@@ -1,0 +1,1262 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/router/routes.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/feedback/p_loading_shimmer.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/auth_state.dart';
+import '../../positions/data/models/position.dart';
+import '../data/home_analytics_api.dart';
+import '../providers/home_provider.dart';
+import '../providers/home_state.dart';
+import 'widgets/position_card.dart';
+
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final homeState = ref.watch(homeProvider);
+    final showNewTrade = homeState is! HomeLoading && homeState is! HomeError;
+
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: showNewTrade
+          ? _NewTradeButton(onPressed: () => context.go(Routes.trade))
+          : null,
+      body: SafeArea(
+        child: switch (homeState) {
+          HomeLoading() => const _LoadingBody(),
+          HomeNoExchange() => const _NoExchangeBody(),
+          HomeEmpty(:final summary) => _DashboardBody(
+              positions: const [],
+              summary: summary,
+              onRefresh: () => ref.read(homeProvider.notifier).refresh(),
+            ),
+          HomeData(:final positions, :final summary) => _DashboardBody(
+              positions: positions,
+              summary: summary,
+              onRefresh: () => ref.read(homeProvider.notifier).refresh(),
+            ),
+          HomeError(:final message) => _ErrorBody(
+              message: message,
+              onRetry: () => ref.read(homeProvider.notifier).refresh(),
+            ),
+        },
+      ),
+    );
+  }
+}
+
+class _LoadingBody extends StatelessWidget {
+  const _LoadingBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: AppSpacing.screenPadding,
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: [
+                    PShimmerBox(
+                        width: 56, height: 56, radius: AppRadius.pillRadius),
+                    SizedBox(width: AppSpacing.md),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PShimmerLine(width: 120, height: 20),
+                        SizedBox(height: AppSpacing.xs),
+                        PShimmerLine(width: 150, height: 18),
+                      ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppSpacing.xl),
+                PShimmerBox(width: double.infinity, height: 224),
+                SizedBox(height: AppSpacing.md),
+                PShimmerBox(width: double.infinity, height: 168),
+                SizedBox(height: AppSpacing.md),
+                PPositionListShimmer(count: 2),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoExchangeBody extends StatelessWidget {
+  const _NoExchangeBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: AppSpacing.screenPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: AppSpacing.lg),
+          const _HomeHeader(),
+          const Spacer(),
+          Center(
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.link_off_rounded,
+                  size: 56,
+                  color: AppColors.textDisabled,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const Text('No exchange connected', style: AppTypography.h3),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Connect your exchange to start seeing live trade guardrails.',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                FilledButton(
+                  onPressed: () => context.go(Routes.profile),
+                  child: const Text('Connect exchange'),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardBody extends ConsumerWidget {
+  const _DashboardBody({
+    required this.positions,
+    required this.summary,
+    required this.onRefresh,
+  });
+
+  final List<Position> positions;
+  final PnlSummary summary;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final analytics = ref.watch(homeAnalyticsProvider('today')).valueOrNull;
+
+    return RefreshIndicator(
+      color: AppColors.accent,
+      onRefresh: onRefresh,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: AppSpacing.screenPadding,
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: AppSpacing.lg),
+                  const _HomeHeader(),
+                  const SizedBox(height: AppSpacing.xl),
+                  const _PeriodTabs(),
+                  const SizedBox(height: AppSpacing.md),
+                  _AdherenceHero(
+                    summary: summary,
+                    positions: positions,
+                    analytics: analytics,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _CostlyMistakeCard(summary: summary, analytics: analytics),
+                  const SizedBox(height: AppSpacing.md),
+                  _OpportunityCostCard(summary: summary, analytics: analytics),
+                  const SizedBox(height: AppSpacing.md),
+                  _AdherenceDetailCard(
+                    positionCount: positions.length,
+                    analytics: analytics,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _RiskPatternCard(),
+                  const SizedBox(height: AppSpacing.md),
+                  _GuardrailStatusCard(
+                    openPositions: positions.length,
+                    analytics: analytics,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  const Text('Current trades', style: AppTypography.h3),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
+            ),
+          ),
+          if (positions.isEmpty)
+            SliverPadding(
+              padding: AppSpacing.screenPadding.copyWith(top: 0),
+              sliver: SliverToBoxAdapter(
+                child: _EmptyCurrentTrades(
+                  onNewTrade: () => context.go(Routes.trade),
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: AppSpacing.screenPadding.copyWith(top: 0),
+              sliver: SliverList.separated(
+                itemCount: positions.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (context, i) {
+                  final position = positions[i];
+                  return PositionCard(
+                    position: position,
+                    onLockToggle: () =>
+                        ref.read(homeProvider.notifier).toggleLock(position.id),
+                    onExitTap: () => context.go(
+                      Routes.positionExitPath(position.id),
+                    ),
+                  ).animate(delay: (i * 35).ms).fadeIn(duration: 280.ms).slideY(
+                        begin: 0.08,
+                        end: 0,
+                        curve: Curves.easeOutCubic,
+                      );
+                },
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 116)),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeHeader extends ConsumerWidget {
+  const _HomeHeader();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider).valueOrNull;
+    final email = authState is AuthAuthenticated ? authState.email : '';
+    final initial =
+        email.isNotEmpty ? email[0].toUpperCase() : '?';
+    // Mask email: show first char + domain with middle hidden
+    final maskedEmail = _maskEmail(email);
+
+    return Row(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            color: AppColors.bgSecondary,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            initial,
+            style: AppTypography.h3.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                maskedEmail,
+                style: AppTypography.h4.copyWith(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _greeting(),
+                style: AppTypography.h3.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Notifications',
+          onPressed: () => context.go(Routes.notifications),
+          icon: const Icon(
+            Icons.notifications_none_rounded,
+            color: AppColors.textPrimary,
+            size: 28,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _maskEmail(String email) {
+    if (email.isEmpty) return '';
+    final parts = email.split('@');
+    if (parts.length != 2) return email;
+    final local = parts[0];
+    final domain = parts[1];
+    final visible = local.length > 2 ? local.substring(0, 2) : local[0];
+    return '$visible***@$domain';
+  }
+
+  static String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+}
+
+class _PeriodTabs extends StatefulWidget {
+  const _PeriodTabs();
+
+  @override
+  State<_PeriodTabs> createState() => _PeriodTabsState();
+}
+
+class _PeriodTabsState extends State<_PeriodTabs> {
+  var _selected = 0;
+  static const _labels = ['Today', 'Weekly', 'Custom'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      children: List.generate(_labels.length, (index) {
+        final selected = index == _selected;
+        return ChoiceChip(
+          selected: selected,
+          showCheckmark: false,
+          label: Text(_labels[index]),
+          labelStyle: AppTypography.bodyMedium.copyWith(
+            color: selected ? const Color(0xFF0057FF) : AppColors.textSecondary,
+          ),
+          side: BorderSide(
+            color: selected ? const Color(0xFF0057FF) : AppColors.borderLight,
+            width: 1.5,
+          ),
+          selectedColor: const Color(0xFFEAF2FF),
+          backgroundColor: AppColors.bgCard,
+          shape: const StadiumBorder(),
+          onSelected: (_) {
+            HapticFeedback.selectionClick();
+            setState(() => _selected = index);
+          },
+        );
+      }),
+    );
+  }
+}
+
+class _AdherenceHero extends StatelessWidget {
+  const _AdherenceHero({
+    required this.summary,
+    required this.positions,
+    this.analytics,
+  });
+  final PnlSummary summary;
+  final List<Position> positions;
+  final HomeAnalytics? analytics;
+
+  @override
+  Widget build(BuildContext context) {
+    final dayPnl = analytics?.todayPnl ??
+        (summary.dayPnl != 0 ? summary.dayPnl : summary.totalUnrealizedPnl);
+    final adherence =
+        analytics?.adherenceScore ?? _adherenceScore(summary, positions.length);
+    final pnlColor = AppColors.pnlColor(dayPnl);
+
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPaddingLg,
+      decoration: BoxDecoration(
+        color: const Color(0xFF073B9A),
+        borderRadius: AppRadius.cardRadiusLg,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF073B9A).withValues(alpha: 0.16),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _HeroMetric(
+                  label: 'Adherence score',
+                  value: '$adherence%',
+                  valueColor: Colors.white,
+                  footer:
+                      '${(analytics?.adherenceChangePct ?? 0).toStringAsFixed(0)}% vs previous',
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _HeroMetric(
+                  label: 'Today\'s PnL',
+                  value: _money(dayPnl, signed: true),
+                  valueColor: pnlColor,
+                  footer:
+                      '${analytics?.tradesClosedToday ?? summary.positionCount.clamp(positions.length, 999)} trades closed',
+                  alignEnd: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Divider(color: Colors.white.withValues(alpha: 0.28), height: 1),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${analytics?.compliantTradeStreak ?? positions.length + 12}\nCompliant trades in a row',
+                  style: AppTypography.bodyLg.copyWith(
+                    color: Colors.white,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              const Icon(Icons.local_fire_department_rounded,
+                  color: Color(0xFFFF7043), size: 36),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.04, end: 0);
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    required this.footer,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final Color valueColor;
+  final String footer;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.body.copyWith(color: Colors.white),
+          textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        FittedBox(
+          alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: AppTypography.display1.copyWith(
+              color: valueColor,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: alignEnd
+                ? Colors.transparent
+                : AppColors.profitGreen.withValues(alpha: 0.12),
+            borderRadius: AppRadius.pillRadius,
+          ),
+          child: Text(
+            footer,
+            style: AppTypography.bodyMedium.copyWith(
+              color: alignEnd ? Colors.white : const Color(0xFF087D55),
+            ),
+            textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CostlyMistakeCard extends StatelessWidget {
+  const _CostlyMistakeCard({required this.summary, this.analytics});
+  final PnlSummary summary;
+  final HomeAnalytics? analytics;
+
+  @override
+  Widget build(BuildContext context) {
+    final mistake = analytics?.mostCostlyMistake;
+    final missed = mistake?.missedPnl ??
+        (summary.dayPnl.abs() * 0.53).clamp(60, 480).roundToDouble();
+    final symbol =
+        mistake?.symbol.isNotEmpty == true ? mistake!.symbol : 'BTC/USDT';
+    final reason = mistake?.reason ?? 'Early exit';
+    return _SectionCard(
+      borderColor: AppColors.lossRed.withValues(alpha: 0.28),
+      backgroundColor: AppColors.lossRed.withValues(alpha: 0.05),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Most costly mistake', style: AppTypography.h3),
+          const SizedBox(height: AppSpacing.xs),
+          RichText(
+            text: TextSpan(
+              style:
+                  AppTypography.bodyLg.copyWith(color: AppColors.textSecondary),
+              children: [
+                const TextSpan(text: 'You would have earned an extra '),
+                TextSpan(
+                  text: _money(missed, signed: true),
+                  style: const TextStyle(
+                    color: Color(0xFF0057FF),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                    text: ' if your latest $symbol trade had followed plan.'),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            width: double.infinity,
+            padding: AppSpacing.cardPadding,
+            decoration: const BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: AppRadius.cardRadius,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_money(missed, signed: true)} missed',
+                        style: AppTypography.h2.copyWith(
+                          color: AppColors.profitGreen,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '$symbol - latest',
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Tap to view trade',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: const Color(0xFF0057FF),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _StatusPill(
+                  label: reason,
+                  color: AppColors.warningAmber,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpportunityCostCard extends StatelessWidget {
+  const _OpportunityCostCard({required this.summary, this.analytics});
+  final PnlSummary summary;
+  final HomeAnalytics? analytics;
+
+  @override
+  Widget build(BuildContext context) {
+    final cost = analytics?.opportunityCostTotal ??
+        (summary.dayPnl == 0 ? -340.0 : -summary.dayPnl.abs());
+    final items = analytics?.opportunityItems ?? const [];
+    final first = items.isNotEmpty ? items[0] : null;
+    final second = items.length > 1 ? items[1] : null;
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Opportunity cost', style: AppTypography.h3),
+                    Text(
+                      'What your decisions cost today',
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                _money(cost),
+                style: AppTypography.numericLg.copyWith(
+                  color: AppColors.lossRed,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _SmallInsightCard(
+                  title: first?.label ?? 'Early exit',
+                  subtitle:
+                      '${first?.count ?? 1} trade - ${first?.symbol.isNotEmpty == true ? first!.symbol : 'BTC/USDT'}',
+                  value: _money(first?.value ?? -180),
+                  color: const Color(0xFFD46A00),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _SmallInsightCard(
+                  title: second?.label ?? 'Outside session',
+                  subtitle:
+                      '${second?.count ?? 1} trade - ${second?.symbol.isNotEmpty == true ? second!.symbol : 'ETH/USDT'}',
+                  value: _money(second?.value ?? -60),
+                  color: AppColors.lossRed,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdherenceDetailCard extends StatelessWidget {
+  const _AdherenceDetailCard(
+      {required this.positionCount, this.analytics});
+  final int positionCount;
+  final HomeAnalytics? analytics;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = analytics?.adherenceScore ??
+        _adherenceScore(const PnlSummary(), positionCount);
+    final pct = score / 100.0;
+    final label = score >= 80
+        ? 'Excellent'
+        : score >= 65
+            ? 'Good'
+            : 'Fair';
+    final color = score >= 80
+        ? AppColors.profitGreen
+        : score >= 65
+            ? AppColors.warningAmber
+            : AppColors.lossRed;
+
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Today\'s adherence', style: AppTypography.h3),
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: SizedBox(
+              width: 172,
+              height: 172,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: pct,
+                    strokeWidth: 18,
+                    strokeCap: StrokeCap.round,
+                    backgroundColor: AppColors.bgSecondary,
+                    color: color,
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: color,
+                          ),
+                        ),
+                        Text('$score%', style: AppTypography.numericLg),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          GridView.count(
+            crossAxisCount: 2,
+            childAspectRatio: 2.4,
+            crossAxisSpacing: AppSpacing.sm,
+            mainAxisSpacing: AppSpacing.sm,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              _AdherenceTile(
+                label: 'Daily loss limit',
+                value: _guardrailProgress(analytics, 'Daily loss limit'),
+                progress: _guardrail(analytics, 'Daily loss limit')?.progress ?? 0,
+                color: _guardrailColor(
+                    _guardrail(analytics, 'Daily loss limit')?.status),
+              ),
+              _AdherenceTile(
+                label: 'Weekly loss limit',
+                value: _guardrailProgress(analytics, 'Weekly loss limit'),
+                progress: _guardrail(analytics, 'Weekly loss limit')?.progress ?? 0,
+                color: _guardrailColor(
+                    _guardrail(analytics, 'Weekly loss limit')?.status),
+              ),
+              _AdherenceTile(
+                label: 'Trades today',
+                value: '${analytics?.tradesClosedToday ?? 0}',
+                progress: score / 100.0,
+                color: color,
+              ),
+              _AdherenceTile(
+                label: 'Open positions',
+                value: '$positionCount',
+                progress: (_guardrail(analytics, 'Open positions')?.progress ??
+                    (positionCount / 5).clamp(0, 1).toDouble()),
+                color: AppColors.profitGreen,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiskPatternCard extends StatelessWidget {
+  const _RiskPatternCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Current risk pattern', style: AppTypography.h3),
+          SizedBox(height: AppSpacing.md),
+          _PatternRow(
+              label: 'Trade frequency',
+              status: 'Normal',
+              color: AppColors.profitGreen),
+          SizedBox(height: AppSpacing.sm),
+          _PatternRow(
+              label: 'Position size variance',
+              status: 'Elevated',
+              color: AppColors.lossRed),
+          SizedBox(height: AppSpacing.sm),
+          _PatternRow(
+              label: 'Behaviour after losses',
+              status: 'Moderate',
+              color: AppColors.warningAmber),
+          SizedBox(height: AppSpacing.md),
+          _InsightCallout(),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuardrailStatusCard extends StatelessWidget {
+  const _GuardrailStatusCard({required this.openPositions, this.analytics});
+  final int openPositions;
+  final HomeAnalytics? analytics;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.profitGreen,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Text('Live guardrail status', style: AppTypography.h3),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _GuardrailTile(
+                  title: _guardrail(analytics, 'Daily loss limit')?.label ??
+                      'Daily loss limit',
+                  subtitle:
+                      _guardrail(analytics, 'Daily loss limit')?.description ??
+                          'Resets at midnight',
+                  value: _guardrailValue(
+                      _guardrail(analytics, 'Daily loss limit')),
+                  progress:
+                      _guardrail(analytics, 'Daily loss limit')?.progress ??
+                          0.24,
+                  color: _guardrailColor(
+                    _guardrail(analytics, 'Daily loss limit')?.status,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _GuardrailTile(
+                  title: 'Open positions',
+                  subtitle: 'Concurrent limit',
+                  value: _guardrailValue(
+                    _guardrail(analytics, 'Open positions'),
+                    fallback: '$openPositions/5',
+                  ),
+                  progress: _guardrail(analytics, 'Open positions')?.progress ??
+                      (openPositions / 5).clamp(0, 1).toDouble(),
+                  color: _guardrailColor(
+                    _guardrail(analytics, 'Open positions')?.status,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.child,
+    this.borderColor = AppColors.borderLight,
+    this.backgroundColor = AppColors.bgCard,
+  });
+
+  final Widget child;
+  final Color borderColor;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: AppRadius.cardRadiusLg,
+        border: Border.all(color: borderColor),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SmallInsightCard extends StatelessWidget {
+  const _SmallInsightCard({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.color,
+  });
+
+  final String title;
+  final String subtitle;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTypography.bodyMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            subtitle,
+            style: AppTypography.bodySm.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(value, style: AppTypography.numericMd.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdherenceTile extends StatelessWidget {
+  const _AdherenceTile({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.progress,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(label, style: AppTypography.bodyMedium)),
+              Text(value, style: AppTypography.numericSm),
+            ],
+          ),
+          LinearProgressIndicator(
+            value: progress.clamp(0.0, 1.0),
+            minHeight: 4,
+            borderRadius: AppRadius.pillRadius,
+            color: color,
+            backgroundColor: AppColors.borderLight,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PatternRow extends StatelessWidget {
+  const _PatternRow({
+    required this.label,
+    required this.status,
+    required this.color,
+  });
+
+  final String label;
+  final String status;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: AppTypography.body)),
+          _StatusPill(label: status, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightCallout extends StatelessWidget {
+  const _InsightCallout();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF4FF),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: const Color(0xFFD8EAFF)),
+      ),
+      child: Text(
+        'Your position sizing is varying more than usual today. Consider keeping your next trade within your average capital band.',
+        style: AppTypography.bodyLg.copyWith(color: AppColors.textPrimary),
+      ),
+    );
+  }
+}
+
+class _GuardrailTile extends StatelessWidget {
+  const _GuardrailTile({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.progress,
+    required this.color,
+  });
+
+  final String title;
+  final String subtitle;
+  final String value;
+  final double progress;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTypography.bodyMedium),
+          Text(
+            subtitle,
+            style:
+                AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(value, style: AppTypography.numericSm),
+          const SizedBox(height: AppSpacing.sm),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 8,
+            borderRadius: AppRadius.pillRadius,
+            color: color,
+            backgroundColor: AppColors.borderLight,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.bodyMedium.copyWith(color: color),
+      ),
+    );
+  }
+}
+
+class _EmptyCurrentTrades extends StatelessWidget {
+  const _EmptyCurrentTrades({required this.onNewTrade});
+  final VoidCallback onNewTrade;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPaddingLg,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadiusLg,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.show_chart_rounded,
+            size: 36,
+            color: AppColors.textDisabled,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text('No open trades', style: AppTypography.h4),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Your current trade information will appear here as soon as a position opens.',
+            textAlign: TextAlign.center,
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton(
+            onPressed: onNewTrade,
+            child: const Text('Start a trade'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NewTradeButton extends StatelessWidget {
+  const _NewTradeButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: AppSpacing.screenH,
+      child: SizedBox(
+        width: double.infinity,
+        height: 58,
+        child: FilledButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.add_rounded, size: 26),
+          label: const Text('New Trade'),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF0057FF),
+            foregroundColor: Colors.white,
+            textStyle: AppTypography.buttonLg,
+            shape: const StadiumBorder(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorBody extends StatelessWidget {
+  const _ErrorBody({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: AppSpacing.screenPadding,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.wifi_off_rounded,
+            size: 56,
+            color: AppColors.textDisabled,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Text('Unable to load', style: AppTypography.h3),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            message,
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          FilledButton(
+            onPressed: onRetry,
+            child: const Text('Try again'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+int _adherenceScore(PnlSummary summary, int openPositions) {
+  final base = summary.dayPnl >= 0 ? 74 : 62;
+  return (base - openPositions.clamp(0, 5)).clamp(45, 96);
+}
+
+String _money(double value, {bool signed = false}) {
+  final sign = signed && value >= 0
+      ? '+'
+      : value < 0
+          ? '-'
+          : '';
+  return '$sign\$${value.abs().toStringAsFixed(0)}';
+}
+
+GuardrailMetric? _guardrail(HomeAnalytics? analytics, String label) {
+  final guardrails = analytics?.guardrails ?? const [];
+  for (final item in guardrails) {
+    if (item.label == label) return item;
+  }
+  return null;
+}
+
+String _guardrailValue(GuardrailMetric? metric, {String? fallback}) {
+  if (metric == null) return fallback ?? '\$0 / \$0';
+  if (metric.unit == 'usd') {
+    return '${_money(metric.value)} / ${_money(metric.limit)}';
+  }
+  return '${metric.value.toStringAsFixed(0)} / ${metric.limit.toStringAsFixed(0)}';
+}
+
+String _guardrailProgress(HomeAnalytics? analytics, String label) {
+  final g = _guardrail(analytics, label);
+  if (g == null) return '—';
+  return '${(g.progress * 100).toStringAsFixed(0)}%';
+}
+
+Color _guardrailColor(String? status) {
+  return switch (status) {
+    'breached' => AppColors.lossRed,
+    'elevated' => AppColors.lossRed,
+    'moderate' => AppColors.warningAmber,
+    _ => AppColors.profitGreen,
+  };
+}

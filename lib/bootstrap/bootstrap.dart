@@ -1,0 +1,16 @@
+import 'package:flutter/widgets.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../core/storage/local_cache.dart';
+
+Future<void> bootstrap() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
+
+  await Future.wait([
+    Hive.openBox<String>(CacheBoxNames.positions),
+    Hive.openBox<String>(CacheBoxNames.orders),
+    Hive.openBox<String>(CacheBoxNames.notifications),
+    Hive.openBox<String>(CacheBoxNames.misc),
+  ]);
+}

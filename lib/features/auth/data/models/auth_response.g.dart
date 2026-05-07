@@ -1,0 +1,33 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'auth_response.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) =>
+    _AuthResponse(
+      token: json['token'] as String,
+      user: AuthUser.fromJson(json['user'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$AuthResponseToJson(_AuthResponse instance) =>
+    <String, dynamic>{
+      'token': instance.token,
+      'user': instance.user,
+    };
+
+_AuthUser _$AuthUserFromJson(Map<String, dynamic> json) => _AuthUser(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      isAdmin: json['is_admin'] as bool? ?? false,
+      totpEnabled: json['totp_enabled'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$AuthUserToJson(_AuthUser instance) => <String, dynamic>{
+      'id': instance.id,
+      'email': instance.email,
+      'is_admin': instance.isAdmin,
+      'totp_enabled': instance.totpEnabled,
+    };
