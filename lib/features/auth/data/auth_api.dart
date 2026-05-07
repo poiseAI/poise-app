@@ -31,7 +31,11 @@ class AuthApi {
       );
       return Ok(AuthResponse.fromJson(resp.data!));
     } on DioException catch (e) {
-      return Err(e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    } on Object catch (e) {
+      return Err(UnknownError('Unexpected login response: $e'));
     }
   }
 
@@ -46,7 +50,11 @@ class AuthApi {
       );
       return Ok(AuthResponse.fromJson(resp.data!));
     } on DioException catch (e) {
-      return Err(e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    } on Object catch (e) {
+      return Err(UnknownError('Unexpected registration response: $e'));
     }
   }
 
@@ -55,7 +63,11 @@ class AuthApi {
       final resp = await _dio.get<Map<String, dynamic>>('/profile');
       return Ok(resp.data!);
     } on DioException catch (e) {
-      return Err(e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    } on Object catch (e) {
+      return Err(UnknownError('Unexpected profile response: $e'));
     }
   }
 
@@ -64,7 +76,9 @@ class AuthApi {
       await _dio.post<void>('/auth/forgot-password', data: {'email': email});
       return const Ok(null);
     } on DioException catch (e) {
-      return Err(e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -81,7 +95,9 @@ class AuthApi {
       });
       return const Ok(null);
     } on DioException catch (e) {
-      return Err(e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 }

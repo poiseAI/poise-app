@@ -11,7 +11,11 @@ import 'ws_message.dart';
 part 'ws_service.g.dart';
 
 @Riverpod(keepAlive: true)
-WsService wsService(Ref ref) => WsService();
+WsService wsService(Ref ref) {
+  final service = WsService();
+  ref.onDispose(service.dispose);
+  return service;
+}
 
 enum WsStatus { disconnected, connecting, connected }
 
@@ -27,6 +31,7 @@ class WsService with WidgetsBindingObserver {
 
   int _backoffSeconds = 1;
   WsStatus _status = WsStatus.disconnected;
+  bool _intentionalDisconnect = false;
 
   WsStatus get status => _status;
   int get backoffSeconds => _backoffSeconds;
@@ -43,11 +48,14 @@ class WsService with WidgetsBindingObserver {
 
   void connect(String token) {
     _token = token;
+    _intentionalDisconnect = false;
     _doConnect();
   }
 
   void _doConnect() {
-    _cleanup();
+    if (_status == WsStatus.connected || _status == WsStatus.connecting) {
+      _cleanup(emitDisconnected: false);
+    }
     if (_token == null) return;
 
     _status = WsStatus.connecting;
@@ -63,9 +71,10 @@ class WsService with WidgetsBindingObserver {
         cancelOnError: false,
       );
 
+      final wasConnected = _status == WsStatus.connected;
       _status = WsStatus.connected;
       _backoffSeconds = 1;
-      _controller.add(const WsMessage.connected());
+      if (!wasConnected) _controller.add(const WsMessage.connected());
     } catch (e) {
       _scheduleReconnect();
     }
@@ -92,9 +101,11 @@ class WsService with WidgetsBindingObserver {
   }
 
   void _scheduleReconnect() {
+    if (_intentionalDisconnect || _token == null) return;
+    final wasDisconnected = _status == WsStatus.disconnected;
     _status = WsStatus.disconnected;
-    _controller.add(const WsMessage.disconnected());
-    _cleanup();
+    if (!wasDisconnected) _controller.add(const WsMessage.disconnected());
+    _cleanup(emitDisconnected: false);
 
     _reconnectTimer = Timer(Duration(seconds: _backoffSeconds), () {
       _backoffSeconds = (_backoffSeconds * 2).clamp(1, 60);
@@ -103,8 +114,9 @@ class WsService with WidgetsBindingObserver {
   }
 
   void disconnect() {
+    _intentionalDisconnect = true;
     _token = null;
-    _cleanup();
+    _cleanup(emitDisconnected: false);
     _status = WsStatus.disconnected;
   }
 
@@ -115,13 +127,17 @@ class WsService with WidgetsBindingObserver {
     }
   }
 
-  void _cleanup() {
+  void _cleanup({bool emitDisconnected = true}) {
     _sub?.cancel();
     _sub = null;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _channel?.sink.close();
     _channel = null;
+    if (emitDisconnected && _status == WsStatus.connected) {
+      _status = WsStatus.disconnected;
+      _controller.add(const WsMessage.disconnected());
+    }
   }
 
   @override
@@ -130,6 +146,7 @@ class WsService with WidgetsBindingObserver {
         _token != null &&
         _status == WsStatus.disconnected) {
       _backoffSeconds = 1;
+      _intentionalDisconnect = false;
       _doConnect();
     }
   }

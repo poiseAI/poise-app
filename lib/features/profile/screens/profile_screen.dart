@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -53,18 +54,17 @@ class _StrategyStatusTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strategiesState = ref.watch(strategiesNotifierProvider);
-    final bool hasActive = strategiesState is StrategiesLoaded &&
-        strategiesState.active != null;
-    final String strategyName = strategiesState is StrategiesLoaded &&
-            strategiesState.active != null
-        ? strategiesState.active!.name
-        : 'Not set';
+    final bool hasActive =
+        strategiesState is StrategiesLoaded && strategiesState.active != null;
+    final String strategyName =
+        strategiesState is StrategiesLoaded && strategiesState.active != null
+            ? strategiesState.active!.name
+            : 'Not set';
 
     return _InfoTile(
       label: 'Active strategy',
       value: hasActive ? strategyName : 'Not set',
-      valueColor:
-          hasActive ? AppColors.profitGreen : AppColors.warningAmber,
+      valueColor: hasActive ? AppColors.profitGreen : AppColors.warningAmber,
     );
   }
 }
@@ -110,8 +110,7 @@ class _TotpTileState extends ConsumerState<_TotpTile> {
     );
     if (code == null || !mounted) return;
 
-    final result =
-        await ref.read(profileApiProvider).disableTotp(token: code);
+    final result = await ref.read(profileApiProvider).disableTotp(token: code);
     if (!mounted) return;
     result.fold(
       onOk: (_) {
@@ -142,8 +141,8 @@ class _TotpTileState extends ConsumerState<_TotpTile> {
               children: [
                 Text(
                   'Enabled',
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.profitGreen),
+                  style:
+                      AppTypography.body.copyWith(color: AppColors.profitGreen),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 TextButton(
@@ -246,13 +245,28 @@ class _TotpEnableDialogState extends ConsumerState<_TotpEnableDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (widget.qrUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                child: Image.network(
-                  widget.qrUrl,
-                  width: 160,
-                  height: 160,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: AppColors.borderLight),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  ),
+                  child: QrImageView(
+                    data: widget.qrUrl,
+                    version: QrVersions.auto,
+                    size: 180,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
+                    ),
+                  ),
                 ),
               ),
             if (widget.qrUrl.isNotEmpty) const SizedBox(height: AppSpacing.md),
@@ -261,7 +275,8 @@ class _TotpEnableDialogState extends ConsumerState<_TotpEnableDialog> {
               style: AppTypography.bodySm,
             ),
             const SizedBox(height: AppSpacing.sm),
-            const Text('2. Enter this secret key:', style: AppTypography.bodySm),
+            const Text('2. Enter this secret key:',
+                style: AppTypography.bodySm),
             const SizedBox(height: AppSpacing.xs),
             Container(
               width: double.infinity,
@@ -636,8 +651,8 @@ class _ExchangeEmptyCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Connect Bybit or Binance to start trading.',
-            style: AppTypography.bodySm
-                .copyWith(color: AppColors.textSecondary),
+            style:
+                AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.md),
           const _MagicLinkButton(),
@@ -666,8 +681,7 @@ class _MagicLinkButtonState extends ConsumerState<_MagicLinkButton> {
 
   Future<void> _requestLink() async {
     setState(() => _loading = true);
-    final result =
-        await ref.read(profileApiProvider).requestApiKeyMagicLink();
+    final result = await ref.read(profileApiProvider).requestApiKeyMagicLink();
     if (!mounted) return;
     setState(() => _loading = false);
     result.fold(

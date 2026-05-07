@@ -11,17 +11,23 @@ part 'orders_provider.g.dart';
 @riverpod
 class OrdersNotifier extends _$OrdersNotifier {
   StreamSubscription<WsMessage>? _wsSub;
+  bool _disposed = false;
 
   @override
   AsyncValue<List<Order>> build() {
     ref.watch(authInvalidatedProvider);
-    ref.onDispose(() => _wsSub?.cancel());
+    _disposed = false;
+    ref.onDispose(() {
+      _disposed = true;
+      _wsSub?.cancel();
+    });
     _init();
     return const AsyncLoading();
   }
 
   Future<void> _init() async {
     await _fetch();
+    if (_disposed) return;
     _wsSub = ref.read(wsServiceProvider).stream.listen((msg) {
       if (msg is WsOrderUpdate) _applyOrderUpdate(msg);
     });
@@ -32,6 +38,7 @@ class OrdersNotifier extends _$OrdersNotifier {
           status: status,
           limit: 30,
         );
+    if (_disposed) return;
     result.fold(
       onOk: (list) => state = AsyncData(list),
       onErr: (e) {

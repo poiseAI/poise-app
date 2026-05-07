@@ -10,6 +10,7 @@ import '../../../core/widgets/feedback/p_toast.dart';
 import '../../../core/widgets/inputs/p_otp_field.dart';
 import '../../../core/widgets/inputs/p_text_field.dart';
 import '../data/auth_api.dart';
+import '../widgets/password_requirements.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, required this.email});
@@ -43,10 +44,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   bool _validatePassword() {
-    final ok = _passCtrl.text.length >= 8;
+    final ok = PasswordRequirements.isValid(_passCtrl.text);
     setState(() {
       _passState = ok ? PFieldState.valid : PFieldState.error;
-      _passError = ok ? null : 'At least 8 characters required';
+      _passError = ok ? null : 'Password does not meet all requirements';
     });
     return ok;
   }
@@ -79,7 +80,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     result.fold(
       onOk: (_) {
         setState(() => _buttonState = PButtonState.success);
-        PToast.success(context, 'Password reset. Sign in with your new password.');
+        PToast.success(
+            context, 'Password reset. Sign in with your new password.');
         Future.delayed(const Duration(milliseconds: 600), () {
           if (mounted) context.go(Routes.login);
         });
@@ -149,9 +151,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 fieldState: _passState,
                 errorText: _passError,
                 onChanged: (val) {
-                  if (_passState != PFieldState.idle) _validatePassword();
+                  setState(() {});
+                  if (_passState != PFieldState.idle) {
+                    _validatePassword();
+                  }
+                  if (_confirmState != PFieldState.idle) {
+                    _validateConfirm();
+                  }
                 },
               ),
+              const SizedBox(height: AppSpacing.sm),
+              PasswordRequirements(password: _passCtrl.text),
               const SizedBox(height: AppSpacing.md),
               PTextField(
                 controller: _confirmCtrl,

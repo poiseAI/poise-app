@@ -20,6 +20,7 @@ class _WsStatusBannerState extends ConsumerState<WsStatusBanner> {
   Timer? _countdownTimer;
   Timer? _hideTimer;
   StreamSubscription<WsMessage>? _wsSub;
+  bool _hasShownDisconnect = false;
 
   @override
   void initState() {
@@ -47,6 +48,8 @@ class _WsStatusBannerState extends ConsumerState<WsStatusBanner> {
   }
 
   void _showConnected() {
+    if (!_hasShownDisconnect) return;
+    _hasShownDisconnect = false;
     _countdownTimer?.cancel();
     _hideTimer?.cancel();
     setState(() => _state = _BannerState.connected);
@@ -56,6 +59,11 @@ class _WsStatusBannerState extends ConsumerState<WsStatusBanner> {
   }
 
   void _showDisconnected() {
+    if (_state == _BannerState.disconnected ||
+        _state == _BannerState.reconnecting) {
+      return;
+    }
+    _hasShownDisconnect = true;
     _hideTimer?.cancel();
     _startCountdown(ref.read(wsServiceProvider).backoffSeconds);
     setState(() => _state = _BannerState.disconnected);
@@ -134,9 +142,8 @@ class _WsStatusBannerState extends ConsumerState<WsStatusBanner> {
           ),
         ),
       ),
-    )
-        .animate(key: ValueKey(_state))
-        .slideY(begin: -1, end: 0, duration: 300.ms, curve: Curves.easeOutCubic);
+    ).animate(key: ValueKey(_state)).slideY(
+        begin: -1, end: 0, duration: 300.ms, curve: Curves.easeOutCubic);
   }
 }
 

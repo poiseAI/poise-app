@@ -28,27 +28,32 @@ class ErrorInterceptor extends Interceptor {
 
     if (status == 404) return const NotFoundError();
 
+    if (status == 409) {
+      return ServerError(status, _extractMessage(err.response?.data));
+    }
+
     if (status == 422 || status == 400) {
       final data = err.response?.data;
       if (data is Map<String, dynamic>) {
         final errors = _parseValidationErrors(data);
         if (errors.isNotEmpty) return ValidationError(errors);
-        final message = data['message'] as String? ??
-            data['error'] as String? ??
-            '';
-        return ServerError(status, message);
+        return ServerError(status, _extractMessage(data));
       }
       return const ValidationError({});
     }
 
     if (status >= 500) {
-      final message = (err.response?.data as Map<String, dynamic>?)?['message']
-              as String? ??
-          '';
-      return ServerError(status, message);
+      return ServerError(status, _extractMessage(err.response?.data));
     }
 
     return UnknownError(err.message ?? '');
+  }
+
+  String _extractMessage(Object? data) {
+    if (data is Map<String, dynamic>) {
+      return data['message'] as String? ?? data['error'] as String? ?? '';
+    }
+    return '';
   }
 
   Map<String, List<String>> _parseValidationErrors(Map<String, dynamic> data) {

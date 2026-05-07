@@ -28,11 +28,14 @@ part 'app_router.g.dart';
 
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  ref.watch(authProvider); // triggers router rebuild on auth change
+  final refreshNotifier = _RouterRefreshNotifier();
+  ref.onDispose(refreshNotifier.dispose);
+  ref.listen(authProvider, (_, __) => refreshNotifier.notify());
 
   return GoRouter(
     initialLocation: Routes.welcome,
     debugLogDiagnostics: true,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) => _redirect(ref, state),
     routes: [
       // ── Auth (no shell) ─────────────────────────────────────────
@@ -139,22 +142,35 @@ GoRouter appRouter(Ref ref) {
 
 String? _redirect(Ref ref, GoRouterState state) {
   final auth = ref.read(authProvider).valueOrNull;
-  final loc = state.matchedLocation;
-  final isAuthRoute = loc.startsWith('/auth');
+  if (auth == null) return null; // still loading
 
-  if (auth == null) return null; // loading — no redirect
+  final loc = state.matchedLocation;
+  final onAuth = loc.startsWith('/auth');
+  final onOnboarding = loc.startsWith('/onboarding');
 
   return switch (auth) {
-    AuthUnauthenticated() when !isAuthRoute => Routes.welcome,
+    // Not logged in → must be on an auth route
+    AuthUnauthenticated() when !onAuth => Routes.welcome,
+
+    // Logged in but onboarding incomplete → must be on onboarding route
     AuthAuthenticated(:final hasActiveStrategy)
-        when !hasActiveStrategy =>
+        when !hasActiveStrategy && !onOnboarding =>
       Routes.riskAppetite,
-    AuthAuthenticated() when isAuthRoute => Routes.home,
+
+    // Logged in and onboarding done → leave auth/onboarding routes
+    AuthAuthenticated(:final hasActiveStrategy)
+        when hasActiveStrategy && (onAuth || onOnboarding) =>
+      Routes.home,
+
     _ => null,
   };
 }
 
 // ── Page transition helpers ──────────────────────────────────────────────────
+
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void notify() => notifyListeners();
+}
 
 CustomTransitionPage<void> _fadeTransition(
   GoRouterState state,

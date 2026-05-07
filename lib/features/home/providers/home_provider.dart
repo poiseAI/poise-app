@@ -14,12 +14,17 @@ part 'home_provider.g.dart';
 @riverpod
 class Home extends _$Home {
   StreamSubscription<WsMessage>? _wsSub;
+  bool _disposed = false;
   static const _posKey = 'open_positions';
 
   @override
   HomeState build() {
     ref.watch(authInvalidatedProvider);
-    ref.onDispose(() => _wsSub?.cancel());
+    _disposed = false;
+    ref.onDispose(() {
+      _disposed = true;
+      _wsSub?.cancel();
+    });
     _init();
     return const HomeState.loading();
   }
@@ -27,6 +32,7 @@ class Home extends _$Home {
   Future<void> _init() async {
     _loadFromCache();
     await _fetchFresh();
+    if (_disposed) return;
     _subscribeWs();
   }
 
@@ -48,6 +54,7 @@ class Home extends _$Home {
     // Check exchange connection first — determines whether to show connect CTA
     final connResult =
         await ref.read(profileApiProvider).getExchangeConnections();
+    if (_disposed) return;
     final connections = connResult.valueOrNull ?? [];
     if (connections.isEmpty) {
       state = const HomeState.noExchange();
@@ -56,7 +63,9 @@ class Home extends _$Home {
 
     final api = ref.read(positionsApiProvider);
     final posResult = await api.getOpenPositions();
+    if (_disposed) return;
     final pnlResult = await api.getPnlSummary();
+    if (_disposed) return;
 
     if (posResult.isErr && state is HomeLoading) {
       state = HomeState.error(message: posResult.error.userMessage);
@@ -73,6 +82,7 @@ class Home extends _$Home {
             positions,
             (p) => p.toJson(),
           );
+      if (_disposed) return;
     }
 
     state = positions.isEmpty

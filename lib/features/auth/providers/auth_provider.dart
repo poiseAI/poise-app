@@ -86,7 +86,7 @@ class Auth extends _$Auth {
 
     return result.fold(
       onOk: (resp) async {
-        await _persistAndActivate(resp);
+        await _persistAndActivate(resp, checkExistingStrategy: false);
         return const Ok(null);
       },
       onErr: (err) {
@@ -124,17 +124,26 @@ class Auth extends _$Auth {
     }
   }
 
-  Future<void> _persistAndActivate(AuthResponse resp) async {
+  Future<void> _persistAndActivate(
+    AuthResponse resp, {
+    bool checkExistingStrategy = true,
+  }) async {
     await ref.read(secureStorageProvider).saveToken(resp.token);
     await ref.read(secureStorageProvider).saveUserId(resp.user.id);
     _connectWs(resp.token);
     _scheduleProactiveRefresh(resp.token);
 
-    // Returning users who already have a strategy must not be sent to onboarding.
-    final strategiesResult =
-        await ref.read(strategiesApiProvider).getActiveStrategies();
-    final hasActiveStrategy =
-        strategiesResult.valueOrNull?.isNotEmpty ?? false;
+    // Compute strategy status BEFORE emitting state so the router only
+    // fires once with the correct value — avoids a flash of the onboarding
+    // screen for returning users who already have an active strategy.
+    final bool hasActiveStrategy;
+    if (checkExistingStrategy) {
+      final result =
+          await ref.read(strategiesApiProvider).getActiveStrategies();
+      hasActiveStrategy = result.valueOrNull?.isNotEmpty ?? false;
+    } else {
+      hasActiveStrategy = false;
+    }
 
     state = AsyncData(AuthState.authenticated(
       userId: resp.user.id,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:toastification/toastification.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
@@ -14,10 +15,20 @@ abstract final class PToast {
     ToastType type = ToastType.info,
     Duration duration = const Duration(seconds: 3),
   }) {
-    final borderColor = switch (type) {
+    final toastType = switch (type) {
+      ToastType.success => ToastificationType.success,
+      ToastType.error => ToastificationType.error,
+      ToastType.info => ToastificationType.info,
+    };
+    final accentColor = switch (type) {
       ToastType.success => AppColors.profitGreen,
       ToastType.error => AppColors.lossRed,
       ToastType.info => AppColors.accentPurple,
+    };
+    final icon = switch (type) {
+      ToastType.success => Icons.check_circle_rounded,
+      ToastType.error => Icons.error_rounded,
+      ToastType.info => Icons.info_rounded,
     };
 
     switch (type) {
@@ -28,41 +39,45 @@ abstract final class PToast {
         HapticFeedback.mediumImpact();
     }
 
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                width: 3,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: borderColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  message,
-                  style: AppTypography.body.copyWith(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          duration: duration,
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.textPrimary,
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadius.cardRadius,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
+    toastification.show(
+      context: context,
+      type: toastType,
+      style: ToastificationStyle.flat,
+      autoCloseDuration: duration,
+      alignment: Alignment.topCenter,
+      title: Text(
+        message,
+        style: AppTypography.body.copyWith(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w600,
         ),
-      );
+      ),
+      icon: Icon(icon, color: accentColor),
+      primaryColor: accentColor,
+      backgroundColor: AppColors.bgCard,
+      foregroundColor: AppColors.textPrimary,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      borderRadius: AppRadius.cardRadius,
+      borderSide: BorderSide(color: accentColor.withValues(alpha: 0.28)),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.textPrimary.withValues(alpha: 0.12),
+          blurRadius: 24,
+          offset: const Offset(0, 12),
+        ),
+      ],
+      showProgressBar: false,
+      closeButtonShowType: CloseButtonShowType.none,
+      closeOnClick: true,
+      dragToClose: true,
+    );
   }
 
   static void success(BuildContext context, String message) =>

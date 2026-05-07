@@ -65,7 +65,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   Widget build(BuildContext context) {
     final messages = ref.watch(aiChatProvider);
     final notifier = ref.read(aiChatProvider.notifier);
-    final isStreaming = notifier.isStreaming;
+    final isStreaming =
+        messages.whereType<AiMessage>().any((msg) => msg.isStreaming);
 
     ref.listen(aiChatProvider, (_, __) => _scrollToBottom());
 
@@ -95,8 +96,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   const Spacer(),
                   if (messages.isNotEmpty)
                     TextButton(
-                      onPressed: () =>
-                          ref.invalidate(aiChatProvider),
+                      onPressed: () => ref.invalidate(aiChatProvider),
                       child: Text('Clear',
                           style: AppTypography.caption
                               .copyWith(color: AppColors.textSecondary)),
@@ -206,9 +206,7 @@ class _EmptyState extends StatelessWidget {
             'I can check your positions, risk scores, and execute trades with your confirmation.',
             style: AppTypography.body.copyWith(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
-          )
-              .animate(delay: 200.ms)
-              .fadeIn(),
+          ).animate(delay: 200.ms).fadeIn(),
           const SizedBox(height: AppSpacing.xl),
           // Suggested prompts (#54)
           Wrap(

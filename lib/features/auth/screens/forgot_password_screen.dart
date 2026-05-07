@@ -44,9 +44,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     if (!_validate()) return;
     setState(() => _buttonState = PButtonState.loading);
 
-    final result = await ref
-        .read(authApiProvider)
-        .forgotPassword(_emailCtrl.text.trim());
+    final result =
+        await ref.read(authApiProvider).forgotPassword(_emailCtrl.text.trim());
 
     if (!mounted) return;
 

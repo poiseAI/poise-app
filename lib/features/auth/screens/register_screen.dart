@@ -9,6 +9,7 @@ import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
 import '../../../core/widgets/inputs/p_text_field.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/password_requirements.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -20,21 +21,27 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
+  final _confirmFocus = FocusNode();
 
   PButtonState _buttonState = PButtonState.idle;
   PFieldState _emailState = PFieldState.idle;
   PFieldState _passwordState = PFieldState.idle;
+  PFieldState _confirmState = PFieldState.idle;
   String? _emailError;
   String? _passwordError;
+  String? _confirmError;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
+    _confirmFocus.dispose();
     super.dispose();
   }
 
@@ -48,10 +55,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   bool _validatePassword(String val) {
-    final ok = val.length >= 8;
+    final ok = PasswordRequirements.isValid(val);
     setState(() {
       _passwordState = ok ? PFieldState.valid : PFieldState.error;
-      _passwordError = ok ? null : 'Password must be at least 8 characters';
+      _passwordError = ok ? null : 'Password does not meet all requirements';
+    });
+    return ok;
+  }
+
+  bool _validateConfirm(String val) {
+    final ok = val == _passwordCtrl.text;
+    setState(() {
+      _confirmState = ok ? PFieldState.valid : PFieldState.error;
+      _confirmError = ok ? null : 'Passwords do not match';
     });
     return ok;
   }
@@ -59,7 +75,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _submit() async {
     final emailOk = _validateEmail(_emailCtrl.text.trim());
     final passOk = _validatePassword(_passwordCtrl.text);
-    if (!emailOk || !passOk) return;
+    final confirmOk = _validateConfirm(_confirmCtrl.text);
+    if (!emailOk || !passOk || !confirmOk) return;
 
     setState(() => _buttonState = PButtonState.loading);
 
@@ -73,9 +90,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     result.fold(
       onOk: (_) {
         setState(() => _buttonState = PButtonState.success);
-        Future.delayed(const Duration(milliseconds: 600), () {
-          if (mounted) context.go(Routes.home);
-        });
+        // Router redirect handles navigation once auth state emits
       },
       onErr: (e) {
         setState(() => _buttonState = PButtonState.error);
@@ -135,7 +150,31 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 fieldState: _passwordState,
                 errorText: _passwordError,
                 onChanged: (val) {
-                  if (_passwordState != PFieldState.idle) _validatePassword(val);
+                  setState(() {});
+                  if (_passwordState != PFieldState.idle) {
+                    _validatePassword(val);
+                  }
+                  if (_confirmState != PFieldState.idle) {
+                    _validateConfirm(_confirmCtrl.text);
+                  }
+                },
+                onEditingComplete: () => _confirmFocus.requestFocus(),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              PasswordRequirements(password: _passwordCtrl.text),
+              const SizedBox(height: AppSpacing.md),
+              PTextField(
+                controller: _confirmCtrl,
+                focusNode: _confirmFocus,
+                label: 'Confirm password',
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                fieldState: _confirmState,
+                errorText: _confirmError,
+                onChanged: (val) {
+                  if (_confirmState != PFieldState.idle) {
+                    _validateConfirm(val);
+                  }
                 },
                 onEditingComplete: _submit,
               ),
