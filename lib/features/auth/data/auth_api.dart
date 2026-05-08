@@ -106,4 +106,26 @@ class AuthApi {
           : UnknownError(e.message ?? ''));
     }
   }
+
+  Future<Result<void, AppError>> verifyEmail(String otp) async {
+    try {
+      await _dio.post<void>('/auth/verify-email', data: {'otp': otp});
+      return const Ok(null);
+    } on DioException catch (e) {
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    }
+  }
+
+  Future<Result<void, AppError>> resendEmailVerification() async {
+    try {
+      await _dio.post<void>('/auth/resend-verification');
+      return const Ok(null);
+    } on DioException catch (e) {
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    }
+  }
 }

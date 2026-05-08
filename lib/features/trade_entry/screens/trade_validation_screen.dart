@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -106,7 +107,11 @@ class TradeValidationScreen extends ConsumerWidget {
                         await notifier.submit(bypassWarnings: true);
                         final latest = ref.read(tradeFormProvider);
                         if (context.mounted && latest.lastOrder != null) {
-                          _showSuccess(context);
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const _TradeOrderSuccessScreen(),
+                            ),
+                          );
                         }
                       },
               ),
@@ -157,23 +162,56 @@ class TradeValidationScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _showSuccess(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Order placed'),
-        content: const Text('Your Poise trade has been submitted.'),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(Routes.orders);
-            },
-            child: const Text('View trades'),
+class _TradeOrderSuccessScreen extends StatelessWidget {
+  const _TradeOrderSuccessScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              Image.asset(
+                'assets/images/success_bag.png',
+                width: 190,
+                height: 190,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ).animate().fadeIn(duration: 240.ms).scale(
+                    begin: const Offset(0.92, 0.92),
+                    end: const Offset(1, 1),
+                    curve: Curves.easeOutBack,
+                  ),
+              const Spacer(),
+              const Text(
+                'Trade Submitted Successfully',
+                textAlign: TextAlign.center,
+                style: AppTypography.h2,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Your Poise trade has been submitted and is now being tracked.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const Spacer(flex: 2),
+              PPrimaryButton(
+                label: 'View trades',
+                onPressed: () => context.go(Routes.orders),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -307,8 +345,13 @@ class _GuardrailPanel extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle_outline_rounded,
-                    size: 76, color: AppColors.accent),
+                Image.asset(
+                  'assets/images/success_check_circle.png',
+                  width: 92,
+                  height: 92,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 const Text('No guardrails triggered', style: AppTypography.h3),
                 const SizedBox(height: AppSpacing.xs),

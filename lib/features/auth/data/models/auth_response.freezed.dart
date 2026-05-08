@@ -356,6 +356,10 @@ class __$AuthResponseCopyWithImpl<$Res>
 mixin _$AuthUser {
   String get id;
   String get email;
+  @JsonKey(name: 'full_name', readValue: _readFullName)
+  String get fullName;
+  @JsonKey(name: 'email_verified')
+  bool get emailVerified;
   @JsonKey(name: 'is_admin')
   bool get isAdmin;
   @JsonKey(name: 'totp_enabled')
@@ -378,6 +382,10 @@ mixin _$AuthUser {
             other is AuthUser &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.email, email) || other.email == email) &&
+            (identical(other.fullName, fullName) ||
+                other.fullName == fullName) &&
+            (identical(other.emailVerified, emailVerified) ||
+                other.emailVerified == emailVerified) &&
             (identical(other.isAdmin, isAdmin) || other.isAdmin == isAdmin) &&
             (identical(other.totpEnabled, totpEnabled) ||
                 other.totpEnabled == totpEnabled));
@@ -385,11 +393,12 @@ mixin _$AuthUser {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, email, isAdmin, totpEnabled);
+  int get hashCode => Object.hash(
+      runtimeType, id, email, fullName, emailVerified, isAdmin, totpEnabled);
 
   @override
   String toString() {
-    return 'AuthUser(id: $id, email: $email, isAdmin: $isAdmin, totpEnabled: $totpEnabled)';
+    return 'AuthUser(id: $id, email: $email, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled)';
   }
 }
 
@@ -401,6 +410,8 @@ abstract mixin class $AuthUserCopyWith<$Res> {
   $Res call(
       {String id,
       String email,
+      @JsonKey(name: 'full_name', readValue: _readFullName) String fullName,
+      @JsonKey(name: 'email_verified') bool emailVerified,
       @JsonKey(name: 'is_admin') bool isAdmin,
       @JsonKey(name: 'totp_enabled') bool totpEnabled});
 }
@@ -419,6 +430,8 @@ class _$AuthUserCopyWithImpl<$Res> implements $AuthUserCopyWith<$Res> {
   $Res call({
     Object? id = null,
     Object? email = null,
+    Object? fullName = null,
+    Object? emailVerified = null,
     Object? isAdmin = null,
     Object? totpEnabled = null,
   }) {
@@ -431,6 +444,14 @@ class _$AuthUserCopyWithImpl<$Res> implements $AuthUserCopyWith<$Res> {
           ? _self.email
           : email // ignore: cast_nullable_to_non_nullable
               as String,
+      fullName: null == fullName
+          ? _self.fullName
+          : fullName // ignore: cast_nullable_to_non_nullable
+              as String,
+      emailVerified: null == emailVerified
+          ? _self.emailVerified
+          : emailVerified // ignore: cast_nullable_to_non_nullable
+              as bool,
       isAdmin: null == isAdmin
           ? _self.isAdmin
           : isAdmin // ignore: cast_nullable_to_non_nullable
@@ -539,6 +560,9 @@ extension AuthUserPatterns on AuthUser {
     TResult Function(
             String id,
             String email,
+            @JsonKey(name: 'full_name', readValue: _readFullName)
+            String fullName,
+            @JsonKey(name: 'email_verified') bool emailVerified,
             @JsonKey(name: 'is_admin') bool isAdmin,
             @JsonKey(name: 'totp_enabled') bool totpEnabled)?
         $default, {
@@ -547,8 +571,8 @@ extension AuthUserPatterns on AuthUser {
     final _that = this;
     switch (_that) {
       case _AuthUser() when $default != null:
-        return $default(
-            _that.id, _that.email, _that.isAdmin, _that.totpEnabled);
+        return $default(_that.id, _that.email, _that.fullName,
+            _that.emailVerified, _that.isAdmin, _that.totpEnabled);
       case _:
         return orElse();
     }
@@ -572,6 +596,9 @@ extension AuthUserPatterns on AuthUser {
     TResult Function(
             String id,
             String email,
+            @JsonKey(name: 'full_name', readValue: _readFullName)
+            String fullName,
+            @JsonKey(name: 'email_verified') bool emailVerified,
             @JsonKey(name: 'is_admin') bool isAdmin,
             @JsonKey(name: 'totp_enabled') bool totpEnabled)
         $default,
@@ -579,8 +606,8 @@ extension AuthUserPatterns on AuthUser {
     final _that = this;
     switch (_that) {
       case _AuthUser():
-        return $default(
-            _that.id, _that.email, _that.isAdmin, _that.totpEnabled);
+        return $default(_that.id, _that.email, _that.fullName,
+            _that.emailVerified, _that.isAdmin, _that.totpEnabled);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -603,6 +630,9 @@ extension AuthUserPatterns on AuthUser {
     TResult? Function(
             String id,
             String email,
+            @JsonKey(name: 'full_name', readValue: _readFullName)
+            String fullName,
+            @JsonKey(name: 'email_verified') bool emailVerified,
             @JsonKey(name: 'is_admin') bool isAdmin,
             @JsonKey(name: 'totp_enabled') bool totpEnabled)?
         $default,
@@ -610,8 +640,8 @@ extension AuthUserPatterns on AuthUser {
     final _that = this;
     switch (_that) {
       case _AuthUser() when $default != null:
-        return $default(
-            _that.id, _that.email, _that.isAdmin, _that.totpEnabled);
+        return $default(_that.id, _that.email, _that.fullName,
+            _that.emailVerified, _that.isAdmin, _that.totpEnabled);
       case _:
         return null;
     }
@@ -624,6 +654,8 @@ class _AuthUser implements AuthUser {
   const _AuthUser(
       {required this.id,
       required this.email,
+      @JsonKey(name: 'full_name', readValue: _readFullName) this.fullName = '',
+      @JsonKey(name: 'email_verified') this.emailVerified = false,
       @JsonKey(name: 'is_admin') this.isAdmin = false,
       @JsonKey(name: 'totp_enabled') this.totpEnabled = false});
   factory _AuthUser.fromJson(Map<String, dynamic> json) =>
@@ -633,6 +665,12 @@ class _AuthUser implements AuthUser {
   final String id;
   @override
   final String email;
+  @override
+  @JsonKey(name: 'full_name', readValue: _readFullName)
+  final String fullName;
+  @override
+  @JsonKey(name: 'email_verified')
+  final bool emailVerified;
   @override
   @JsonKey(name: 'is_admin')
   final bool isAdmin;
@@ -662,6 +700,10 @@ class _AuthUser implements AuthUser {
             other is _AuthUser &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.email, email) || other.email == email) &&
+            (identical(other.fullName, fullName) ||
+                other.fullName == fullName) &&
+            (identical(other.emailVerified, emailVerified) ||
+                other.emailVerified == emailVerified) &&
             (identical(other.isAdmin, isAdmin) || other.isAdmin == isAdmin) &&
             (identical(other.totpEnabled, totpEnabled) ||
                 other.totpEnabled == totpEnabled));
@@ -669,11 +711,12 @@ class _AuthUser implements AuthUser {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, email, isAdmin, totpEnabled);
+  int get hashCode => Object.hash(
+      runtimeType, id, email, fullName, emailVerified, isAdmin, totpEnabled);
 
   @override
   String toString() {
-    return 'AuthUser(id: $id, email: $email, isAdmin: $isAdmin, totpEnabled: $totpEnabled)';
+    return 'AuthUser(id: $id, email: $email, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled)';
   }
 }
 
@@ -687,6 +730,8 @@ abstract mixin class _$AuthUserCopyWith<$Res>
   $Res call(
       {String id,
       String email,
+      @JsonKey(name: 'full_name', readValue: _readFullName) String fullName,
+      @JsonKey(name: 'email_verified') bool emailVerified,
       @JsonKey(name: 'is_admin') bool isAdmin,
       @JsonKey(name: 'totp_enabled') bool totpEnabled});
 }
@@ -705,6 +750,8 @@ class __$AuthUserCopyWithImpl<$Res> implements _$AuthUserCopyWith<$Res> {
   $Res call({
     Object? id = null,
     Object? email = null,
+    Object? fullName = null,
+    Object? emailVerified = null,
     Object? isAdmin = null,
     Object? totpEnabled = null,
   }) {
@@ -717,6 +764,14 @@ class __$AuthUserCopyWithImpl<$Res> implements _$AuthUserCopyWith<$Res> {
           ? _self.email
           : email // ignore: cast_nullable_to_non_nullable
               as String,
+      fullName: null == fullName
+          ? _self.fullName
+          : fullName // ignore: cast_nullable_to_non_nullable
+              as String,
+      emailVerified: null == emailVerified
+          ? _self.emailVerified
+          : emailVerified // ignore: cast_nullable_to_non_nullable
+              as bool,
       isAdmin: null == isAdmin
           ? _self.isAdmin
           : isAdmin // ignore: cast_nullable_to_non_nullable

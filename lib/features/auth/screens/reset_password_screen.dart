@@ -80,10 +80,14 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     result.fold(
       onOk: (_) {
         setState(() => _buttonState = PButtonState.success);
-        PToast.success(
-            context, 'Password reset. Sign in with your new password.');
         Future.delayed(const Duration(milliseconds: 600), () {
-          if (mounted) context.go(Routes.login);
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute<void>(
+                builder: (_) => const _PasswordUpdatedSuccessScreen(),
+              ),
+            );
+          }
         });
       },
       onErr: (e) {
@@ -181,6 +185,55 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 state: _buttonState,
                 onPressed: _otpComplete ? _submit : null,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PasswordUpdatedSuccessScreen extends StatelessWidget {
+  const _PasswordUpdatedSuccessScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              Image.asset(
+                'assets/images/success_lock.png',
+                width: 190,
+                height: 190,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+              const Spacer(),
+              const Text(
+                'Your password has been updated',
+                textAlign: TextAlign.center,
+                style: AppTypography.h2,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Your password has been reset successfully, you can now proceed to log in.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const Spacer(flex: 2),
+              PPrimaryButton(
+                label: 'Login',
+                onPressed: () => context.go(Routes.login),
+              ),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),

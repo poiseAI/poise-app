@@ -21,6 +21,8 @@ Map<String, dynamic> _$AuthResponseToJson(_AuthResponse instance) =>
 _AuthUser _$AuthUserFromJson(Map<String, dynamic> json) => _AuthUser(
       id: json['id'] as String,
       email: json['email'] as String,
+      fullName: _readFullName(json, 'full_name') as String? ?? '',
+      emailVerified: json['email_verified'] as bool? ?? false,
       isAdmin: json['is_admin'] as bool? ?? false,
       totpEnabled: json['totp_enabled'] as bool? ?? false,
     );
@@ -28,6 +30,8 @@ _AuthUser _$AuthUserFromJson(Map<String, dynamic> json) => _AuthUser(
 Map<String, dynamic> _$AuthUserToJson(_AuthUser instance) => <String, dynamic>{
       'id': instance.id,
       'email': instance.email,
+      'full_name': instance.fullName,
+      'email_verified': instance.emailVerified,
       'is_admin': instance.isAdmin,
       'totp_enabled': instance.totpEnabled,
     };

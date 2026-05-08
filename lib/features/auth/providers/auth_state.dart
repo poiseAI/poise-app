@@ -12,6 +12,8 @@ sealed class AuthState with _$AuthState {
     required String userId,
     required String email,
     required String token,
+    @Default('') String fullName,
+    @Default(false) bool emailVerified,
     @Default(false) bool isAdmin,
     @Default(false) bool totpEnabled,
     @Default(false) bool hasActiveStrategy,

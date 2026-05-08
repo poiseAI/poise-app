@@ -28,6 +28,10 @@ class Auth extends _$Auth {
       onOk: (data) async {
         final userId = (data['id'] ?? data['user_id']) as String? ?? '';
         final email = data['email'] as String? ?? '';
+        final fullName = (data['full_name'] ?? data['name'] ?? data['fullName'])
+                as String? ??
+            '';
+        final emailVerified = data['email_verified'] as bool? ?? true;
         _connectWs(token);
         _scheduleProactiveRefresh(token);
 
@@ -41,6 +45,10 @@ class Auth extends _$Auth {
           userId: userId,
           email: email,
           token: token,
+          fullName: fullName,
+          emailVerified: emailVerified,
+          isAdmin: data['is_admin'] as bool? ?? false,
+          totpEnabled: data['totp_enabled'] as bool? ?? false,
           hasActiveStrategy: hasActiveStrategy,
         );
       },
@@ -105,6 +113,60 @@ class Auth extends _$Auth {
     state = const AsyncData(AuthState.unauthenticated());
   }
 
+  Future<Result<void, String>> verifyEmail(String otp) async {
+    final result = await ref.read(authApiProvider).verifyEmail(otp);
+    return result.fold(
+      onOk: (_) async {
+        await refreshSession();
+        return const Ok(null);
+      },
+      onErr: (err) => Err(err.userMessage),
+    );
+  }
+
+  Future<Result<void, String>> resendEmailVerification() async {
+    final result = await ref.read(authApiProvider).resendEmailVerification();
+    return result.fold(
+      onOk: (_) => const Ok(null),
+      onErr: (err) => Err(err.userMessage),
+    );
+  }
+
+  Future<void> refreshSession() async {
+    final token = await ref.read(secureStorageProvider).getToken();
+    if (token == null) {
+      state = const AsyncData(AuthState.unauthenticated());
+      return;
+    }
+
+    final result = await ref.read(authApiProvider).getMe();
+    await result.fold(
+      onOk: (data) async {
+        final userId = (data['id'] ?? data['user_id']) as String? ?? '';
+        final email = data['email'] as String? ?? '';
+        final fullName = (data['full_name'] ?? data['name'] ?? data['fullName'])
+                as String? ??
+            '';
+        final emailVerified = data['email_verified'] as bool? ?? true;
+        final strategiesResult =
+            await ref.read(strategiesApiProvider).getActiveStrategies();
+        final hasActiveStrategy =
+            strategiesResult.valueOrNull?.isNotEmpty ?? false;
+        state = AsyncData(AuthState.authenticated(
+          userId: userId,
+          email: email,
+          token: token,
+          fullName: fullName,
+          emailVerified: emailVerified,
+          isAdmin: data['is_admin'] as bool? ?? false,
+          totpEnabled: data['totp_enabled'] as bool? ?? false,
+          hasActiveStrategy: hasActiveStrategy,
+        ));
+      },
+      onErr: (_) async => logout(),
+    );
+  }
+
   void markHasActiveStrategy() {
     final current = state.valueOrNull;
     if (current is AuthAuthenticated) {
@@ -151,6 +213,8 @@ class Auth extends _$Auth {
       userId: resp.user.id,
       email: resp.user.email,
       token: resp.token,
+      fullName: resp.user.fullName,
+      emailVerified: resp.user.emailVerified,
       isAdmin: resp.user.isAdmin,
       totpEnabled: resp.user.totpEnabled,
       hasActiveStrategy: hasActiveStrategy,

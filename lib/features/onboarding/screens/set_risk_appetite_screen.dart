@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
@@ -20,70 +22,121 @@ class SetRiskAppetiteScreen extends ConsumerStatefulWidget {
 }
 
 class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
-  int? _selected; // 0=Conservative, 1=Moderate, 2=Aggressive
+  int _selected = 0;
+  bool _confirming = false;
   PButtonState _buttonState = PButtonState.idle;
 
   static const _options = [
-    (
+    _RiskPreset(
       label: 'Conservative',
-      desc: 'Max 1% per trade · 2% daily loss',
-      color: AppColors.riskLow,
+      shortDesc:
+          'This option is for users who want to minimize risk and prioritize capital preservation.',
+      reviewDesc:
+          'This appetite is best for experienced traders who understand high market volatility.',
+      request: CreateStrategyRequest(
+        name: 'Conservative',
+        maxPositionSize: 500,
+        maxPositionValueUsd: 2000,
+        maxDailyLossUsd: 5000,
+        maxOpenPositions: 5,
+        maxLeverage: 4,
+        requireExitReason: true,
+        requireOtpForExit: true,
+      ),
+      rows: [
+        ('Percentage risk per trade', '10%'),
+        ('Max leverage per asset', '4'),
+        ('Max trades per day', '25'),
+        ('Daily maximum loss', '\$5,000'),
+        ('Weekly Maximum loss', '\$5,000'),
+        ('Max concurrent open positions', '5'),
+        ('Max consecutive losses in a day', '5'),
+      ],
     ),
-    (
-      label: 'Moderate',
-      desc: 'Max 2% per trade · 5% daily loss',
-      color: AppColors.riskMedium,
+    _RiskPreset(
+      label: 'Balanced',
+      shortDesc: 'A practical middle ground for steady disciplined trading.',
+      reviewDesc:
+          'Balanced rules keep trade sizing controlled while allowing measured opportunities.',
+      request: CreateStrategyRequest(
+        name: 'Balanced',
+        maxPositionSize: 1000,
+        maxPositionValueUsd: 5000,
+        maxDailyLossUsd: 5000,
+        maxOpenPositions: 5,
+        maxLeverage: 10,
+        requireExitReason: true,
+        requireOtpForExit: true,
+      ),
+      rows: [
+        ('Percentage risk per trade', '2%'),
+        ('Max leverage per asset', '10'),
+        ('Max trades per day', '5'),
+        ('Daily maximum loss', '\$5,000'),
+        ('Weekly Maximum loss', '\$5,000'),
+        ('Max concurrent open positions', '5'),
+        ('Max consecutive losses in a day', '3'),
+      ],
     ),
-    (
+    _RiskPreset(
       label: 'Aggressive',
-      desc: 'Max 5% per trade · 10% daily loss',
-      color: AppColors.riskHigh,
+      shortDesc: 'Higher limits for traders who accept larger drawdown risk.',
+      reviewDesc:
+          'Aggressive rules allow more exposure and require active risk monitoring.',
+      request: CreateStrategyRequest(
+        name: 'Aggressive',
+        maxPositionSize: 2500,
+        maxPositionValueUsd: 10000,
+        maxDailyLossUsd: 10000,
+        maxOpenPositions: 10,
+        maxLeverage: 20,
+        requireExitReason: false,
+        requireOtpForExit: false,
+      ),
+      rows: [
+        ('Percentage risk per trade', '5%'),
+        ('Max leverage per asset', '20'),
+        ('Max trades per day', '10'),
+        ('Daily maximum loss', '\$10,000'),
+        ('Weekly Maximum loss', '\$20,000'),
+        ('Max concurrent open positions', '10'),
+        ('Max consecutive losses in a day', '5'),
+      ],
     ),
-  ];
-
-  // Risk profile presets
-  static const _presets = [
-    CreateStrategyRequest(
-      name: 'Conservative',
-      maxPositionSize: 500,
-      maxPositionValueUsd: 2000,
-      maxDailyLossUsd: 100,
-      maxOpenPositions: 3,
-      maxLeverage: 5,
-      requireExitReason: true,
-      requireOtpForExit: true,
-    ),
-    CreateStrategyRequest(
-      name: 'Moderate',
-      maxPositionSize: 1000,
-      maxPositionValueUsd: 5000,
-      maxDailyLossUsd: 250,
-      maxOpenPositions: 5,
-      maxLeverage: 10,
-      requireExitReason: true,
-      requireOtpForExit: true,
-    ),
-    CreateStrategyRequest(
-      name: 'Aggressive',
-      maxPositionSize: 2500,
-      maxPositionValueUsd: 10000,
-      maxDailyLossUsd: 500,
-      maxOpenPositions: 10,
-      maxLeverage: 20,
-      requireExitReason: false,
-      requireOtpForExit: false,
+    _RiskPreset(
+      label: 'Customizable',
+      shortDesc:
+          'Start from balanced defaults and adjust as your rules mature.',
+      reviewDesc:
+          'Custom rules use balanced defaults for now and can be refined later.',
+      request: CreateStrategyRequest(
+        name: 'Customizable',
+        maxPositionSize: 1000,
+        maxPositionValueUsd: 5000,
+        maxDailyLossUsd: 5000,
+        maxOpenPositions: 5,
+        maxLeverage: 10,
+        requireExitReason: true,
+        requireOtpForExit: true,
+      ),
+      rows: [
+        ('Percentage risk per trade', '2%'),
+        ('Max leverage per asset', '10'),
+        ('Max trades per day', '5'),
+        ('Daily maximum loss', '\$5,000'),
+        ('Weekly Maximum loss', '\$5,000'),
+        ('Max concurrent open positions', '5'),
+        ('Max consecutive losses in a day', '3'),
+      ],
     ),
   ];
 
   Future<void> _confirm() async {
-    if (_selected == null) return;
-
+    final preset = _options[_selected];
     setState(() => _buttonState = PButtonState.loading);
-
     final result = await ref
         .read(strategiesNotifierProvider.notifier)
-        .createAndActivate(_presets[_selected!]);
-
+        .createAndActivate(preset.request);
     if (!mounted) return;
 
     if (result.isErr) {
@@ -92,25 +145,27 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     }
 
     setState(() => _buttonState = PButtonState.success);
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const _AppetiteConfiguredSheet(),
-    );
+    await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
     final prefs = await ref.read(appPreferencesProvider.future);
     await prefs.setOnboardingComplete();
     if (!mounted) return;
-    // Mark strategy active after confirmation; router redirect handles navigation.
     ref.read(authProvider.notifier).markHasActiveStrategy();
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => const _RiskAppetiteSuccessScreen(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    return _confirming ? _buildConfirm(context) : _buildSelect(context);
+  }
+
+  Widget _buildSelect(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
           padding: AppSpacing.screenPadding,
@@ -118,48 +173,96 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.xl),
-              const Text('Set your risk\nappetite',
-                      style: AppTypography.display2)
-                  .animate()
-                  .fadeIn(duration: 300.ms)
-                  .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
-              const SizedBox(height: AppSpacing.xs),
+              const Text('Risk Appetite', style: AppTypography.h2),
+              const SizedBox(height: AppSpacing.lg),
               Text(
-                'We\'ll use this to protect your trades.',
-                style: AppTypography.bodyLg
-                    .copyWith(color: AppColors.textSecondary),
-              )
-                  .animate(delay: 80.ms)
-                  .fadeIn(duration: 280.ms)
-                  .slideY(begin: 0.06, end: 0),
-              const SizedBox(height: AppSpacing.xxl),
+                'Each risk appetite has specific trading rules that dictate how Poise enforces limits and guardrails.',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textPrimary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Select an option',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
               ..._options.asMap().entries.map((entry) {
-                final i = entry.key;
-                final opt = entry.value;
-                final isSelected = _selected == i;
-
+                final index = entry.key;
+                final option = entry.value;
+                final selected = index == _selected;
                 return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: i < _options.length - 1 ? AppSpacing.sm : 0,
-                  ),
-                  child: _RiskOptionCard(
-                    label: opt.label,
-                    desc: opt.desc,
-                    accentColor: opt.color,
-                    selected: isSelected,
-                    onTap: () => setState(() => _selected = i),
-                  )
-                      .animate(delay: (120 + i * 60).ms)
-                      .fadeIn(duration: 280.ms)
-                      .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _RiskSelectCard(
+                    preset: option,
+                    selected: selected,
+                    onTap: () => setState(() => _selected = index),
+                  ).animate(delay: (index * 45).ms).fadeIn().slideY(
+                        begin: 0.06,
+                        end: 0,
+                        curve: Curves.easeOutCubic,
+                      ),
                 );
               }),
               const Spacer(),
               PPrimaryButton(
+                label: 'Continue',
+                onPressed: () => setState(() => _confirming = true),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfirm(BuildContext context) {
+    final preset = _options[_selected];
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        title: const Text('Confirm configuration'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => setState(() => _confirming = false),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.textPrimary,
+                    height: 1.45,
+                  ),
+                  children: [
+                    const TextSpan(
+                        text: 'Please review your risk settings for a '),
+                    TextSpan(
+                      text: '${preset.label} Appetite',
+                      style: const TextStyle(color: AppColors.primary),
+                    ),
+                    const TextSpan(text: ' below.'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _RiskConfirmCard(preset: preset),
+              const Spacer(),
+              PPrimaryButton(
                 label: 'Confirm',
                 state: _buttonState,
-                onPressed: _selected != null ? _confirm : null,
-              ).animate(delay: 320.ms).fadeIn(duration: 250.ms),
+                onPressed:
+                    _buttonState == PButtonState.loading ? null : _confirm,
+              ),
               const SizedBox(height: AppSpacing.lg),
             ],
           ),
@@ -169,152 +272,194 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   }
 }
 
-class _AppetiteConfiguredSheet extends StatelessWidget {
-  const _AppetiteConfiguredSheet();
+class _RiskPreset {
+  const _RiskPreset({
+    required this.label,
+    required this.shortDesc,
+    required this.reviewDesc,
+    required this.request,
+    required this.rows,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(AppSpacing.sm),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.xl,
-        ),
-        decoration: const BoxDecoration(
-          color: AppColors.bgPrimary,
-          borderRadius: BorderRadius.all(Radius.circular(28)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Text('Poise AI', style: AppTypography.h4),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.brand50.withValues(alpha: 0.55),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  color: AppColors.primary,
-                  size: 34,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Text(
-              'Risk appetite configured',
-              textAlign: TextAlign.center,
-              style: AppTypography.h2,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Your guardrails are active. Poise will use these limits to review trades before execution.',
-              textAlign: TextAlign.center,
-              style: AppTypography.body.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PPrimaryButton(
-              label: 'Continue',
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  final String label;
+  final String shortDesc;
+  final String reviewDesc;
+  final CreateStrategyRequest request;
+  final List<(String, String)> rows;
 }
 
-class _RiskOptionCard extends StatelessWidget {
-  const _RiskOptionCard({
-    required this.label,
-    required this.desc,
-    required this.accentColor,
+class _RiskSelectCard extends StatelessWidget {
+  const _RiskSelectCard({
+    required this.preset,
     required this.selected,
     required this.onTap,
   });
 
-  final String label;
-  final String desc;
-  final Color accentColor;
+  final _RiskPreset preset;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
+      duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
-        color:
-            selected ? accentColor.withValues(alpha: 0.06) : AppColors.bgCard,
+        color: AppColors.bgCard,
         borderRadius: AppRadius.cardRadius,
         border: Border.all(
-          color: selected ? accentColor : AppColors.borderLight,
-          width: selected ? 1.5 : 1,
+          color: selected ? AppColors.primary : AppColors.borderLight,
+          width: selected ? 2 : 1,
         ),
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.18),
+                  blurRadius: 0,
+                  spreadRadius: 3,
+                ),
+              ]
+            : null,
       ),
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadius.cardRadius,
         child: Padding(
           padding: AppSpacing.cardPadding,
-          child: Row(
+          child: Column(
+            crossAxisAlignment:
+                selected ? CrossAxisAlignment.start : CrossAxisAlignment.center,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected ? accentColor : AppColors.textDisabled,
-                    width: selected ? 5 : 1.5,
+              Text(preset.label, style: AppTypography.h4),
+              if (selected) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  preset.shortDesc,
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.45,
                   ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RiskConfirmCard extends StatelessWidget {
+  const _RiskConfirmCard({required this.preset});
+
+  final _RiskPreset preset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.primary, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.18),
+            blurRadius: 0,
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(preset.label, style: AppTypography.h4),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            preset.reviewDesc,
+            style: AppTypography.bodySm.copyWith(
+              color: AppColors.textPrimary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...preset.rows.map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
                   children: [
-                    Text(label, style: AppTypography.h4),
-                    const SizedBox(height: 2),
-                    Text(
-                      desc,
-                      style: AppTypography.bodySm
-                          .copyWith(color: AppColors.textSecondary),
+                    Expanded(
+                      child: Text(
+                        row.$1,
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(row.$2, style: AppTypography.bodyMedium),
                   ],
                 ),
               ),
-              if (selected)
-                Icon(Icons.check_rounded, color: accentColor, size: 18)
-                    .animate()
-                    .scale(
-                      begin: const Offset(0, 0),
-                      end: const Offset(1, 1),
-                      duration: 200.ms,
-                      curve: Curves.easeOutBack,
-                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiskAppetiteSuccessScreen extends StatelessWidget {
+  const _RiskAppetiteSuccessScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              Image.asset(
+                'assets/images/success_rocket.png',
+                width: 190,
+                height: 190,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ).animate().fadeIn(duration: 260.ms).scale(
+                    begin: const Offset(0.92, 0.92),
+                    end: const Offset(1, 1),
+                    curve: Curves.easeOutBack,
+                  ),
+              const Spacer(),
+              const Text(
+                'Risk Appetite Successfully Set',
+                textAlign: TextAlign.center,
+                style: AppTypography.h2,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Click continue below to proceed',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const Spacer(flex: 2),
+              PPrimaryButton(
+                label: 'Continue',
+                onPressed: () => context.go(Routes.home),
+              ),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),

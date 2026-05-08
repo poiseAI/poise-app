@@ -9,16 +9,30 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../providers/trade_form_provider.dart';
+import '../providers/symbol_search_provider.dart';
 import 'widgets/leverage_slider.dart';
 import 'widgets/order_type_toggle.dart';
 import 'widgets/symbol_picker.dart';
 import 'widgets/tp_sl_section.dart';
 
-class TradeEntryScreen extends ConsumerWidget {
+class TradeEntryScreen extends ConsumerStatefulWidget {
   const TradeEntryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TradeEntryScreen> createState() => _TradeEntryScreenState();
+}
+
+class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(symbolSearchProvider.notifier).loadPopular();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final form = ref.watch(tradeFormProvider);
     final notifier = ref.read(tradeFormProvider.notifier);
     final preflight = form.preflight;

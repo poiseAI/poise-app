@@ -9,6 +9,7 @@ import '../../features/auth/providers/auth_state.dart';
 import '../../features/auth/screens/welcome_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
+import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/onboarding/screens/set_risk_appetite_screen.dart';
@@ -56,6 +57,11 @@ GoRouter appRouter(Ref ref) {
         path: Routes.register,
         pageBuilder: (context, state) =>
             _slideTransition(state, const RegisterScreen()),
+      ),
+      GoRoute(
+        path: Routes.verifyEmail,
+        pageBuilder: (context, state) =>
+            _slideTransition(state, const VerifyEmailScreen()),
       ),
       GoRoute(
         path: Routes.riskAppetite,
@@ -168,13 +174,16 @@ String? _redirect(Ref ref, GoRouterState state) {
       Routes.login,
 
     // Logged in but onboarding incomplete → must be on onboarding route
-    AuthAuthenticated(:final hasActiveStrategy)
-        when !hasActiveStrategy && !onOnboarding =>
+    AuthAuthenticated(:final emailVerified)
+        when !emailVerified && loc != Routes.verifyEmail =>
+      Routes.verifyEmail,
+    AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
+        when emailVerified && !hasActiveStrategy && !onOnboarding =>
       Routes.riskAppetite,
 
     // Logged in and onboarding done → leave auth/onboarding routes
-    AuthAuthenticated(:final hasActiveStrategy)
-        when hasActiveStrategy && (onAuth || onOnboarding) =>
+    AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
+        when emailVerified && hasActiveStrategy && (onAuth || onOnboarding) =>
       Routes.home,
     _ => null,
   };

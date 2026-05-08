@@ -24,7 +24,7 @@ final notificationUnreadCountProvider = AutoDisposeProvider<int>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef NotificationUnreadCountRef = AutoDisposeProviderRef<int>;
-String _$notificationsHash() => r'3d59625dcd34e7e335b0441f9859858f3d6f37d2';
+String _$notificationsHash() => r'5ce89e46ebaebbdf4f662aa38d605e41d4d2e40c';
 
 /// See also [Notifications].
 @ProviderFor(Notifications)

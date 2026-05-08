@@ -3,6 +3,7 @@ abstract final class Routes {
   static const welcome = '/auth/welcome';
   static const login = '/auth/login';
   static const register = '/auth/register';
+  static const verifyEmail = '/auth/verify-email';
   static const riskAppetite = '/onboarding/risk-appetite';
   static const forgotPassword = '/auth/forgot-password';
   static const resetPassword = '/auth/reset-password';

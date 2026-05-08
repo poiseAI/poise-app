@@ -145,8 +145,15 @@ extension AuthStatePatterns on AuthState {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loading,
     TResult Function()? unauthenticated,
-    TResult Function(String userId, String email, String token, bool isAdmin,
-            bool totpEnabled, bool hasActiveStrategy)?
+    TResult Function(
+            String userId,
+            String email,
+            String token,
+            String fullName,
+            bool emailVerified,
+            bool isAdmin,
+            bool totpEnabled,
+            bool hasActiveStrategy)?
         authenticated,
     required TResult orElse(),
   }) {
@@ -157,8 +164,15 @@ extension AuthStatePatterns on AuthState {
       case AuthUnauthenticated() when unauthenticated != null:
         return unauthenticated();
       case AuthAuthenticated() when authenticated != null:
-        return authenticated(_that.userId, _that.email, _that.token,
-            _that.isAdmin, _that.totpEnabled, _that.hasActiveStrategy);
+        return authenticated(
+            _that.userId,
+            _that.email,
+            _that.token,
+            _that.fullName,
+            _that.emailVerified,
+            _that.isAdmin,
+            _that.totpEnabled,
+            _that.hasActiveStrategy);
       case _:
         return orElse();
     }
@@ -181,8 +195,15 @@ extension AuthStatePatterns on AuthState {
   TResult when<TResult extends Object?>({
     required TResult Function() loading,
     required TResult Function() unauthenticated,
-    required TResult Function(String userId, String email, String token,
-            bool isAdmin, bool totpEnabled, bool hasActiveStrategy)
+    required TResult Function(
+            String userId,
+            String email,
+            String token,
+            String fullName,
+            bool emailVerified,
+            bool isAdmin,
+            bool totpEnabled,
+            bool hasActiveStrategy)
         authenticated,
   }) {
     final _that = this;
@@ -192,8 +213,15 @@ extension AuthStatePatterns on AuthState {
       case AuthUnauthenticated():
         return unauthenticated();
       case AuthAuthenticated():
-        return authenticated(_that.userId, _that.email, _that.token,
-            _that.isAdmin, _that.totpEnabled, _that.hasActiveStrategy);
+        return authenticated(
+            _that.userId,
+            _that.email,
+            _that.token,
+            _that.fullName,
+            _that.emailVerified,
+            _that.isAdmin,
+            _that.totpEnabled,
+            _that.hasActiveStrategy);
     }
   }
 
@@ -213,8 +241,15 @@ extension AuthStatePatterns on AuthState {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loading,
     TResult? Function()? unauthenticated,
-    TResult? Function(String userId, String email, String token, bool isAdmin,
-            bool totpEnabled, bool hasActiveStrategy)?
+    TResult? Function(
+            String userId,
+            String email,
+            String token,
+            String fullName,
+            bool emailVerified,
+            bool isAdmin,
+            bool totpEnabled,
+            bool hasActiveStrategy)?
         authenticated,
   }) {
     final _that = this;
@@ -224,8 +259,15 @@ extension AuthStatePatterns on AuthState {
       case AuthUnauthenticated() when unauthenticated != null:
         return unauthenticated();
       case AuthAuthenticated() when authenticated != null:
-        return authenticated(_that.userId, _that.email, _that.token,
-            _that.isAdmin, _that.totpEnabled, _that.hasActiveStrategy);
+        return authenticated(
+            _that.userId,
+            _that.email,
+            _that.token,
+            _that.fullName,
+            _that.emailVerified,
+            _that.isAdmin,
+            _that.totpEnabled,
+            _that.hasActiveStrategy);
       case _:
         return null;
     }
@@ -279,6 +321,8 @@ class AuthAuthenticated implements AuthState {
       {required this.userId,
       required this.email,
       required this.token,
+      this.fullName = '',
+      this.emailVerified = false,
       this.isAdmin = false,
       this.totpEnabled = false,
       this.hasActiveStrategy = false});
@@ -286,6 +330,10 @@ class AuthAuthenticated implements AuthState {
   final String userId;
   final String email;
   final String token;
+  @JsonKey()
+  final String fullName;
+  @JsonKey()
+  final bool emailVerified;
   @JsonKey()
   final bool isAdmin;
   @JsonKey()
@@ -308,6 +356,10 @@ class AuthAuthenticated implements AuthState {
             (identical(other.userId, userId) || other.userId == userId) &&
             (identical(other.email, email) || other.email == email) &&
             (identical(other.token, token) || other.token == token) &&
+            (identical(other.fullName, fullName) ||
+                other.fullName == fullName) &&
+            (identical(other.emailVerified, emailVerified) ||
+                other.emailVerified == emailVerified) &&
             (identical(other.isAdmin, isAdmin) || other.isAdmin == isAdmin) &&
             (identical(other.totpEnabled, totpEnabled) ||
                 other.totpEnabled == totpEnabled) &&
@@ -316,12 +368,12 @@ class AuthAuthenticated implements AuthState {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, userId, email, token, isAdmin,
-      totpEnabled, hasActiveStrategy);
+  int get hashCode => Object.hash(runtimeType, userId, email, token, fullName,
+      emailVerified, isAdmin, totpEnabled, hasActiveStrategy);
 
   @override
   String toString() {
-    return 'AuthState.authenticated(userId: $userId, email: $email, token: $token, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasActiveStrategy: $hasActiveStrategy)';
+    return 'AuthState.authenticated(userId: $userId, email: $email, token: $token, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasActiveStrategy: $hasActiveStrategy)';
   }
 }
 
@@ -336,6 +388,8 @@ abstract mixin class $AuthAuthenticatedCopyWith<$Res>
       {String userId,
       String email,
       String token,
+      String fullName,
+      bool emailVerified,
       bool isAdmin,
       bool totpEnabled,
       bool hasActiveStrategy});
@@ -356,6 +410,8 @@ class _$AuthAuthenticatedCopyWithImpl<$Res>
     Object? userId = null,
     Object? email = null,
     Object? token = null,
+    Object? fullName = null,
+    Object? emailVerified = null,
     Object? isAdmin = null,
     Object? totpEnabled = null,
     Object? hasActiveStrategy = null,
@@ -373,6 +429,14 @@ class _$AuthAuthenticatedCopyWithImpl<$Res>
           ? _self.token
           : token // ignore: cast_nullable_to_non_nullable
               as String,
+      fullName: null == fullName
+          ? _self.fullName
+          : fullName // ignore: cast_nullable_to_non_nullable
+              as String,
+      emailVerified: null == emailVerified
+          ? _self.emailVerified
+          : emailVerified // ignore: cast_nullable_to_non_nullable
+              as bool,
       isAdmin: null == isAdmin
           ? _self.isAdmin
           : isAdmin // ignore: cast_nullable_to_non_nullable

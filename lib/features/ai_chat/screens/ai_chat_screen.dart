@@ -13,10 +13,10 @@ import 'widgets/confirmation_card.dart';
 import 'widgets/tool_call_card.dart';
 
 const _suggestedPrompts = [
-  "What's my P&L today?",
-  'Show open positions',
-  "What's the risk on BTC?",
-  'Set TP for my biggest position',
+  'How did I perform this week?',
+  'What should I improve first?',
+  'Where am I exceeding my limits?',
+  'What patterns do you see in my trading?',
 ];
 
 class AiChatScreen extends ConsumerStatefulWidget {
@@ -81,25 +81,23 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
               child: Row(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentPurple.withValues(alpha: 0.12),
-                      borderRadius: AppRadius.chipRadius,
+                  const SizedBox(width: 48),
+                  const Expanded(
+                    child: Center(
+                      child: Text('Poise AI', style: AppTypography.h1),
                     ),
-                    child: const Icon(Icons.auto_awesome_rounded,
-                        size: 18, color: AppColors.accentPurple),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Text('Poise AI', style: AppTypography.h3),
-                  const Spacer(),
                   if (messages.isNotEmpty)
                     TextButton(
                       onPressed: () => ref.invalidate(aiChatProvider),
                       child: Text('Clear',
                           style: AppTypography.caption
                               .copyWith(color: AppColors.textSecondary)),
+                    ),
+                  if (messages.isEmpty)
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.error_outline_rounded),
                     ),
                 ],
               ),
@@ -183,36 +181,57 @@ class _EmptyState extends StatelessWidget {
     return Padding(
       padding: AppSpacing.screenPadding,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.accentPurple.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.auto_awesome_rounded,
-                size: 36, color: AppColors.accentPurple),
-          )
-              .animate()
-              .scale(begin: const Offset(0.8, 0.8), curve: Curves.easeOutBack),
-          const SizedBox(height: AppSpacing.lg),
-          const Text('Ask Poise AI anything', style: AppTypography.h3)
-              .animate(delay: 100.ms)
-              .fadeIn(),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'I can check your positions, risk scores, and execute trades with your confirmation.',
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ).animate(delay: 200.ms).fadeIn(),
+          const Spacer(),
+          Center(
+            child: Image.asset(
+              'assets/images/onboarding_light_bulb.png',
+              width: 210,
+              height: 210,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            ).animate().fadeIn(duration: 260.ms).scale(
+                  begin: const Offset(0.92, 0.92),
+                  end: const Offset(1, 1),
+                  curve: Curves.easeOutBack,
+                ),
+          ),
           const SizedBox(height: AppSpacing.xl),
-          // Suggested prompts (#54)
+          Center(
+            child: Text(
+              'Start a chat with Poise AI to get insight about your trades and your habits',
+              style: AppTypography.h2.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w400,
+                height: 1.35,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: FilledButton.icon(
+              onPressed: () => onPromptTap(_suggestedPrompts.first),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Start new chat'),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'Popular ways to get started',
+            style: AppTypography.h3.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            alignment: WrapAlignment.center,
+            alignment: WrapAlignment.start,
             children: _suggestedPrompts.asMap().entries.map((e) {
               return GestureDetector(
                 onTap: () {
@@ -223,13 +242,13 @@ class _EmptyState extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: AppColors.bgCard,
-                    borderRadius: AppRadius.chipRadius,
-                    border: Border.all(color: AppColors.borderLight),
+                    color: AppColors.primary.withValues(alpha: 0.04),
+                    borderRadius: AppRadius.pillRadius,
+                    border: Border.all(color: AppColors.brand100),
                   ),
                   child: Text(e.value,
-                      style: AppTypography.bodySm
-                          .copyWith(color: AppColors.textSecondary)),
+                      style: AppTypography.bodyLg
+                          .copyWith(color: AppColors.primary)),
                 ),
               )
                   .animate(delay: (300 + e.key * 50).ms)
