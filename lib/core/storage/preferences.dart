@@ -24,6 +24,7 @@ class AppPreferences {
   static const _notifGuardrailsKey = 'notif_guardrails';
   static const _notifExternalTradesKey = 'notif_external_trades';
   static const _notifEmailKey = 'notif_email';
+  static const _symbolHistoryKey = 'symbol_history';
 
   ThemeMode get themeMode {
     final raw = _prefs.getString(_themeKey);
@@ -82,4 +83,17 @@ class AppPreferences {
 
   Future<void> setEmailNotifications(bool value) =>
       _prefs.setBool(_notifEmailKey, value);
+
+  List<String> get symbolHistory =>
+      _prefs.getStringList(_symbolHistoryKey) ?? const [];
+
+  Future<void> addSymbolHistory(String symbol) async {
+    final normalized = symbol.trim().toUpperCase();
+    if (normalized.isEmpty) return;
+    final next = [
+      normalized,
+      ...symbolHistory.where((item) => item != normalized),
+    ].take(12).toList();
+    await _prefs.setStringList(_symbolHistoryKey, next);
+  }
 }

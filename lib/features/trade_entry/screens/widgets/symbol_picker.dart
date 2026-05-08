@@ -37,6 +37,7 @@ class _SymbolPickerState extends ConsumerState<SymbolPicker> {
 
   void _select(TradingSymbol sym) {
     ref.read(tradeFormProvider.notifier).setSymbol(sym);
+    ref.read(symbolSearchProvider.notifier).remember(sym);
     _ctrl.clear();
     _close();
   }

@@ -12,6 +12,7 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/onboarding/screens/set_risk_appetite_screen.dart';
+import '../storage/preferences.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/trade_entry/screens/trade_entry_screen.dart';
 import '../../features/trade_entry/screens/trade_validation_screen.dart';
@@ -32,6 +33,7 @@ GoRouter appRouter(Ref ref) {
   final refreshNotifier = _RouterRefreshNotifier();
   ref.onDispose(refreshNotifier.dispose);
   ref.listen(authProvider, (_, __) => refreshNotifier.notify());
+  ref.listen(appPreferencesProvider, (_, __) => refreshNotifier.notify());
 
   return GoRouter(
     initialLocation: Routes.welcome,
@@ -153,10 +155,17 @@ String? _redirect(Ref ref, GoRouterState state) {
   final loc = state.matchedLocation;
   final onAuth = loc.startsWith('/auth');
   final onOnboarding = loc.startsWith('/onboarding');
+  final hasSeenWelcome =
+      ref.read(appPreferencesProvider).valueOrNull?.hasSeenWelcome ?? false;
 
   return switch (auth) {
     // Not logged in → must be on an auth route
     AuthUnauthenticated() when !onAuth => Routes.welcome,
+
+    // Returning signed-out users should go straight to login after the first
+    // welcome run, while fresh installs still see the onboarding carousel.
+    AuthUnauthenticated() when hasSeenWelcome && loc == Routes.welcome =>
+      Routes.login,
 
     // Logged in but onboarding incomplete → must be on onboarding route
     AuthAuthenticated(:final hasActiveStrategy)
@@ -167,7 +176,6 @@ String? _redirect(Ref ref, GoRouterState state) {
     AuthAuthenticated(:final hasActiveStrategy)
         when hasActiveStrategy && (onAuth || onOnboarding) =>
       Routes.home,
-
     _ => null,
   };
 }

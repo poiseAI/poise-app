@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -18,8 +19,7 @@ class SetRiskAppetiteScreen extends ConsumerStatefulWidget {
       _SetRiskAppetiteScreenState();
 }
 
-class _SetRiskAppetiteScreenState
-    extends ConsumerState<SetRiskAppetiteScreen> {
+class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   int? _selected; // 0=Conservative, 1=Moderate, 2=Aggressive
   PButtonState _buttonState = PButtonState.idle;
 
@@ -94,7 +94,17 @@ class _SetRiskAppetiteScreenState
     setState(() => _buttonState = PButtonState.success);
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    // Mark strategy active after animation — router redirect handles navigation
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _AppetiteConfiguredSheet(),
+    );
+    if (!mounted) return;
+    final prefs = await ref.read(appPreferencesProvider.future);
+    await prefs.setOnboardingComplete();
+    if (!mounted) return;
+    // Mark strategy active after confirmation; router redirect handles navigation.
     ref.read(authProvider.notifier).markHasActiveStrategy();
   }
 
@@ -108,7 +118,8 @@ class _SetRiskAppetiteScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.xl),
-              const Text('Set your risk\nappetite', style: AppTypography.display2)
+              const Text('Set your risk\nappetite',
+                      style: AppTypography.display2)
                   .animate()
                   .fadeIn(duration: 300.ms)
                   .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
@@ -148,12 +159,84 @@ class _SetRiskAppetiteScreenState
                 label: 'Confirm',
                 state: _buttonState,
                 onPressed: _selected != null ? _confirm : null,
-              )
-                  .animate(delay: 320.ms)
-                  .fadeIn(duration: 250.ms),
+              ).animate(delay: 320.ms).fadeIn(duration: 250.ms),
               const SizedBox(height: AppSpacing.lg),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppetiteConfiguredSheet extends StatelessWidget {
+  const _AppetiteConfiguredSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.xl,
+        ),
+        decoration: const BoxDecoration(
+          color: AppColors.bgPrimary,
+          borderRadius: BorderRadius.all(Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Text('Poise AI', style: AppTypography.h4),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            Center(
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.brand50.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: AppColors.primary,
+                  size: 34,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const Text(
+              'Risk appetite configured',
+              textAlign: TextAlign.center,
+              style: AppTypography.h2,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Your guardrails are active. Poise will use these limits to review trades before execution.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PPrimaryButton(
+              label: 'Continue',
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
         ),
       ),
     );
@@ -181,9 +264,8 @@ class _RiskOptionCard extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color: selected
-            ? accentColor.withValues(alpha: 0.06)
-            : AppColors.bgCard,
+        color:
+            selected ? accentColor.withValues(alpha: 0.06) : AppColors.bgCard,
         borderRadius: AppRadius.cardRadius,
         border: Border.all(
           color: selected ? accentColor : AppColors.borderLight,

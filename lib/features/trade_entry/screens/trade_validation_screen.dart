@@ -72,8 +72,6 @@ class TradeValidationScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
                   _SummaryGrid(validation: validation),
                   const SizedBox(height: AppSpacing.xl),
-                  const Text('Risk guardrails check', style: AppTypography.h3),
-                  const SizedBox(height: AppSpacing.sm),
                   _GuardrailPanel(validation: validation),
                   if (form.submitError != null) ...[
                     const SizedBox(height: AppSpacing.md),
@@ -94,8 +92,9 @@ class TradeValidationScreen extends ConsumerWidget {
                     : form.isSubmitting
                         ? 'Submitting...'
                         : 'Submit trade',
-                state:
-                    form.isSubmitting ? PButtonState.loading : PButtonState.idle,
+                state: form.isSubmitting
+                    ? PButtonState.loading
+                    : PButtonState.idle,
                 onPressed: validation.isBlocked || form.isSubmitting
                     ? null
                     : () async {
@@ -138,8 +137,8 @@ class TradeValidationScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
               Text(
                 'Submitting this trade will continue after one or more guardrail warnings. Do you want to proceed?',
-                style:
-                    AppTypography.bodyLg.copyWith(color: AppColors.textSecondary),
+                style: AppTypography.bodyLg
+                    .copyWith(color: AppColors.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xl),
               OutlinedButton(
@@ -186,54 +185,101 @@ class _SummaryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      ('Risk', '${validation.riskPct.toStringAsFixed(2)}%', null),
-      ('Margin', _money(validation.margin), null),
-      ('Risk-to-Reward Ratio', validation.riskRewardRatio, null),
-      ('Possible Loss', '-${_money(validation.possibleLoss)}', AppColors.lossRed),
-      ('Possible Profit', '+${_money(validation.possibleProfit)}',
-          AppColors.profitGreen),
-    ];
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: AppSpacing.sm,
-        mainAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 1.85,
-      ),
-      itemBuilder: (_, i) {
-        final item = items[i];
-        return Container(
-          padding: AppSpacing.cardPadding,
-          decoration: BoxDecoration(
-            color: AppColors.bgCard,
-            borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: AppColors.borderLight),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(item.$1,
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.textSecondary)),
-              const SizedBox(height: AppSpacing.xs),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  item.$2,
-                  style: AppTypography.numericMd
-                      .copyWith(color: item.$3 ?? AppColors.textPrimary),
-                ),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _SummaryTile(
+                label: 'Risk',
+                value: '${validation.riskPct.toStringAsFixed(2)}%',
               ),
-            ],
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _SummaryTile(
+                label: 'Position Size',
+                value: _money(validation.margin),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _SummaryTile(
+                label: 'Risk-to-Reward Ratio',
+                value: validation.riskRewardRatio,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _SummaryTile(
+                label: 'Possible Loss',
+                value: '-${_money(validation.possibleLoss)}',
+                valueColor: AppColors.lossRed,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _SummaryTile(
+          label: 'Possible Profit',
+          value: '+${_money(validation.possibleProfit)}',
+          valueColor: AppColors.profitGreen,
+          centered: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  const _SummaryTile({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.centered = false,
+  });
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool centered;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 86,
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+            textAlign: centered ? TextAlign.center : TextAlign.left,
           ),
-        );
-      },
+          const SizedBox(height: AppSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: AppTypography.numericMd
+                  .copyWith(color: valueColor ?? AppColors.textPrimary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -245,36 +291,52 @@ class _GuardrailPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!validation.isBlocked && !validation.hasWarnings) {
-      return Container(
-        height: 280,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.bgCard,
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(color: AppColors.borderLight),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_outline_rounded,
-                size: 76, color: AppColors.accent),
-            const SizedBox(height: AppSpacing.md),
-            const Text('No guardrails triggered', style: AppTypography.h3),
-            const SizedBox(height: AppSpacing.xs),
-            Text('You’re all set and ready to roll!',
-                style:
-                    AppTypography.body.copyWith(color: AppColors.textSecondary)),
-          ],
-        ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Risk guardrails check', style: AppTypography.h3),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            height: 280,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: AppRadius.cardRadius,
+              border: Border.all(color: AppColors.borderLight),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_outline_rounded,
+                    size: 76, color: AppColors.accent),
+                const SizedBox(height: AppSpacing.md),
+                const Text('No guardrails triggered', style: AppTypography.h3),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'You’re all set and ready to roll!',
+                  style: AppTypography.body
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
     }
 
-    final items = [
-      ...validation.blockingGuardrails,
-      ...validation.warningGuardrails,
-    ];
+    final items = validation.isBlocked
+        ? validation.blockingGuardrails
+        : validation.warningGuardrails;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          validation.isBlocked
+              ? 'Risk guardrails check'
+              : 'Behavioural Analysis',
+          style: AppTypography.h3,
+        ),
+        const SizedBox(height: AppSpacing.sm),
         for (final item in items) ...[
           _GuardrailTile(item: item),
           const SizedBox(height: AppSpacing.sm),
@@ -312,7 +374,8 @@ class _GuardrailTile extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(item.message,
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary)),
           if (!blocked) ...[
             const SizedBox(height: AppSpacing.md),
             OutlinedButton(

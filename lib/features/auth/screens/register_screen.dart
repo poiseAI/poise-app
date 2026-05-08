@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -124,6 +123,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Sign up'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -138,12 +138,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: AppSpacing.lg),
-                  const Text('Sign up', style: AppTypography.h1),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text('Enter Details', style: AppTypography.h2),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Create your trading operating system.',
-                    style: AppTypography.bodyLg
+                    'Enter your details to create an account.',
+                    style: AppTypography.body
                         .copyWith(color: AppColors.textSecondary),
                   ),
                   SizedBox(
@@ -153,7 +153,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   PTextField(
                     controller: _nameCtrl,
                     focusNode: _nameFocus,
-                    label: 'Full name',
+                    label: 'Your name',
                     textInputAction: TextInputAction.next,
                     fieldState: _nameState,
                     errorText: _nameError,
@@ -204,6 +204,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     controller: _confirmCtrl,
                     focusNode: _confirmFocus,
                     label: 'Confirm password',
+                    hint: 'Repeat password',
                     obscureText: true,
                     textInputAction: TextInputAction.done,
                     fieldState: _confirmState,
@@ -217,20 +218,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   PPrimaryButton(
-                    label: 'Create account',
+                    label: 'Continue',
                     state: _buttonState,
                     onPressed: _submit,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Center(
-                    child: TextButton(
-                      onPressed: () => context.go(Routes.login),
-                      child: Text(
-                        'Already have an account? Log in',
-                        style: AppTypography.body
-                            .copyWith(color: AppColors.textSecondary),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                 ],
