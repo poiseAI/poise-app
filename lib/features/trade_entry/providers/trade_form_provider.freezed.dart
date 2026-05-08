@@ -19,11 +19,23 @@ mixin _$TradeFormState {
   OrderSide get side;
   double get quantity;
   double? get limitPrice;
+  MarginMode get marginMode;
+  double get marginValue;
+  double get availableBalance;
+  String get balanceCurrency;
   double get leverage;
-  List<double> get tpLevels;
+  double? get takeProfit1;
+  double? get takeProfit2;
   double? get slPrice;
+  bool get autoStopLossProgression;
   RiskScore? get riskScore;
+  TradePreflight? get preflight;
+  TradeValidationResult? get validation;
+  bool get isLoadingPreflight;
+  bool get isValidating;
   bool get isSubmitting;
+  String? get preflightError;
+  String? get validationError;
   String? get submitError;
   Order? get lastOrder;
 
@@ -48,14 +60,40 @@ mixin _$TradeFormState {
                 other.quantity == quantity) &&
             (identical(other.limitPrice, limitPrice) ||
                 other.limitPrice == limitPrice) &&
+            (identical(other.marginMode, marginMode) ||
+                other.marginMode == marginMode) &&
+            (identical(other.marginValue, marginValue) ||
+                other.marginValue == marginValue) &&
+            (identical(other.availableBalance, availableBalance) ||
+                other.availableBalance == availableBalance) &&
+            (identical(other.balanceCurrency, balanceCurrency) ||
+                other.balanceCurrency == balanceCurrency) &&
             (identical(other.leverage, leverage) ||
                 other.leverage == leverage) &&
-            const DeepCollectionEquality().equals(other.tpLevels, tpLevels) &&
+            (identical(other.takeProfit1, takeProfit1) ||
+                other.takeProfit1 == takeProfit1) &&
+            (identical(other.takeProfit2, takeProfit2) ||
+                other.takeProfit2 == takeProfit2) &&
             (identical(other.slPrice, slPrice) || other.slPrice == slPrice) &&
+            (identical(
+                    other.autoStopLossProgression, autoStopLossProgression) ||
+                other.autoStopLossProgression == autoStopLossProgression) &&
             (identical(other.riskScore, riskScore) ||
                 other.riskScore == riskScore) &&
+            (identical(other.preflight, preflight) ||
+                other.preflight == preflight) &&
+            (identical(other.validation, validation) ||
+                other.validation == validation) &&
+            (identical(other.isLoadingPreflight, isLoadingPreflight) ||
+                other.isLoadingPreflight == isLoadingPreflight) &&
+            (identical(other.isValidating, isValidating) ||
+                other.isValidating == isValidating) &&
             (identical(other.isSubmitting, isSubmitting) ||
                 other.isSubmitting == isSubmitting) &&
+            (identical(other.preflightError, preflightError) ||
+                other.preflightError == preflightError) &&
+            (identical(other.validationError, validationError) ||
+                other.validationError == validationError) &&
             (identical(other.submitError, submitError) ||
                 other.submitError == submitError) &&
             (identical(other.lastOrder, lastOrder) ||
@@ -63,24 +101,37 @@ mixin _$TradeFormState {
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      symbol,
-      orderType,
-      side,
-      quantity,
-      limitPrice,
-      leverage,
-      const DeepCollectionEquality().hash(tpLevels),
-      slPrice,
-      riskScore,
-      isSubmitting,
-      submitError,
-      lastOrder);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        symbol,
+        orderType,
+        side,
+        quantity,
+        limitPrice,
+        marginMode,
+        marginValue,
+        availableBalance,
+        balanceCurrency,
+        leverage,
+        takeProfit1,
+        takeProfit2,
+        slPrice,
+        autoStopLossProgression,
+        riskScore,
+        preflight,
+        validation,
+        isLoadingPreflight,
+        isValidating,
+        isSubmitting,
+        preflightError,
+        validationError,
+        submitError,
+        lastOrder
+      ]);
 
   @override
   String toString() {
-    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, quantity: $quantity, limitPrice: $limitPrice, leverage: $leverage, tpLevels: $tpLevels, slPrice: $slPrice, riskScore: $riskScore, isSubmitting: $isSubmitting, submitError: $submitError, lastOrder: $lastOrder)';
+    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder)';
   }
 }
 
@@ -96,11 +147,23 @@ abstract mixin class $TradeFormStateCopyWith<$Res> {
       OrderSide side,
       double quantity,
       double? limitPrice,
+      MarginMode marginMode,
+      double marginValue,
+      double availableBalance,
+      String balanceCurrency,
       double leverage,
-      List<double> tpLevels,
+      double? takeProfit1,
+      double? takeProfit2,
       double? slPrice,
+      bool autoStopLossProgression,
       RiskScore? riskScore,
+      TradePreflight? preflight,
+      TradeValidationResult? validation,
+      bool isLoadingPreflight,
+      bool isValidating,
       bool isSubmitting,
+      String? preflightError,
+      String? validationError,
       String? submitError,
       Order? lastOrder});
 
@@ -127,11 +190,23 @@ class _$TradeFormStateCopyWithImpl<$Res>
     Object? side = null,
     Object? quantity = null,
     Object? limitPrice = freezed,
+    Object? marginMode = null,
+    Object? marginValue = null,
+    Object? availableBalance = null,
+    Object? balanceCurrency = null,
     Object? leverage = null,
-    Object? tpLevels = null,
+    Object? takeProfit1 = freezed,
+    Object? takeProfit2 = freezed,
     Object? slPrice = freezed,
+    Object? autoStopLossProgression = null,
     Object? riskScore = freezed,
+    Object? preflight = freezed,
+    Object? validation = freezed,
+    Object? isLoadingPreflight = null,
+    Object? isValidating = null,
     Object? isSubmitting = null,
+    Object? preflightError = freezed,
+    Object? validationError = freezed,
     Object? submitError = freezed,
     Object? lastOrder = freezed,
   }) {
@@ -156,26 +231,74 @@ class _$TradeFormStateCopyWithImpl<$Res>
           ? _self.limitPrice
           : limitPrice // ignore: cast_nullable_to_non_nullable
               as double?,
+      marginMode: null == marginMode
+          ? _self.marginMode
+          : marginMode // ignore: cast_nullable_to_non_nullable
+              as MarginMode,
+      marginValue: null == marginValue
+          ? _self.marginValue
+          : marginValue // ignore: cast_nullable_to_non_nullable
+              as double,
+      availableBalance: null == availableBalance
+          ? _self.availableBalance
+          : availableBalance // ignore: cast_nullable_to_non_nullable
+              as double,
+      balanceCurrency: null == balanceCurrency
+          ? _self.balanceCurrency
+          : balanceCurrency // ignore: cast_nullable_to_non_nullable
+              as String,
       leverage: null == leverage
           ? _self.leverage
           : leverage // ignore: cast_nullable_to_non_nullable
               as double,
-      tpLevels: null == tpLevels
-          ? _self.tpLevels
-          : tpLevels // ignore: cast_nullable_to_non_nullable
-              as List<double>,
+      takeProfit1: freezed == takeProfit1
+          ? _self.takeProfit1
+          : takeProfit1 // ignore: cast_nullable_to_non_nullable
+              as double?,
+      takeProfit2: freezed == takeProfit2
+          ? _self.takeProfit2
+          : takeProfit2 // ignore: cast_nullable_to_non_nullable
+              as double?,
       slPrice: freezed == slPrice
           ? _self.slPrice
           : slPrice // ignore: cast_nullable_to_non_nullable
               as double?,
+      autoStopLossProgression: null == autoStopLossProgression
+          ? _self.autoStopLossProgression
+          : autoStopLossProgression // ignore: cast_nullable_to_non_nullable
+              as bool,
       riskScore: freezed == riskScore
           ? _self.riskScore
           : riskScore // ignore: cast_nullable_to_non_nullable
               as RiskScore?,
+      preflight: freezed == preflight
+          ? _self.preflight
+          : preflight // ignore: cast_nullable_to_non_nullable
+              as TradePreflight?,
+      validation: freezed == validation
+          ? _self.validation
+          : validation // ignore: cast_nullable_to_non_nullable
+              as TradeValidationResult?,
+      isLoadingPreflight: null == isLoadingPreflight
+          ? _self.isLoadingPreflight
+          : isLoadingPreflight // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isValidating: null == isValidating
+          ? _self.isValidating
+          : isValidating // ignore: cast_nullable_to_non_nullable
+              as bool,
       isSubmitting: null == isSubmitting
           ? _self.isSubmitting
           : isSubmitting // ignore: cast_nullable_to_non_nullable
               as bool,
+      preflightError: freezed == preflightError
+          ? _self.preflightError
+          : preflightError // ignore: cast_nullable_to_non_nullable
+              as String?,
+      validationError: freezed == validationError
+          ? _self.validationError
+          : validationError // ignore: cast_nullable_to_non_nullable
+              as String?,
       submitError: freezed == submitError
           ? _self.submitError
           : submitError // ignore: cast_nullable_to_non_nullable
@@ -329,11 +452,23 @@ extension TradeFormStatePatterns on TradeFormState {
             OrderSide side,
             double quantity,
             double? limitPrice,
+            MarginMode marginMode,
+            double marginValue,
+            double availableBalance,
+            String balanceCurrency,
             double leverage,
-            List<double> tpLevels,
+            double? takeProfit1,
+            double? takeProfit2,
             double? slPrice,
+            bool autoStopLossProgression,
             RiskScore? riskScore,
+            TradePreflight? preflight,
+            TradeValidationResult? validation,
+            bool isLoadingPreflight,
+            bool isValidating,
             bool isSubmitting,
+            String? preflightError,
+            String? validationError,
             String? submitError,
             Order? lastOrder)?
         $default, {
@@ -348,11 +483,23 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.side,
             _that.quantity,
             _that.limitPrice,
+            _that.marginMode,
+            _that.marginValue,
+            _that.availableBalance,
+            _that.balanceCurrency,
             _that.leverage,
-            _that.tpLevels,
+            _that.takeProfit1,
+            _that.takeProfit2,
             _that.slPrice,
+            _that.autoStopLossProgression,
             _that.riskScore,
+            _that.preflight,
+            _that.validation,
+            _that.isLoadingPreflight,
+            _that.isValidating,
             _that.isSubmitting,
+            _that.preflightError,
+            _that.validationError,
             _that.submitError,
             _that.lastOrder);
       case _:
@@ -381,11 +528,23 @@ extension TradeFormStatePatterns on TradeFormState {
             OrderSide side,
             double quantity,
             double? limitPrice,
+            MarginMode marginMode,
+            double marginValue,
+            double availableBalance,
+            String balanceCurrency,
             double leverage,
-            List<double> tpLevels,
+            double? takeProfit1,
+            double? takeProfit2,
             double? slPrice,
+            bool autoStopLossProgression,
             RiskScore? riskScore,
+            TradePreflight? preflight,
+            TradeValidationResult? validation,
+            bool isLoadingPreflight,
+            bool isValidating,
             bool isSubmitting,
+            String? preflightError,
+            String? validationError,
             String? submitError,
             Order? lastOrder)
         $default,
@@ -399,11 +558,23 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.side,
             _that.quantity,
             _that.limitPrice,
+            _that.marginMode,
+            _that.marginValue,
+            _that.availableBalance,
+            _that.balanceCurrency,
             _that.leverage,
-            _that.tpLevels,
+            _that.takeProfit1,
+            _that.takeProfit2,
             _that.slPrice,
+            _that.autoStopLossProgression,
             _that.riskScore,
+            _that.preflight,
+            _that.validation,
+            _that.isLoadingPreflight,
+            _that.isValidating,
             _that.isSubmitting,
+            _that.preflightError,
+            _that.validationError,
             _that.submitError,
             _that.lastOrder);
       case _:
@@ -431,11 +602,23 @@ extension TradeFormStatePatterns on TradeFormState {
             OrderSide side,
             double quantity,
             double? limitPrice,
+            MarginMode marginMode,
+            double marginValue,
+            double availableBalance,
+            String balanceCurrency,
             double leverage,
-            List<double> tpLevels,
+            double? takeProfit1,
+            double? takeProfit2,
             double? slPrice,
+            bool autoStopLossProgression,
             RiskScore? riskScore,
+            TradePreflight? preflight,
+            TradeValidationResult? validation,
+            bool isLoadingPreflight,
+            bool isValidating,
             bool isSubmitting,
+            String? preflightError,
+            String? validationError,
             String? submitError,
             Order? lastOrder)?
         $default,
@@ -449,11 +632,23 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.side,
             _that.quantity,
             _that.limitPrice,
+            _that.marginMode,
+            _that.marginValue,
+            _that.availableBalance,
+            _that.balanceCurrency,
             _that.leverage,
-            _that.tpLevels,
+            _that.takeProfit1,
+            _that.takeProfit2,
             _that.slPrice,
+            _that.autoStopLossProgression,
             _that.riskScore,
+            _that.preflight,
+            _that.validation,
+            _that.isLoadingPreflight,
+            _that.isValidating,
             _that.isSubmitting,
+            _that.preflightError,
+            _that.validationError,
             _that.submitError,
             _that.lastOrder);
       case _:
@@ -468,17 +663,28 @@ class _TradeFormState implements TradeFormState {
   const _TradeFormState(
       {this.symbol,
       this.orderType = OrderType.market,
-      this.side = OrderSide.buy,
+      this.side = OrderSide.long,
       this.quantity = 1.0,
       this.limitPrice,
-      this.leverage = 10.0,
-      final List<double> tpLevels = const [],
+      this.marginMode = MarginMode.percentage,
+      this.marginValue = 20.0,
+      this.availableBalance = 0.0,
+      this.balanceCurrency = 'USD',
+      this.leverage = 1.0,
+      this.takeProfit1,
+      this.takeProfit2,
       this.slPrice,
+      this.autoStopLossProgression = false,
       this.riskScore,
+      this.preflight,
+      this.validation,
+      this.isLoadingPreflight = false,
+      this.isValidating = false,
       this.isSubmitting = false,
+      this.preflightError,
+      this.validationError,
       this.submitError,
-      this.lastOrder})
-      : _tpLevels = tpLevels;
+      this.lastOrder});
 
   @override
   final TradingSymbol? symbol;
@@ -495,23 +701,47 @@ class _TradeFormState implements TradeFormState {
   final double? limitPrice;
   @override
   @JsonKey()
-  final double leverage;
-  final List<double> _tpLevels;
+  final MarginMode marginMode;
   @override
   @JsonKey()
-  List<double> get tpLevels {
-    if (_tpLevels is EqualUnmodifiableListView) return _tpLevels;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_tpLevels);
-  }
-
+  final double marginValue;
+  @override
+  @JsonKey()
+  final double availableBalance;
+  @override
+  @JsonKey()
+  final String balanceCurrency;
+  @override
+  @JsonKey()
+  final double leverage;
+  @override
+  final double? takeProfit1;
+  @override
+  final double? takeProfit2;
   @override
   final double? slPrice;
   @override
+  @JsonKey()
+  final bool autoStopLossProgression;
+  @override
   final RiskScore? riskScore;
+  @override
+  final TradePreflight? preflight;
+  @override
+  final TradeValidationResult? validation;
+  @override
+  @JsonKey()
+  final bool isLoadingPreflight;
+  @override
+  @JsonKey()
+  final bool isValidating;
   @override
   @JsonKey()
   final bool isSubmitting;
+  @override
+  final String? preflightError;
+  @override
+  final String? validationError;
   @override
   final String? submitError;
   @override
@@ -538,14 +768,40 @@ class _TradeFormState implements TradeFormState {
                 other.quantity == quantity) &&
             (identical(other.limitPrice, limitPrice) ||
                 other.limitPrice == limitPrice) &&
+            (identical(other.marginMode, marginMode) ||
+                other.marginMode == marginMode) &&
+            (identical(other.marginValue, marginValue) ||
+                other.marginValue == marginValue) &&
+            (identical(other.availableBalance, availableBalance) ||
+                other.availableBalance == availableBalance) &&
+            (identical(other.balanceCurrency, balanceCurrency) ||
+                other.balanceCurrency == balanceCurrency) &&
             (identical(other.leverage, leverage) ||
                 other.leverage == leverage) &&
-            const DeepCollectionEquality().equals(other._tpLevels, _tpLevels) &&
+            (identical(other.takeProfit1, takeProfit1) ||
+                other.takeProfit1 == takeProfit1) &&
+            (identical(other.takeProfit2, takeProfit2) ||
+                other.takeProfit2 == takeProfit2) &&
             (identical(other.slPrice, slPrice) || other.slPrice == slPrice) &&
+            (identical(
+                    other.autoStopLossProgression, autoStopLossProgression) ||
+                other.autoStopLossProgression == autoStopLossProgression) &&
             (identical(other.riskScore, riskScore) ||
                 other.riskScore == riskScore) &&
+            (identical(other.preflight, preflight) ||
+                other.preflight == preflight) &&
+            (identical(other.validation, validation) ||
+                other.validation == validation) &&
+            (identical(other.isLoadingPreflight, isLoadingPreflight) ||
+                other.isLoadingPreflight == isLoadingPreflight) &&
+            (identical(other.isValidating, isValidating) ||
+                other.isValidating == isValidating) &&
             (identical(other.isSubmitting, isSubmitting) ||
                 other.isSubmitting == isSubmitting) &&
+            (identical(other.preflightError, preflightError) ||
+                other.preflightError == preflightError) &&
+            (identical(other.validationError, validationError) ||
+                other.validationError == validationError) &&
             (identical(other.submitError, submitError) ||
                 other.submitError == submitError) &&
             (identical(other.lastOrder, lastOrder) ||
@@ -553,24 +809,37 @@ class _TradeFormState implements TradeFormState {
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      symbol,
-      orderType,
-      side,
-      quantity,
-      limitPrice,
-      leverage,
-      const DeepCollectionEquality().hash(_tpLevels),
-      slPrice,
-      riskScore,
-      isSubmitting,
-      submitError,
-      lastOrder);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        symbol,
+        orderType,
+        side,
+        quantity,
+        limitPrice,
+        marginMode,
+        marginValue,
+        availableBalance,
+        balanceCurrency,
+        leverage,
+        takeProfit1,
+        takeProfit2,
+        slPrice,
+        autoStopLossProgression,
+        riskScore,
+        preflight,
+        validation,
+        isLoadingPreflight,
+        isValidating,
+        isSubmitting,
+        preflightError,
+        validationError,
+        submitError,
+        lastOrder
+      ]);
 
   @override
   String toString() {
-    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, quantity: $quantity, limitPrice: $limitPrice, leverage: $leverage, tpLevels: $tpLevels, slPrice: $slPrice, riskScore: $riskScore, isSubmitting: $isSubmitting, submitError: $submitError, lastOrder: $lastOrder)';
+    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder)';
   }
 }
 
@@ -588,11 +857,23 @@ abstract mixin class _$TradeFormStateCopyWith<$Res>
       OrderSide side,
       double quantity,
       double? limitPrice,
+      MarginMode marginMode,
+      double marginValue,
+      double availableBalance,
+      String balanceCurrency,
       double leverage,
-      List<double> tpLevels,
+      double? takeProfit1,
+      double? takeProfit2,
       double? slPrice,
+      bool autoStopLossProgression,
       RiskScore? riskScore,
+      TradePreflight? preflight,
+      TradeValidationResult? validation,
+      bool isLoadingPreflight,
+      bool isValidating,
       bool isSubmitting,
+      String? preflightError,
+      String? validationError,
       String? submitError,
       Order? lastOrder});
 
@@ -622,11 +903,23 @@ class __$TradeFormStateCopyWithImpl<$Res>
     Object? side = null,
     Object? quantity = null,
     Object? limitPrice = freezed,
+    Object? marginMode = null,
+    Object? marginValue = null,
+    Object? availableBalance = null,
+    Object? balanceCurrency = null,
     Object? leverage = null,
-    Object? tpLevels = null,
+    Object? takeProfit1 = freezed,
+    Object? takeProfit2 = freezed,
     Object? slPrice = freezed,
+    Object? autoStopLossProgression = null,
     Object? riskScore = freezed,
+    Object? preflight = freezed,
+    Object? validation = freezed,
+    Object? isLoadingPreflight = null,
+    Object? isValidating = null,
     Object? isSubmitting = null,
+    Object? preflightError = freezed,
+    Object? validationError = freezed,
     Object? submitError = freezed,
     Object? lastOrder = freezed,
   }) {
@@ -651,26 +944,74 @@ class __$TradeFormStateCopyWithImpl<$Res>
           ? _self.limitPrice
           : limitPrice // ignore: cast_nullable_to_non_nullable
               as double?,
+      marginMode: null == marginMode
+          ? _self.marginMode
+          : marginMode // ignore: cast_nullable_to_non_nullable
+              as MarginMode,
+      marginValue: null == marginValue
+          ? _self.marginValue
+          : marginValue // ignore: cast_nullable_to_non_nullable
+              as double,
+      availableBalance: null == availableBalance
+          ? _self.availableBalance
+          : availableBalance // ignore: cast_nullable_to_non_nullable
+              as double,
+      balanceCurrency: null == balanceCurrency
+          ? _self.balanceCurrency
+          : balanceCurrency // ignore: cast_nullable_to_non_nullable
+              as String,
       leverage: null == leverage
           ? _self.leverage
           : leverage // ignore: cast_nullable_to_non_nullable
               as double,
-      tpLevels: null == tpLevels
-          ? _self._tpLevels
-          : tpLevels // ignore: cast_nullable_to_non_nullable
-              as List<double>,
+      takeProfit1: freezed == takeProfit1
+          ? _self.takeProfit1
+          : takeProfit1 // ignore: cast_nullable_to_non_nullable
+              as double?,
+      takeProfit2: freezed == takeProfit2
+          ? _self.takeProfit2
+          : takeProfit2 // ignore: cast_nullable_to_non_nullable
+              as double?,
       slPrice: freezed == slPrice
           ? _self.slPrice
           : slPrice // ignore: cast_nullable_to_non_nullable
               as double?,
+      autoStopLossProgression: null == autoStopLossProgression
+          ? _self.autoStopLossProgression
+          : autoStopLossProgression // ignore: cast_nullable_to_non_nullable
+              as bool,
       riskScore: freezed == riskScore
           ? _self.riskScore
           : riskScore // ignore: cast_nullable_to_non_nullable
               as RiskScore?,
+      preflight: freezed == preflight
+          ? _self.preflight
+          : preflight // ignore: cast_nullable_to_non_nullable
+              as TradePreflight?,
+      validation: freezed == validation
+          ? _self.validation
+          : validation // ignore: cast_nullable_to_non_nullable
+              as TradeValidationResult?,
+      isLoadingPreflight: null == isLoadingPreflight
+          ? _self.isLoadingPreflight
+          : isLoadingPreflight // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isValidating: null == isValidating
+          ? _self.isValidating
+          : isValidating // ignore: cast_nullable_to_non_nullable
+              as bool,
       isSubmitting: null == isSubmitting
           ? _self.isSubmitting
           : isSubmitting // ignore: cast_nullable_to_non_nullable
               as bool,
+      preflightError: freezed == preflightError
+          ? _self.preflightError
+          : preflightError // ignore: cast_nullable_to_non_nullable
+              as String?,
+      validationError: freezed == validationError
+          ? _self.validationError
+          : validationError // ignore: cast_nullable_to_non_nullable
+              as String?,
       submitError: freezed == submitError
           ? _self.submitError
           : submitError // ignore: cast_nullable_to_non_nullable

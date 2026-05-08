@@ -71,9 +71,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final result = await ref.read(authProvider.notifier).login(
           _emailCtrl.text.trim(),
           _passwordCtrl.text,
-          totpToken: _showTotp && _totpCtrl.text.length == 6
-              ? _totpCtrl.text
-              : null,
+          totpToken:
+              _showTotp && _totpCtrl.text.length == 6 ? _totpCtrl.text : null,
         );
 
     if (!mounted) return;
@@ -117,106 +116,157 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.lg),
-              const Text('Welcome back', style: AppTypography.h1),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Sign in to your account.',
-                style: AppTypography.bodyLg
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              PTextField(
-                controller: _emailCtrl,
-                focusNode: _emailFocus,
-                label: 'Email',
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                fieldState: _emailState,
-                errorText: _emailError,
-                autofocus: true,
-                onChanged: (val) {
-                  if (_emailState != PFieldState.idle) _validateEmail(val);
-                },
-                onEditingComplete: () => _passwordFocus.requestFocus(),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              PTextField(
-                controller: _passwordCtrl,
-                focusNode: _passwordFocus,
-                label: 'Password',
-                obscureText: true,
-                textInputAction:
-                    _showTotp ? TextInputAction.next : TextInputAction.done,
-                fieldState: _passwordState,
-                errorText: _passwordError,
-                onChanged: (val) {
-                  if (_passwordState != PFieldState.idle) _validatePassword(val);
-                },
-                onEditingComplete: _showTotp
-                    ? () => _totpFocus.requestFocus()
-                    : _submit,
-              ),
-              if (_showTotp) ...[
-                const SizedBox(height: AppSpacing.md),
-                PTextField(
-                  controller: _totpCtrl,
-                  focusNode: _totpFocus,
-                  label: '2FA code',
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  onEditingComplete: _submit,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Enter the 6-digit code from your authenticator app.',
-                  style: AppTypography.bodySm
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => context.push(Routes.forgotPassword),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    'Forgot password?',
-                    style: AppTypography.bodySm
-                        .copyWith(color: AppColors.primary),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              PPrimaryButton(
-                label: 'Sign in',
-                state: _buttonState,
-                onPressed: _submit,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.go(Routes.register),
-                  child: Text(
-                    "Don't have an account? Sign up",
-                    style: AppTypography.body
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: AppSpacing.screenPadding,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: constraints.maxHeight * 0.10),
+                  const Center(child: _PoiseMark()),
+                  const SizedBox(height: AppSpacing.xl),
+                  const Text('Welcome back', style: AppTypography.h1),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Sign in to keep every trade inside your plan.',
+                    style: AppTypography.bodyLg
                         .copyWith(color: AppColors.textSecondary),
                   ),
-                ),
+                  SizedBox(
+                      height: constraints.maxHeight > 720
+                          ? AppSpacing.xxl
+                          : AppSpacing.xl),
+                  PTextField(
+                    controller: _emailCtrl,
+                    focusNode: _emailFocus,
+                    label: 'Email address',
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    fieldState: _emailState,
+                    errorText: _emailError,
+                    autofocus: true,
+                    onChanged: (val) {
+                      if (_emailState != PFieldState.idle) {
+                        _validateEmail(val);
+                      }
+                    },
+                    onEditingComplete: () => _passwordFocus.requestFocus(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  PTextField(
+                    controller: _passwordCtrl,
+                    focusNode: _passwordFocus,
+                    label: 'Password',
+                    obscureText: true,
+                    textInputAction:
+                        _showTotp ? TextInputAction.next : TextInputAction.done,
+                    fieldState: _passwordState,
+                    errorText: _passwordError,
+                    onChanged: (val) {
+                      if (_passwordState != PFieldState.idle) {
+                        _validatePassword(val);
+                      }
+                    },
+                    onEditingComplete:
+                        _showTotp ? () => _totpFocus.requestFocus() : _submit,
+                  ),
+                  if (_showTotp) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    PTextField(
+                      controller: _totpCtrl,
+                      focusNode: _totpFocus,
+                      label: '2FA code',
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onEditingComplete: _submit,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Enter the 6-digit code from your authenticator app.',
+                      style: AppTypography.bodySm
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => context.push(Routes.forgotPassword),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Forgot password?',
+                        style: AppTypography.bodySm
+                            .copyWith(color: AppColors.primary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  PPrimaryButton(
+                    label: 'Log in',
+                    state: _buttonState,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.go(Routes.register),
+                      child: Text(
+                        "Don't have an account? Sign up",
+                        style: AppTypography.body
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PoiseMark extends StatelessWidget {
+  const _PoiseMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 82,
+      height: 82,
+      decoration: BoxDecoration(
+        color: AppColors.brand500,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brand500.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.shield_rounded,
+            size: 46,
+            color: Colors.white.withValues(alpha: 0.96),
+          ),
+          const Icon(
+            Icons.show_chart_rounded,
+            size: 24,
+            color: AppColors.brand500,
+          ),
+        ],
       ),
     );
   }

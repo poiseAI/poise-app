@@ -49,6 +49,8 @@ class HomeAnalytics {
     required this.opportunityCostTotal,
     required this.opportunityItems,
     required this.guardrails,
+    required this.disciplineFlags,
+    required this.sourceBreakdown,
     this.mostCostlyMistake,
   });
 
@@ -80,6 +82,14 @@ class HomeAnalytics {
           .whereType<Map<String, dynamic>>()
           .map(GuardrailMetric.fromJson)
           .toList(),
+      disciplineFlags:
+          ((json['discipline_flags'] as List<dynamic>?) ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(DisciplineFlag.fromJson)
+              .toList(),
+      sourceBreakdown: SourceBreakdown.fromJson(
+        (json['source_breakdown'] as Map<String, dynamic>?) ?? const {},
+      ),
     );
   }
 
@@ -92,6 +102,52 @@ class HomeAnalytics {
   final double opportunityCostTotal;
   final List<OpportunityItem> opportunityItems;
   final List<GuardrailMetric> guardrails;
+  final List<DisciplineFlag> disciplineFlags;
+  final SourceBreakdown sourceBreakdown;
+}
+
+class SourceBreakdown {
+  const SourceBreakdown({
+    required this.poiseOpen,
+    required this.externalOpen,
+    required this.poiseOrders,
+    required this.externalOrders,
+  });
+
+  factory SourceBreakdown.fromJson(Map<String, dynamic> json) =>
+      SourceBreakdown(
+        poiseOpen: (json['poise_open'] as num?)?.toInt() ?? 0,
+        externalOpen: (json['external_open'] as num?)?.toInt() ?? 0,
+        poiseOrders: (json['poise_orders'] as num?)?.toInt() ?? 0,
+        externalOrders: (json['external_orders'] as num?)?.toInt() ?? 0,
+      );
+
+  final int poiseOpen;
+  final int externalOpen;
+  final int poiseOrders;
+  final int externalOrders;
+}
+
+class DisciplineFlag {
+  const DisciplineFlag({
+    required this.label,
+    required this.description,
+    required this.severity,
+    required this.impact,
+  });
+
+  factory DisciplineFlag.fromJson(Map<String, dynamic> json) =>
+      DisciplineFlag(
+        label: json['label'] as String? ?? 'Discipline flag',
+        description: json['description'] as String? ?? '',
+        severity: json['severity'] as String? ?? 'moderate',
+        impact: (json['impact'] as num?)?.toDouble() ?? 0,
+      );
+
+  final String label;
+  final String description;
+  final String severity;
+  final double impact;
 }
 
 class CostlyMistake {

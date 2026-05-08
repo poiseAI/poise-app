@@ -26,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: const PAppBar(title: 'Profile'),
-      backgroundColor: AppColors.bgSurface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ListView(
         padding: AppSpacing.screenPadding,
         children: [
@@ -123,18 +123,23 @@ class _TotpTileState extends ConsumerState<_TotpTile> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        border: Border.all(color: AppColors.borderLight),
+        color: colorScheme.surfaceContainerHighest,
+        border: Border.all(color: colorScheme.outline),
         borderRadius: const BorderRadius.all(Radius.circular(8)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('2FA', style: AppTypography.body),
+          Text(
+            '2FA',
+            style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+          ),
           if (widget.totpEnabled)
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -173,7 +178,7 @@ class _TotpTileState extends ConsumerState<_TotpTile> {
               child: Text(
                 'Set up',
                 style: AppTypography.body.copyWith(
-                  color: AppColors.accent,
+                  color: colorScheme.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -237,6 +242,8 @@ class _TotpEnableDialogState extends ConsumerState<_TotpEnableDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return AlertDialog(
       title: const Text('Set up 2FA'),
       content: SingleChildScrollView(
@@ -250,7 +257,7 @@ class _TotpEnableDialogState extends ConsumerState<_TotpEnableDialog> {
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border.all(color: AppColors.borderLight),
+                    border: Border.all(color: colorScheme.outline),
                     borderRadius: const BorderRadius.all(Radius.circular(8)),
                   ),
                   child: QrImageView(
@@ -271,7 +278,7 @@ class _TotpEnableDialogState extends ConsumerState<_TotpEnableDialog> {
               ),
             if (widget.qrUrl.isNotEmpty) const SizedBox(height: AppSpacing.md),
             const Text(
-              '1. Scan the QR code or enter the secret key manually.',
+              '1. Scan the QR code with Google/Microsoft/Apple Authenticator or enter the secret key manually.',
               style: AppTypography.bodySm,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -281,13 +288,15 @@ class _TotpEnableDialogState extends ConsumerState<_TotpEnableDialog> {
             Container(
               width: double.infinity,
               padding: AppSpacing.cardPadding,
-              decoration: const BoxDecoration(
-                color: AppColors.bgSecondary,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                border: Border.all(color: colorScheme.outline),
+                borderRadius: const BorderRadius.all(Radius.circular(6)),
               ),
               child: SelectableText(
                 widget.secret,
                 style: AppTypography.bodyMedium.copyWith(
+                  color: colorScheme.onSurface,
                   fontFamily: 'monospace',
                 ),
               ),
@@ -302,6 +311,8 @@ class _TotpEnableDialogState extends ConsumerState<_TotpEnableDialog> {
               controller: _codeCtrl,
               keyboardType: TextInputType.number,
               maxLength: 6,
+              style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
               decoration: InputDecoration(
                 hintText: '000000',
                 errorText: _error,
@@ -359,6 +370,8 @@ class _TotpDisableDialogState extends State<_TotpDisableDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return AlertDialog(
       title: const Text('Disable 2FA'),
       content: Column(
@@ -375,6 +388,8 @@ class _TotpDisableDialogState extends State<_TotpDisableDialog> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             autofocus: true,
+            style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+            cursorColor: colorScheme.primary,
             decoration: InputDecoration(
               hintText: '000000',
               errorText: _error,
@@ -407,12 +422,14 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Text(
         title.toUpperCase(),
         style: AppTypography.labelSm.copyWith(
-          color: AppColors.textSecondary,
+          color: colorScheme.onSurfaceVariant,
           letterSpacing: 1.2,
         ),
       ),
@@ -428,22 +445,27 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        border: Border.all(color: AppColors.borderLight),
+        color: colorScheme.surfaceContainerHighest,
+        border: Border.all(color: colorScheme.outline),
         borderRadius: const BorderRadius.all(Radius.circular(8)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.body),
+          Text(
+            label,
+            style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+          ),
           Text(
             value,
             style: AppTypography.body.copyWith(
-              color: valueColor ?? AppColors.textPrimary,
+              color: valueColor ?? colorScheme.onSurface,
             ),
           ),
         ],
@@ -500,9 +522,19 @@ class _ExchangeConnectionsSectionState
             onAdd: () => _showAddExchangeDialog(context),
           );
         }
+        final activeCount =
+            connections.where((c) => (c['is_active'] as bool?) ?? false).length;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (connections.length > 1) ...[
+              _ExchangeClarityNote(
+                text: activeCount > 1
+                    ? '$activeCount exchanges are active. Each trade will show its exchange so external and Poise trades stay easy to separate.'
+                    : '${connections.length} exchanges connected. Activate the exchange you want Poise to use for new trades.',
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             ...connections.map((c) => _ConnectionTile(
                   id: (c['id'] as String?) ?? '',
                   exchange: (c['exchange'] as String?) ?? 'Exchange',
@@ -529,6 +561,40 @@ class _ExchangeConnectionsSectionState
       builder: (_) => const _ExchangeConnectionDialog(),
     );
     if (created == true && mounted) _reload();
+  }
+}
+
+class _ExchangeClarityNote extends StatelessWidget {
+  const _ExchangeClarityNote({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.brand50.withValues(alpha: 0.35),
+        border: Border.all(color: AppColors.brand100),
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded,
+              color: AppColors.primary, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypography.bodySm.copyWith(
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -571,12 +637,14 @@ class _ConnectionTileState extends ConsumerState<_ConnectionTile> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        border: Border.all(color: AppColors.borderLight),
+        color: colorScheme.surfaceContainerHighest,
+        border: Border.all(color: colorScheme.outline),
         borderRadius: const BorderRadius.all(Radius.circular(8)),
       ),
       child: Row(
@@ -587,14 +655,15 @@ class _ConnectionTileState extends ConsumerState<_ConnectionTile> {
             children: [
               Text(
                 widget.exchange,
-                style: AppTypography.body,
+                style:
+                    AppTypography.body.copyWith(color: colorScheme.onSurface),
               ),
               Text(
                 widget.isActive ? 'Active' : 'Inactive',
                 style: AppTypography.bodySm.copyWith(
                   color: widget.isActive
                       ? AppColors.profitGreen
-                      : AppColors.textSecondary,
+                      : colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -634,11 +703,13 @@ class _ExchangeEmptyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        border: Border.all(color: AppColors.borderLight),
+        color: colorScheme.surfaceContainerHighest,
+        border: Border.all(color: colorScheme.outline),
         borderRadius: const BorderRadius.all(Radius.circular(8)),
       ),
       child: Column(
@@ -646,13 +717,14 @@ class _ExchangeEmptyCard extends StatelessWidget {
         children: [
           Text(
             'No exchange connected',
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.body
+                .copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Connect Bybit or Binance to start trading.',
-            style:
-                AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodySm
+                .copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: AppSpacing.md),
           const _MagicLinkButton(),
@@ -740,6 +812,8 @@ class _ExchangeConnectionDialogState
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return AlertDialog(
       title: const Text('Connect Bybit'),
       content: SingleChildScrollView(
@@ -748,12 +822,16 @@ class _ExchangeConnectionDialogState
           children: [
             TextField(
               controller: _apiKeyCtrl,
+              style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
               decoration: const InputDecoration(labelText: 'API key'),
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _apiSecretCtrl,
+              style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
               decoration: const InputDecoration(labelText: 'API secret'),
               obscureText: true,
             ),

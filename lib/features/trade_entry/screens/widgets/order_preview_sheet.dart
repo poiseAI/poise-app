@@ -100,7 +100,7 @@ class _PreviewBody extends StatelessWidget {
         ('Stop loss', '\$${form.slPrice!.toStringAsFixed(2)}'),
     ];
 
-    final sideColor = form.side == OrderSide.buy
+    final sideColor = form.side == OrderSide.long
         ? AppColors.profitGreen
         : AppColors.lossRed;
 
@@ -132,7 +132,7 @@ class _PreviewBody extends StatelessWidget {
                 borderRadius: AppRadius.chipRadius,
               ),
               child: Text(
-                form.side == OrderSide.buy ? 'BUY' : 'SELL',
+                form.side == OrderSide.long ? 'BUY' : 'SELL',
                 style: AppTypography.label.copyWith(color: sideColor),
               ),
             ),
@@ -156,7 +156,7 @@ class _PreviewBody extends StatelessWidget {
               .fadeIn(duration: 200.ms)
               .slideX(begin: 0.05, end: 0);
         }),
-        if (form.tpLevels.isNotEmpty) ...[
+        if (form.takeProfit1 != null || form.takeProfit2 != null) ...[
           Row(
             children: [
               Text('Take profit',
@@ -165,7 +165,10 @@ class _PreviewBody extends StatelessWidget {
               const Spacer(),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: form.tpLevels
+                children: [
+                  if (form.takeProfit1 != null) form.takeProfit1!,
+                  if (form.takeProfit2 != null) form.takeProfit2!,
+                ]
                     .map((p) => Text('\$${p.toStringAsFixed(2)}',
                         style: AppTypography.label
                             .copyWith(color: AppColors.profitGreen)))
@@ -208,7 +211,7 @@ class _PreviewBody extends StatelessWidget {
         PPrimaryButton(
           label: 'Confirm order',
           state: form.isSubmitting ? PButtonState.loading : PButtonState.idle,
-          onPressed: notifier.submit,
+          onPressed: () => notifier.submit(bypassWarnings: true),
         ),
         const SizedBox(height: AppSpacing.sm),
       ],

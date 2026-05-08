@@ -19,15 +19,24 @@ mixin _$TradingSymbol {
   String get baseAsset;
   @JsonKey(readValue: _readQuoteAsset)
   String get quoteAsset;
+  @JsonKey(readValue: _readExchange)
   String get exchange;
-  @JsonKey(name: 'last_price')
+  @JsonKey(readValue: _readStatus)
+  String get status;
+  @JsonKey(readValue: _readLastPrice)
   double get lastPrice;
-  @JsonKey(name: 'price_change_pct')
+  @JsonKey(readValue: _readPriceChangePct)
   double get priceChangePct;
-  @JsonKey(name: 'min_qty')
+  @JsonKey(readValue: _readMinQty)
   double get minQty;
-  @JsonKey(name: 'max_leverage')
+  @JsonKey(readValue: _readMaxLeverage)
   int get maxLeverage;
+  @JsonKey(readValue: _readTickSize)
+  double get tickSize;
+  @JsonKey(readValue: _readQtyStep)
+  double get qtyStep;
+  @JsonKey(readValue: _readMinNotional)
+  double get minNotional;
 
   /// Create a copy of TradingSymbol
   /// with the given fields replaced by the non-null parameter values.
@@ -52,23 +61,41 @@ mixin _$TradingSymbol {
                 other.quoteAsset == quoteAsset) &&
             (identical(other.exchange, exchange) ||
                 other.exchange == exchange) &&
+            (identical(other.status, status) || other.status == status) &&
             (identical(other.lastPrice, lastPrice) ||
                 other.lastPrice == lastPrice) &&
             (identical(other.priceChangePct, priceChangePct) ||
                 other.priceChangePct == priceChangePct) &&
             (identical(other.minQty, minQty) || other.minQty == minQty) &&
             (identical(other.maxLeverage, maxLeverage) ||
-                other.maxLeverage == maxLeverage));
+                other.maxLeverage == maxLeverage) &&
+            (identical(other.tickSize, tickSize) ||
+                other.tickSize == tickSize) &&
+            (identical(other.qtyStep, qtyStep) || other.qtyStep == qtyStep) &&
+            (identical(other.minNotional, minNotional) ||
+                other.minNotional == minNotional));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, symbol, baseAsset, quoteAsset,
-      exchange, lastPrice, priceChangePct, minQty, maxLeverage);
+  int get hashCode => Object.hash(
+      runtimeType,
+      symbol,
+      baseAsset,
+      quoteAsset,
+      exchange,
+      status,
+      lastPrice,
+      priceChangePct,
+      minQty,
+      maxLeverage,
+      tickSize,
+      qtyStep,
+      minNotional);
 
   @override
   String toString() {
-    return 'TradingSymbol(symbol: $symbol, baseAsset: $baseAsset, quoteAsset: $quoteAsset, exchange: $exchange, lastPrice: $lastPrice, priceChangePct: $priceChangePct, minQty: $minQty, maxLeverage: $maxLeverage)';
+    return 'TradingSymbol(symbol: $symbol, baseAsset: $baseAsset, quoteAsset: $quoteAsset, exchange: $exchange, status: $status, lastPrice: $lastPrice, priceChangePct: $priceChangePct, minQty: $minQty, maxLeverage: $maxLeverage, tickSize: $tickSize, qtyStep: $qtyStep, minNotional: $minNotional)';
   }
 }
 
@@ -82,11 +109,15 @@ abstract mixin class $TradingSymbolCopyWith<$Res> {
       {String symbol,
       @JsonKey(readValue: _readBaseAsset) String baseAsset,
       @JsonKey(readValue: _readQuoteAsset) String quoteAsset,
-      String exchange,
-      @JsonKey(name: 'last_price') double lastPrice,
-      @JsonKey(name: 'price_change_pct') double priceChangePct,
-      @JsonKey(name: 'min_qty') double minQty,
-      @JsonKey(name: 'max_leverage') int maxLeverage});
+      @JsonKey(readValue: _readExchange) String exchange,
+      @JsonKey(readValue: _readStatus) String status,
+      @JsonKey(readValue: _readLastPrice) double lastPrice,
+      @JsonKey(readValue: _readPriceChangePct) double priceChangePct,
+      @JsonKey(readValue: _readMinQty) double minQty,
+      @JsonKey(readValue: _readMaxLeverage) int maxLeverage,
+      @JsonKey(readValue: _readTickSize) double tickSize,
+      @JsonKey(readValue: _readQtyStep) double qtyStep,
+      @JsonKey(readValue: _readMinNotional) double minNotional});
 }
 
 /// @nodoc
@@ -106,10 +137,14 @@ class _$TradingSymbolCopyWithImpl<$Res>
     Object? baseAsset = null,
     Object? quoteAsset = null,
     Object? exchange = null,
+    Object? status = null,
     Object? lastPrice = null,
     Object? priceChangePct = null,
     Object? minQty = null,
     Object? maxLeverage = null,
+    Object? tickSize = null,
+    Object? qtyStep = null,
+    Object? minNotional = null,
   }) {
     return _then(_self.copyWith(
       symbol: null == symbol
@@ -128,6 +163,10 @@ class _$TradingSymbolCopyWithImpl<$Res>
           ? _self.exchange
           : exchange // ignore: cast_nullable_to_non_nullable
               as String,
+      status: null == status
+          ? _self.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
       lastPrice: null == lastPrice
           ? _self.lastPrice
           : lastPrice // ignore: cast_nullable_to_non_nullable
@@ -144,6 +183,18 @@ class _$TradingSymbolCopyWithImpl<$Res>
           ? _self.maxLeverage
           : maxLeverage // ignore: cast_nullable_to_non_nullable
               as int,
+      tickSize: null == tickSize
+          ? _self.tickSize
+          : tickSize // ignore: cast_nullable_to_non_nullable
+              as double,
+      qtyStep: null == qtyStep
+          ? _self.qtyStep
+          : qtyStep // ignore: cast_nullable_to_non_nullable
+              as double,
+      minNotional: null == minNotional
+          ? _self.minNotional
+          : minNotional // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
@@ -245,11 +296,15 @@ extension TradingSymbolPatterns on TradingSymbol {
             String symbol,
             @JsonKey(readValue: _readBaseAsset) String baseAsset,
             @JsonKey(readValue: _readQuoteAsset) String quoteAsset,
-            String exchange,
-            @JsonKey(name: 'last_price') double lastPrice,
-            @JsonKey(name: 'price_change_pct') double priceChangePct,
-            @JsonKey(name: 'min_qty') double minQty,
-            @JsonKey(name: 'max_leverage') int maxLeverage)?
+            @JsonKey(readValue: _readExchange) String exchange,
+            @JsonKey(readValue: _readStatus) String status,
+            @JsonKey(readValue: _readLastPrice) double lastPrice,
+            @JsonKey(readValue: _readPriceChangePct) double priceChangePct,
+            @JsonKey(readValue: _readMinQty) double minQty,
+            @JsonKey(readValue: _readMaxLeverage) int maxLeverage,
+            @JsonKey(readValue: _readTickSize) double tickSize,
+            @JsonKey(readValue: _readQtyStep) double qtyStep,
+            @JsonKey(readValue: _readMinNotional) double minNotional)?
         $default, {
     required TResult orElse(),
   }) {
@@ -261,10 +316,14 @@ extension TradingSymbolPatterns on TradingSymbol {
             _that.baseAsset,
             _that.quoteAsset,
             _that.exchange,
+            _that.status,
             _that.lastPrice,
             _that.priceChangePct,
             _that.minQty,
-            _that.maxLeverage);
+            _that.maxLeverage,
+            _that.tickSize,
+            _that.qtyStep,
+            _that.minNotional);
       case _:
         return orElse();
     }
@@ -289,11 +348,15 @@ extension TradingSymbolPatterns on TradingSymbol {
             String symbol,
             @JsonKey(readValue: _readBaseAsset) String baseAsset,
             @JsonKey(readValue: _readQuoteAsset) String quoteAsset,
-            String exchange,
-            @JsonKey(name: 'last_price') double lastPrice,
-            @JsonKey(name: 'price_change_pct') double priceChangePct,
-            @JsonKey(name: 'min_qty') double minQty,
-            @JsonKey(name: 'max_leverage') int maxLeverage)
+            @JsonKey(readValue: _readExchange) String exchange,
+            @JsonKey(readValue: _readStatus) String status,
+            @JsonKey(readValue: _readLastPrice) double lastPrice,
+            @JsonKey(readValue: _readPriceChangePct) double priceChangePct,
+            @JsonKey(readValue: _readMinQty) double minQty,
+            @JsonKey(readValue: _readMaxLeverage) int maxLeverage,
+            @JsonKey(readValue: _readTickSize) double tickSize,
+            @JsonKey(readValue: _readQtyStep) double qtyStep,
+            @JsonKey(readValue: _readMinNotional) double minNotional)
         $default,
   ) {
     final _that = this;
@@ -304,10 +367,14 @@ extension TradingSymbolPatterns on TradingSymbol {
             _that.baseAsset,
             _that.quoteAsset,
             _that.exchange,
+            _that.status,
             _that.lastPrice,
             _that.priceChangePct,
             _that.minQty,
-            _that.maxLeverage);
+            _that.maxLeverage,
+            _that.tickSize,
+            _that.qtyStep,
+            _that.minNotional);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -331,11 +398,15 @@ extension TradingSymbolPatterns on TradingSymbol {
             String symbol,
             @JsonKey(readValue: _readBaseAsset) String baseAsset,
             @JsonKey(readValue: _readQuoteAsset) String quoteAsset,
-            String exchange,
-            @JsonKey(name: 'last_price') double lastPrice,
-            @JsonKey(name: 'price_change_pct') double priceChangePct,
-            @JsonKey(name: 'min_qty') double minQty,
-            @JsonKey(name: 'max_leverage') int maxLeverage)?
+            @JsonKey(readValue: _readExchange) String exchange,
+            @JsonKey(readValue: _readStatus) String status,
+            @JsonKey(readValue: _readLastPrice) double lastPrice,
+            @JsonKey(readValue: _readPriceChangePct) double priceChangePct,
+            @JsonKey(readValue: _readMinQty) double minQty,
+            @JsonKey(readValue: _readMaxLeverage) int maxLeverage,
+            @JsonKey(readValue: _readTickSize) double tickSize,
+            @JsonKey(readValue: _readQtyStep) double qtyStep,
+            @JsonKey(readValue: _readMinNotional) double minNotional)?
         $default,
   ) {
     final _that = this;
@@ -346,10 +417,14 @@ extension TradingSymbolPatterns on TradingSymbol {
             _that.baseAsset,
             _that.quoteAsset,
             _that.exchange,
+            _that.status,
             _that.lastPrice,
             _that.priceChangePct,
             _that.minQty,
-            _that.maxLeverage);
+            _that.maxLeverage,
+            _that.tickSize,
+            _that.qtyStep,
+            _that.minNotional);
       case _:
         return null;
     }
@@ -363,11 +438,15 @@ class _TradingSymbol implements TradingSymbol {
       {required this.symbol,
       @JsonKey(readValue: _readBaseAsset) required this.baseAsset,
       @JsonKey(readValue: _readQuoteAsset) required this.quoteAsset,
-      this.exchange = 'bybit',
-      @JsonKey(name: 'last_price') this.lastPrice = 0.0,
-      @JsonKey(name: 'price_change_pct') this.priceChangePct = 0.0,
-      @JsonKey(name: 'min_qty') this.minQty = 0.001,
-      @JsonKey(name: 'max_leverage') this.maxLeverage = 100});
+      @JsonKey(readValue: _readExchange) this.exchange = 'bybit',
+      @JsonKey(readValue: _readStatus) this.status = 'Trading',
+      @JsonKey(readValue: _readLastPrice) this.lastPrice = 0.0,
+      @JsonKey(readValue: _readPriceChangePct) this.priceChangePct = 0.0,
+      @JsonKey(readValue: _readMinQty) this.minQty = 0.001,
+      @JsonKey(readValue: _readMaxLeverage) this.maxLeverage = 100,
+      @JsonKey(readValue: _readTickSize) this.tickSize = 0.0,
+      @JsonKey(readValue: _readQtyStep) this.qtyStep = 0.0,
+      @JsonKey(readValue: _readMinNotional) this.minNotional = 0.0});
   factory _TradingSymbol.fromJson(Map<String, dynamic> json) =>
       _$TradingSymbolFromJson(json);
 
@@ -380,20 +459,32 @@ class _TradingSymbol implements TradingSymbol {
   @JsonKey(readValue: _readQuoteAsset)
   final String quoteAsset;
   @override
-  @JsonKey()
+  @JsonKey(readValue: _readExchange)
   final String exchange;
   @override
-  @JsonKey(name: 'last_price')
+  @JsonKey(readValue: _readStatus)
+  final String status;
+  @override
+  @JsonKey(readValue: _readLastPrice)
   final double lastPrice;
   @override
-  @JsonKey(name: 'price_change_pct')
+  @JsonKey(readValue: _readPriceChangePct)
   final double priceChangePct;
   @override
-  @JsonKey(name: 'min_qty')
+  @JsonKey(readValue: _readMinQty)
   final double minQty;
   @override
-  @JsonKey(name: 'max_leverage')
+  @JsonKey(readValue: _readMaxLeverage)
   final int maxLeverage;
+  @override
+  @JsonKey(readValue: _readTickSize)
+  final double tickSize;
+  @override
+  @JsonKey(readValue: _readQtyStep)
+  final double qtyStep;
+  @override
+  @JsonKey(readValue: _readMinNotional)
+  final double minNotional;
 
   /// Create a copy of TradingSymbol
   /// with the given fields replaced by the non-null parameter values.
@@ -422,23 +513,41 @@ class _TradingSymbol implements TradingSymbol {
                 other.quoteAsset == quoteAsset) &&
             (identical(other.exchange, exchange) ||
                 other.exchange == exchange) &&
+            (identical(other.status, status) || other.status == status) &&
             (identical(other.lastPrice, lastPrice) ||
                 other.lastPrice == lastPrice) &&
             (identical(other.priceChangePct, priceChangePct) ||
                 other.priceChangePct == priceChangePct) &&
             (identical(other.minQty, minQty) || other.minQty == minQty) &&
             (identical(other.maxLeverage, maxLeverage) ||
-                other.maxLeverage == maxLeverage));
+                other.maxLeverage == maxLeverage) &&
+            (identical(other.tickSize, tickSize) ||
+                other.tickSize == tickSize) &&
+            (identical(other.qtyStep, qtyStep) || other.qtyStep == qtyStep) &&
+            (identical(other.minNotional, minNotional) ||
+                other.minNotional == minNotional));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, symbol, baseAsset, quoteAsset,
-      exchange, lastPrice, priceChangePct, minQty, maxLeverage);
+  int get hashCode => Object.hash(
+      runtimeType,
+      symbol,
+      baseAsset,
+      quoteAsset,
+      exchange,
+      status,
+      lastPrice,
+      priceChangePct,
+      minQty,
+      maxLeverage,
+      tickSize,
+      qtyStep,
+      minNotional);
 
   @override
   String toString() {
-    return 'TradingSymbol(symbol: $symbol, baseAsset: $baseAsset, quoteAsset: $quoteAsset, exchange: $exchange, lastPrice: $lastPrice, priceChangePct: $priceChangePct, minQty: $minQty, maxLeverage: $maxLeverage)';
+    return 'TradingSymbol(symbol: $symbol, baseAsset: $baseAsset, quoteAsset: $quoteAsset, exchange: $exchange, status: $status, lastPrice: $lastPrice, priceChangePct: $priceChangePct, minQty: $minQty, maxLeverage: $maxLeverage, tickSize: $tickSize, qtyStep: $qtyStep, minNotional: $minNotional)';
   }
 }
 
@@ -454,11 +563,15 @@ abstract mixin class _$TradingSymbolCopyWith<$Res>
       {String symbol,
       @JsonKey(readValue: _readBaseAsset) String baseAsset,
       @JsonKey(readValue: _readQuoteAsset) String quoteAsset,
-      String exchange,
-      @JsonKey(name: 'last_price') double lastPrice,
-      @JsonKey(name: 'price_change_pct') double priceChangePct,
-      @JsonKey(name: 'min_qty') double minQty,
-      @JsonKey(name: 'max_leverage') int maxLeverage});
+      @JsonKey(readValue: _readExchange) String exchange,
+      @JsonKey(readValue: _readStatus) String status,
+      @JsonKey(readValue: _readLastPrice) double lastPrice,
+      @JsonKey(readValue: _readPriceChangePct) double priceChangePct,
+      @JsonKey(readValue: _readMinQty) double minQty,
+      @JsonKey(readValue: _readMaxLeverage) int maxLeverage,
+      @JsonKey(readValue: _readTickSize) double tickSize,
+      @JsonKey(readValue: _readQtyStep) double qtyStep,
+      @JsonKey(readValue: _readMinNotional) double minNotional});
 }
 
 /// @nodoc
@@ -478,10 +591,14 @@ class __$TradingSymbolCopyWithImpl<$Res>
     Object? baseAsset = null,
     Object? quoteAsset = null,
     Object? exchange = null,
+    Object? status = null,
     Object? lastPrice = null,
     Object? priceChangePct = null,
     Object? minQty = null,
     Object? maxLeverage = null,
+    Object? tickSize = null,
+    Object? qtyStep = null,
+    Object? minNotional = null,
   }) {
     return _then(_TradingSymbol(
       symbol: null == symbol
@@ -500,6 +617,10 @@ class __$TradingSymbolCopyWithImpl<$Res>
           ? _self.exchange
           : exchange // ignore: cast_nullable_to_non_nullable
               as String,
+      status: null == status
+          ? _self.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
       lastPrice: null == lastPrice
           ? _self.lastPrice
           : lastPrice // ignore: cast_nullable_to_non_nullable
@@ -516,6 +637,18 @@ class __$TradingSymbolCopyWithImpl<$Res>
           ? _self.maxLeverage
           : maxLeverage // ignore: cast_nullable_to_non_nullable
               as int,
+      tickSize: null == tickSize
+          ? _self.tickSize
+          : tickSize // ignore: cast_nullable_to_non_nullable
+              as double,
+      qtyStep: null == qtyStep
+          ? _self.qtyStep
+          : qtyStep // ignore: cast_nullable_to_non_nullable
+              as double,
+      minNotional: null == minNotional
+          ? _self.minNotional
+          : minNotional // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }

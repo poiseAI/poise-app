@@ -14,6 +14,7 @@ import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/onboarding/screens/set_risk_appetite_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/trade_entry/screens/trade_entry_screen.dart';
+import '../../features/trade_entry/screens/trade_validation_screen.dart';
 import '../../features/orders/screens/orders_screen.dart';
 import '../../features/ai_chat/screens/ai_chat_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
@@ -90,6 +91,11 @@ GoRouter appRouter(Ref ref) {
             path: Routes.trade,
             pageBuilder: (context, state) =>
                 _fadeTransition(state, const TradeEntryScreen()),
+          ),
+          GoRoute(
+            path: Routes.tradeValidation,
+            pageBuilder: (context, state) =>
+                _slideTransition(state, const TradeValidationScreen()),
           ),
           GoRoute(
             path: Routes.ai,

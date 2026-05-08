@@ -40,13 +40,19 @@ class AuthApi {
   }
 
   Future<Result<AuthResponse, AppError>> register({
+    required String fullName,
     required String email,
     required String password,
   }) async {
     try {
       final resp = await _dio.post<Map<String, dynamic>>(
         '/auth/register',
-        data: {'email': email, 'password': password},
+        data: {
+          'name': fullName,
+          'full_name': fullName,
+          'email': email,
+          'password': password,
+        },
       );
       return Ok(AuthResponse.fromJson(resp.data!));
     } on DioException catch (e) {

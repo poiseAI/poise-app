@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../data/models/notification_item.dart';
 import '../providers/notifications_provider.dart';
-
-const _filters = ['All', 'Orders', 'Positions', 'Risk', 'System'];
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -20,136 +20,129 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  int _filterIndex = 0;
-
-  List<NotificationItem> _filtered(List<NotificationItem> items) {
-    if (_filterIndex == 0) return items;
-    final filterType = switch (_filterIndex) {
-      1 => 'order',
-      2 => 'position',
-      3 => 'risk',
-      4 => 'system',
-      _ => '',
-    };
-    return items.where((n) => n.type.contains(filterType)).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final notifications = ref.watch(notificationsProvider);
-    final filtered = _filtered(notifications);
     final notifier = ref.read(notificationsProvider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: AppSpacing.screenPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSpacing.lg),
-                    Row(
+        child: notifications.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Text('Failed to load notifications',
+                style: AppTypography.body
+                    .copyWith(color: AppColors.textSecondary)),
+          ),
+          data: (items) {
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: AppSpacing.screenPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Notifications', style: AppTypography.h1),
-                        const Spacer(),
-                        if (notifications.any((n) => !n.read))
-                          TextButton(
-                            onPressed: notifier.markAllRead,
-                            child: Text(
-                              'Mark all read',
-                              style: AppTypography.caption
-                                  .copyWith(color: AppColors.accent),
+                        const SizedBox(height: AppSpacing.lg),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => context.canPop()
+                                  ? context.pop()
+                                  : context.go(Routes.home),
+                              icon: const Icon(Icons.arrow_back_rounded),
                             ),
+                            const SizedBox(width: AppSpacing.sm),
+                            const Expanded(
+                              child: Text('Notifications',
+                                  style: AppTypography.h1),
+                            ),
+                            if (items.any((n) => !n.read))
+                              TextButton(
+                                onPressed: notifier.markAllRead,
+                                child: Text(
+                                  'Mark all read',
+                                  style: AppTypography.caption
+                                      .copyWith(color: AppColors.accent),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          'Today',
+                          style: AppTypography.bodyLg.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
                           ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    // Filter bar (#48)
-                    SizedBox(
-                      height: 36,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _filters.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(width: AppSpacing.xs),
-                        itemBuilder: (_, i) {
-                          final active = _filterIndex == i;
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() => _filterIndex = i);
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.md, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: active
-                                    ? AppColors.accent
-                                    : AppColors.bgCard,
-                                borderRadius: AppRadius.chipRadius,
-                                border: Border.all(
-                                  color: active
-                                      ? AppColors.accent
-                                      : AppColors.borderLight,
-                                ),
-                              ),
-                              child: Text(
-                                _filters[i],
-                                style: AppTypography.caption.copyWith(
-                                  color: active
-                                      ? Colors.white
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-
-            if (filtered.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyState(),
-              )
-            else
-              SliverPadding(
-                padding: AppSpacing.screenPadding.copyWith(top: 0),
-                sliver: SliverList.separated(
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.xs),
-                  itemBuilder: (_, i) {
-                    final item = filtered[i];
-                    return _NotificationTile(
-                      key: ValueKey(item.id),
-                      item: item,
-                      index: i,
-                      onDismiss: () {
-                        HapticFeedback.mediumImpact();
-                        notifier.dismiss(item.id);
+                if (items.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _EmptyState(),
+                  )
+                else
+                  SliverPadding(
+                    padding: AppSpacing.screenPadding.copyWith(top: 0),
+                    sliver: SliverList.separated(
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (_, i) {
+                        final item = items[i];
+                        return _NotificationTile(
+                          key: ValueKey(item.id),
+                          item: item,
+                          index: i,
+                          onDismiss: () {
+                            HapticFeedback.mediumImpact();
+                            notifier.dismiss(item.id);
+                          },
+                          onTap: () async {
+                            await notifier.markRead(item.id);
+                            if (context.mounted) {
+                              _openNotification(context, item);
+                            }
+                          },
+                        );
                       },
-                      onTap: () => notifier.markRead(item.id),
-                    );
-                  },
-                ),
-              ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
-          ],
+                    ),
+                  ),
+                const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpacing.xxl)),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
+}
+
+void _openNotification(BuildContext context, NotificationItem item) {
+  final type = item.type;
+  if (type.contains('order') || type.contains('trade')) {
+    context.go(Routes.orders);
+    return;
+  }
+  if (type.contains('position')) {
+    context.go(Routes.home);
+    return;
+  }
+  if (type.contains('risk') || type.contains('guardrail')) {
+    context.go(Routes.ai, extra: item.body);
+    return;
+  }
+  if (type.contains('api') ||
+      type.contains('exchange') ||
+      type.contains('sync')) {
+    context.go(Routes.profile);
   }
 }
 
@@ -197,18 +190,21 @@ class _NotificationTile extends StatelessWidget {
           color: AppColors.lossRed.withValues(alpha: 0.1),
           borderRadius: AppRadius.chipRadius,
         ),
-        child: const Icon(Icons.delete_outline_rounded,
-            color: AppColors.lossRed),
+        child:
+            const Icon(Icons.delete_outline_rounded, color: AppColors.lossRed),
       ),
       onDismissed: (_) => onDismiss(),
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
           decoration: BoxDecoration(
-            color: item.read ? AppColors.bgCard : color.withValues(alpha: 0.04),
-            borderRadius: AppRadius.chipRadius,
+            color: item.read ? AppColors.bgCard : AppColors.bgSecondary,
+            borderRadius: AppRadius.cardRadius,
             border: Border.all(
               color: item.read
                   ? AppColors.borderLight
@@ -219,15 +215,16 @@ class _NotificationTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
+                  border: Border.all(color: color.withValues(alpha: 0.24)),
                 ),
-                child: Icon(_typeIcon(item.type), size: 18, color: color),
+                child: Icon(_typeIcon(item.type), size: 22, color: color),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,6 +244,14 @@ class _NotificationTile extends StatelessWidget {
                           .copyWith(color: AppColors.textSecondary),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      _relativeTime(item.createdAt),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textTertiary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -273,6 +278,23 @@ class _NotificationTile extends StatelessWidget {
   }
 }
 
+String _relativeTime(String raw) {
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return '';
+  final diff = DateTime.now().difference(parsed);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inMinutes < 60) {
+    final m = diff.inMinutes;
+    return '$m minute${m == 1 ? '' : 's'} ago';
+  }
+  if (diff.inHours < 24) {
+    final h = diff.inHours;
+    return '$h hour${h == 1 ? '' : 's'} ago';
+  }
+  final d = diff.inDays;
+  return '$d day${d == 1 ? '' : 's'} ago';
+}
+
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -289,11 +311,8 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             'No notifications to show.',
-            style:
-                AppTypography.body.copyWith(color: AppColors.textSecondary),
-          )
-              .animate(delay: 100.ms)
-              .fadeIn(duration: 300.ms),
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+          ).animate(delay: 100.ms).fadeIn(duration: 300.ms),
         ],
       ),
     );

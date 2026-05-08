@@ -12,95 +12,160 @@ part 'notifications_provider.g.dart';
 class Notifications extends _$Notifications {
   StreamSubscription<WsMessage>? _wsSub;
   StreamSubscription<Map<String, dynamic>>? _notifSub;
+  bool _subscribed = false;
 
   @override
-  List<NotificationItem> build() {
+  AsyncValue<List<NotificationItem>> build() {
     ref.onDispose(() {
       _wsSub?.cancel();
       _notifSub?.cancel();
     });
     _load();
-    return [];
+    return const AsyncLoading();
   }
 
   Future<void> _load() async {
-    final result =
-        await ref.read(notificationRepositoryProvider).getRecent();
+    final result = await ref.read(notificationRepositoryProvider).getRecent();
     result.fold(
-      onOk: (items) => state = items,
-      onErr: (_) {},
+      onOk: (items) {
+        state = AsyncData(_sort(items));
+        _subscribe();
+      },
+      onErr: (e) {
+        state = AsyncError(e, StackTrace.current);
+        _subscribe();
+      },
     );
+  }
 
+  void _subscribe() {
+    if (_subscribed) return;
+    _subscribed = true;
     final wsService = ref.read(wsServiceProvider);
-
-    // Order fill/cancel events → inline notification
     _wsSub = wsService.stream.listen((msg) {
       if (msg is WsOrderUpdate) _injectFromOrder(msg);
+      if (msg is WsPositionUpdate) _injectPosition(msg);
     });
-
-    // Real-time backend notifications (persisted + broadcast via WS)
     _notifSub = wsService.notificationStream.listen(_injectFromWs);
   }
 
-  /// Backend sends: { id, title, body, notification_type, read, created_at }
   void _injectFromWs(Map<String, dynamic> data) {
-    final id = data['id'] as String? ??
-        'ws-${DateTime.now().millisecondsSinceEpoch}';
-
-    // Avoid duplicates when REST pre-load + WS push overlap
-    if (state.any((n) => n.id == id)) return;
-
-    final notification = NotificationItem(
+    final id = _stableId(data, prefix: 'notification');
+    _insert(NotificationItem(
       id: id,
       title: data['title'] as String? ?? '',
       body: data['body'] as String? ?? '',
       type: data['notification_type'] as String? ?? 'system',
-      read: false,
-      createdAt: data['created_at'] as String? ??
-          DateTime.now().toIso8601String(),
-    );
-    state = [notification, ...state];
+      read: data['read'] as bool? ?? false,
+      createdAt: data['created_at'] as String? ?? DateTime.now().toIso8601String(),
+      meta: (data['meta'] as Map<String, dynamic>?) ?? data,
+    ));
   }
 
   void _injectFromOrder(WsOrderUpdate msg) {
     final data = msg.data;
     final status = data['status'] as String? ?? '';
-    if (status != 'filled' && status != 'cancelled') return;
-
-    final notification = NotificationItem(
-      id: 'ws-${DateTime.now().millisecondsSinceEpoch}',
-      title: status == 'filled' ? 'Order filled' : 'Order cancelled',
+    if (status != 'filled' && status != 'cancelled' && status != 'rejected') {
+      return;
+    }
+    _insert(NotificationItem(
+      id: _stableId(data, prefix: 'order'),
+      title: switch (status) {
+        'filled' => 'Order filled',
+        'cancelled' => 'Order cancelled',
+        'rejected' => 'Order rejected',
+        _ => 'Order updated',
+      },
       body:
-          '${data['symbol'] ?? ''} ${data['side'] ?? ''} order '
-          '${status == 'filled' ? 'was filled' : 'was cancelled'}.',
-      type: status == 'filled' ? 'order_filled' : 'order_cancelled',
+          '${data['symbol'] ?? ''} ${data['side'] ?? ''} order ${_statusPhrase(status)}.',
+      type: switch (status) {
+        'filled' => 'order_filled',
+        'cancelled' => 'order_cancelled',
+        'rejected' => 'order_rejected',
+        _ => 'order_update',
+      },
       createdAt: DateTime.now().toIso8601String(),
-    );
-    state = [notification, ...state];
+      meta: data,
+    ));
   }
 
-  void dismiss(String id) {
-    state = state.where((n) => n.id != id).toList();
+  void _injectPosition(WsPositionUpdate msg) {
+    final data = msg.data;
+    _insert(NotificationItem(
+      id: _stableId(data, prefix: 'position', fallbackId: msg.positionId),
+      title: data['source'] == 'external'
+          ? 'External trade captured'
+          : 'Position updated',
+      body:
+          '${data['symbol'] ?? 'Position'} updated from your connected exchange.',
+      type: data['source'] == 'external'
+          ? 'external_trade_captured'
+          : 'position_update',
+      createdAt: DateTime.now().toIso8601String(),
+      meta: data,
+    ));
   }
 
-  void markRead(String id) {
-    state = [
-      for (final n in state)
+  void _insert(NotificationItem notification) {
+    final current = state.valueOrNull ?? const <NotificationItem>[];
+    if (current.any((n) => n.id == notification.id)) return;
+    state = AsyncData(_sort([notification, ...current]));
+  }
+
+  Future<void> dismiss(String id) async {
+    final current = state.valueOrNull ?? const <NotificationItem>[];
+    state = AsyncData(current.where((n) => n.id != id).toList());
+    await ref.read(notificationRepositoryProvider).dismiss(id);
+  }
+
+  Future<void> markRead(String id) async {
+    final current = state.valueOrNull ?? const <NotificationItem>[];
+    state = AsyncData([
+      for (final n in current)
         if (n.id == id) n.copyWith(read: true) else n,
-    ];
-    ref.read(notificationRepositoryProvider).markRead(id);
+    ]);
+    await ref.read(notificationRepositoryProvider).markRead(id);
   }
 
   Future<void> markAllRead() async {
-    state = state.map((n) => n.copyWith(read: true)).toList();
+    final current = state.valueOrNull ?? const <NotificationItem>[];
+    state = AsyncData(current.map((n) => n.copyWith(read: true)).toList());
     await ref.read(notificationRepositoryProvider).markAllRead();
   }
 
-  int get unreadCount => state.where((n) => !n.read).length;
+  List<NotificationItem> _sort(List<NotificationItem> items) {
+    final copy = [...items];
+    copy.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return copy;
+  }
+}
+
+String _statusPhrase(String status) => switch (status) {
+      'filled' => 'was filled',
+      'cancelled' => 'was cancelled',
+      'rejected' => 'was rejected',
+      _ => 'was updated',
+    };
+
+String _stableId(
+  Map<String, dynamic> data, {
+  required String prefix,
+  String? fallbackId,
+}) {
+  final id = data['notification_id'] ??
+      data['event_id'] ??
+      data['id'] ??
+      data['order_id'] ??
+      data['exchange_order_id'] ??
+      data['position_id'] ??
+      fallbackId;
+  final updated = data['updated_at'] ?? data['last_synced_at'] ?? data['status'];
+  if (id != null && id.toString().isNotEmpty) return '$prefix-$id-$updated';
+  return '$prefix-${DateTime.now().microsecondsSinceEpoch}';
 }
 
 @riverpod
 int notificationUnreadCount(Ref ref) {
-  final items = ref.watch(notificationsProvider);
+  final items = ref.watch(notificationsProvider).valueOrNull ?? const [];
   return items.where((n) => !n.read).length;
 }

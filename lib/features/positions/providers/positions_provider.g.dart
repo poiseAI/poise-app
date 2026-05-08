@@ -6,7 +6,7 @@ part of 'positions_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$positionsNotifierHash() => r'854e484670b913ef4ee7ef43d24c17e409b5d125';
+String _$positionsNotifierHash() => r'ab9cfcb4ad983c2bb9f7e14dde4f85b993a6772d';
 
 /// Canonical positions state — shared source of truth for home + other features.
 /// Seeds from HTTP, merges WsPositionUpdate events in real time.

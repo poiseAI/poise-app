@@ -21,9 +21,26 @@ mixin _$Position {
   double get currentPrice;
   @JsonKey(readValue: _readQuantity)
   double get quantity;
+  String get source;
+  @JsonKey(name: 'exchange_order_id')
+  String? get exchangeOrderId;
   double get leverage;
   double get unrealizedPnl;
   double get unrealizedPnlPct;
+  @JsonKey(name: 'realized_pnl')
+  double get realizedPnl;
+  @JsonKey(name: 'liquidation_price')
+  double? get liquidationPrice;
+  @JsonKey(name: 'margin_used')
+  double? get marginUsed;
+  @JsonKey(name: 'remaining_quantity')
+  double? get remainingQuantity;
+  @JsonKey(name: 'sync_status')
+  String get syncStatus;
+  @JsonKey(name: 'last_synced_at')
+  String? get lastSyncedAt;
+  @JsonKey(name: 'closed_at')
+  String? get closedAt;
   String get status; // 'open' | 'locked' | 'closing'
   bool get isLocked;
   @JsonKey(name: 'tp_levels')
@@ -59,12 +76,29 @@ mixin _$Position {
                 other.currentPrice == currentPrice) &&
             (identical(other.quantity, quantity) ||
                 other.quantity == quantity) &&
+            (identical(other.source, source) || other.source == source) &&
+            (identical(other.exchangeOrderId, exchangeOrderId) ||
+                other.exchangeOrderId == exchangeOrderId) &&
             (identical(other.leverage, leverage) ||
                 other.leverage == leverage) &&
             (identical(other.unrealizedPnl, unrealizedPnl) ||
                 other.unrealizedPnl == unrealizedPnl) &&
             (identical(other.unrealizedPnlPct, unrealizedPnlPct) ||
                 other.unrealizedPnlPct == unrealizedPnlPct) &&
+            (identical(other.realizedPnl, realizedPnl) ||
+                other.realizedPnl == realizedPnl) &&
+            (identical(other.liquidationPrice, liquidationPrice) ||
+                other.liquidationPrice == liquidationPrice) &&
+            (identical(other.marginUsed, marginUsed) ||
+                other.marginUsed == marginUsed) &&
+            (identical(other.remainingQuantity, remainingQuantity) ||
+                other.remainingQuantity == remainingQuantity) &&
+            (identical(other.syncStatus, syncStatus) ||
+                other.syncStatus == syncStatus) &&
+            (identical(other.lastSyncedAt, lastSyncedAt) ||
+                other.lastSyncedAt == lastSyncedAt) &&
+            (identical(other.closedAt, closedAt) ||
+                other.closedAt == closedAt) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.isLocked, isLocked) ||
                 other.isLocked == isLocked) &&
@@ -78,27 +112,37 @@ mixin _$Position {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      symbol,
-      side,
-      entryPrice,
-      currentPrice,
-      quantity,
-      leverage,
-      unrealizedPnl,
-      unrealizedPnlPct,
-      status,
-      isLocked,
-      const DeepCollectionEquality().hash(tpLevels),
-      slPrice,
-      exchange,
-      createdAt);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        symbol,
+        side,
+        entryPrice,
+        currentPrice,
+        quantity,
+        source,
+        exchangeOrderId,
+        leverage,
+        unrealizedPnl,
+        unrealizedPnlPct,
+        realizedPnl,
+        liquidationPrice,
+        marginUsed,
+        remainingQuantity,
+        syncStatus,
+        lastSyncedAt,
+        closedAt,
+        status,
+        isLocked,
+        const DeepCollectionEquality().hash(tpLevels),
+        slPrice,
+        exchange,
+        createdAt
+      ]);
 
   @override
   String toString() {
-    return 'Position(id: $id, symbol: $symbol, side: $side, entryPrice: $entryPrice, currentPrice: $currentPrice, quantity: $quantity, leverage: $leverage, unrealizedPnl: $unrealizedPnl, unrealizedPnlPct: $unrealizedPnlPct, status: $status, isLocked: $isLocked, tpLevels: $tpLevels, slPrice: $slPrice, exchange: $exchange, createdAt: $createdAt)';
+    return 'Position(id: $id, symbol: $symbol, side: $side, entryPrice: $entryPrice, currentPrice: $currentPrice, quantity: $quantity, source: $source, exchangeOrderId: $exchangeOrderId, leverage: $leverage, unrealizedPnl: $unrealizedPnl, unrealizedPnlPct: $unrealizedPnlPct, realizedPnl: $realizedPnl, liquidationPrice: $liquidationPrice, marginUsed: $marginUsed, remainingQuantity: $remainingQuantity, syncStatus: $syncStatus, lastSyncedAt: $lastSyncedAt, closedAt: $closedAt, status: $status, isLocked: $isLocked, tpLevels: $tpLevels, slPrice: $slPrice, exchange: $exchange, createdAt: $createdAt)';
   }
 }
 
@@ -114,9 +158,18 @@ abstract mixin class $PositionCopyWith<$Res> {
       double entryPrice,
       double currentPrice,
       @JsonKey(readValue: _readQuantity) double quantity,
+      String source,
+      @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
       double leverage,
       double unrealizedPnl,
       double unrealizedPnlPct,
+      @JsonKey(name: 'realized_pnl') double realizedPnl,
+      @JsonKey(name: 'liquidation_price') double? liquidationPrice,
+      @JsonKey(name: 'margin_used') double? marginUsed,
+      @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
+      @JsonKey(name: 'sync_status') String syncStatus,
+      @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
+      @JsonKey(name: 'closed_at') String? closedAt,
       String status,
       bool isLocked,
       @JsonKey(name: 'tp_levels') List<double> tpLevels,
@@ -143,9 +196,18 @@ class _$PositionCopyWithImpl<$Res> implements $PositionCopyWith<$Res> {
     Object? entryPrice = null,
     Object? currentPrice = null,
     Object? quantity = null,
+    Object? source = null,
+    Object? exchangeOrderId = freezed,
     Object? leverage = null,
     Object? unrealizedPnl = null,
     Object? unrealizedPnlPct = null,
+    Object? realizedPnl = null,
+    Object? liquidationPrice = freezed,
+    Object? marginUsed = freezed,
+    Object? remainingQuantity = freezed,
+    Object? syncStatus = null,
+    Object? lastSyncedAt = freezed,
+    Object? closedAt = freezed,
     Object? status = null,
     Object? isLocked = null,
     Object? tpLevels = null,
@@ -178,6 +240,14 @@ class _$PositionCopyWithImpl<$Res> implements $PositionCopyWith<$Res> {
           ? _self.quantity
           : quantity // ignore: cast_nullable_to_non_nullable
               as double,
+      source: null == source
+          ? _self.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String,
+      exchangeOrderId: freezed == exchangeOrderId
+          ? _self.exchangeOrderId
+          : exchangeOrderId // ignore: cast_nullable_to_non_nullable
+              as String?,
       leverage: null == leverage
           ? _self.leverage
           : leverage // ignore: cast_nullable_to_non_nullable
@@ -190,6 +260,34 @@ class _$PositionCopyWithImpl<$Res> implements $PositionCopyWith<$Res> {
           ? _self.unrealizedPnlPct
           : unrealizedPnlPct // ignore: cast_nullable_to_non_nullable
               as double,
+      realizedPnl: null == realizedPnl
+          ? _self.realizedPnl
+          : realizedPnl // ignore: cast_nullable_to_non_nullable
+              as double,
+      liquidationPrice: freezed == liquidationPrice
+          ? _self.liquidationPrice
+          : liquidationPrice // ignore: cast_nullable_to_non_nullable
+              as double?,
+      marginUsed: freezed == marginUsed
+          ? _self.marginUsed
+          : marginUsed // ignore: cast_nullable_to_non_nullable
+              as double?,
+      remainingQuantity: freezed == remainingQuantity
+          ? _self.remainingQuantity
+          : remainingQuantity // ignore: cast_nullable_to_non_nullable
+              as double?,
+      syncStatus: null == syncStatus
+          ? _self.syncStatus
+          : syncStatus // ignore: cast_nullable_to_non_nullable
+              as String,
+      lastSyncedAt: freezed == lastSyncedAt
+          ? _self.lastSyncedAt
+          : lastSyncedAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      closedAt: freezed == closedAt
+          ? _self.closedAt
+          : closedAt // ignore: cast_nullable_to_non_nullable
+              as String?,
       status: null == status
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable
@@ -318,9 +416,18 @@ extension PositionPatterns on Position {
             double entryPrice,
             double currentPrice,
             @JsonKey(readValue: _readQuantity) double quantity,
+            String source,
+            @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
             double leverage,
             double unrealizedPnl,
             double unrealizedPnlPct,
+            @JsonKey(name: 'realized_pnl') double realizedPnl,
+            @JsonKey(name: 'liquidation_price') double? liquidationPrice,
+            @JsonKey(name: 'margin_used') double? marginUsed,
+            @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
+            @JsonKey(name: 'sync_status') String syncStatus,
+            @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
+            @JsonKey(name: 'closed_at') String? closedAt,
             String status,
             bool isLocked,
             @JsonKey(name: 'tp_levels') List<double> tpLevels,
@@ -340,9 +447,18 @@ extension PositionPatterns on Position {
             _that.entryPrice,
             _that.currentPrice,
             _that.quantity,
+            _that.source,
+            _that.exchangeOrderId,
             _that.leverage,
             _that.unrealizedPnl,
             _that.unrealizedPnlPct,
+            _that.realizedPnl,
+            _that.liquidationPrice,
+            _that.marginUsed,
+            _that.remainingQuantity,
+            _that.syncStatus,
+            _that.lastSyncedAt,
+            _that.closedAt,
             _that.status,
             _that.isLocked,
             _that.tpLevels,
@@ -376,9 +492,18 @@ extension PositionPatterns on Position {
             double entryPrice,
             double currentPrice,
             @JsonKey(readValue: _readQuantity) double quantity,
+            String source,
+            @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
             double leverage,
             double unrealizedPnl,
             double unrealizedPnlPct,
+            @JsonKey(name: 'realized_pnl') double realizedPnl,
+            @JsonKey(name: 'liquidation_price') double? liquidationPrice,
+            @JsonKey(name: 'margin_used') double? marginUsed,
+            @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
+            @JsonKey(name: 'sync_status') String syncStatus,
+            @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
+            @JsonKey(name: 'closed_at') String? closedAt,
             String status,
             bool isLocked,
             @JsonKey(name: 'tp_levels') List<double> tpLevels,
@@ -397,9 +522,18 @@ extension PositionPatterns on Position {
             _that.entryPrice,
             _that.currentPrice,
             _that.quantity,
+            _that.source,
+            _that.exchangeOrderId,
             _that.leverage,
             _that.unrealizedPnl,
             _that.unrealizedPnlPct,
+            _that.realizedPnl,
+            _that.liquidationPrice,
+            _that.marginUsed,
+            _that.remainingQuantity,
+            _that.syncStatus,
+            _that.lastSyncedAt,
+            _that.closedAt,
             _that.status,
             _that.isLocked,
             _that.tpLevels,
@@ -432,9 +566,18 @@ extension PositionPatterns on Position {
             double entryPrice,
             double currentPrice,
             @JsonKey(readValue: _readQuantity) double quantity,
+            String source,
+            @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
             double leverage,
             double unrealizedPnl,
             double unrealizedPnlPct,
+            @JsonKey(name: 'realized_pnl') double realizedPnl,
+            @JsonKey(name: 'liquidation_price') double? liquidationPrice,
+            @JsonKey(name: 'margin_used') double? marginUsed,
+            @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
+            @JsonKey(name: 'sync_status') String syncStatus,
+            @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
+            @JsonKey(name: 'closed_at') String? closedAt,
             String status,
             bool isLocked,
             @JsonKey(name: 'tp_levels') List<double> tpLevels,
@@ -453,9 +596,18 @@ extension PositionPatterns on Position {
             _that.entryPrice,
             _that.currentPrice,
             _that.quantity,
+            _that.source,
+            _that.exchangeOrderId,
             _that.leverage,
             _that.unrealizedPnl,
             _that.unrealizedPnlPct,
+            _that.realizedPnl,
+            _that.liquidationPrice,
+            _that.marginUsed,
+            _that.remainingQuantity,
+            _that.syncStatus,
+            _that.lastSyncedAt,
+            _that.closedAt,
             _that.status,
             _that.isLocked,
             _that.tpLevels,
@@ -478,9 +630,18 @@ class _Position implements Position {
       required this.entryPrice,
       required this.currentPrice,
       @JsonKey(readValue: _readQuantity) required this.quantity,
+      this.source = 'external',
+      @JsonKey(name: 'exchange_order_id') this.exchangeOrderId,
       this.leverage = 1.0,
       required this.unrealizedPnl,
       this.unrealizedPnlPct = 0.0,
+      @JsonKey(name: 'realized_pnl') this.realizedPnl = 0.0,
+      @JsonKey(name: 'liquidation_price') this.liquidationPrice,
+      @JsonKey(name: 'margin_used') this.marginUsed,
+      @JsonKey(name: 'remaining_quantity') this.remainingQuantity,
+      @JsonKey(name: 'sync_status') this.syncStatus = 'synced',
+      @JsonKey(name: 'last_synced_at') this.lastSyncedAt,
+      @JsonKey(name: 'closed_at') this.closedAt,
       required this.status,
       this.isLocked = false,
       @JsonKey(name: 'tp_levels') final List<double> tpLevels = const [],
@@ -507,12 +668,39 @@ class _Position implements Position {
   final double quantity;
   @override
   @JsonKey()
+  final String source;
+  @override
+  @JsonKey(name: 'exchange_order_id')
+  final String? exchangeOrderId;
+  @override
+  @JsonKey()
   final double leverage;
   @override
   final double unrealizedPnl;
   @override
   @JsonKey()
   final double unrealizedPnlPct;
+  @override
+  @JsonKey(name: 'realized_pnl')
+  final double realizedPnl;
+  @override
+  @JsonKey(name: 'liquidation_price')
+  final double? liquidationPrice;
+  @override
+  @JsonKey(name: 'margin_used')
+  final double? marginUsed;
+  @override
+  @JsonKey(name: 'remaining_quantity')
+  final double? remainingQuantity;
+  @override
+  @JsonKey(name: 'sync_status')
+  final String syncStatus;
+  @override
+  @JsonKey(name: 'last_synced_at')
+  final String? lastSyncedAt;
+  @override
+  @JsonKey(name: 'closed_at')
+  final String? closedAt;
   @override
   final String status;
 // 'open' | 'locked' | 'closing'
@@ -567,12 +755,29 @@ class _Position implements Position {
                 other.currentPrice == currentPrice) &&
             (identical(other.quantity, quantity) ||
                 other.quantity == quantity) &&
+            (identical(other.source, source) || other.source == source) &&
+            (identical(other.exchangeOrderId, exchangeOrderId) ||
+                other.exchangeOrderId == exchangeOrderId) &&
             (identical(other.leverage, leverage) ||
                 other.leverage == leverage) &&
             (identical(other.unrealizedPnl, unrealizedPnl) ||
                 other.unrealizedPnl == unrealizedPnl) &&
             (identical(other.unrealizedPnlPct, unrealizedPnlPct) ||
                 other.unrealizedPnlPct == unrealizedPnlPct) &&
+            (identical(other.realizedPnl, realizedPnl) ||
+                other.realizedPnl == realizedPnl) &&
+            (identical(other.liquidationPrice, liquidationPrice) ||
+                other.liquidationPrice == liquidationPrice) &&
+            (identical(other.marginUsed, marginUsed) ||
+                other.marginUsed == marginUsed) &&
+            (identical(other.remainingQuantity, remainingQuantity) ||
+                other.remainingQuantity == remainingQuantity) &&
+            (identical(other.syncStatus, syncStatus) ||
+                other.syncStatus == syncStatus) &&
+            (identical(other.lastSyncedAt, lastSyncedAt) ||
+                other.lastSyncedAt == lastSyncedAt) &&
+            (identical(other.closedAt, closedAt) ||
+                other.closedAt == closedAt) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.isLocked, isLocked) ||
                 other.isLocked == isLocked) &&
@@ -586,27 +791,37 @@ class _Position implements Position {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      symbol,
-      side,
-      entryPrice,
-      currentPrice,
-      quantity,
-      leverage,
-      unrealizedPnl,
-      unrealizedPnlPct,
-      status,
-      isLocked,
-      const DeepCollectionEquality().hash(_tpLevels),
-      slPrice,
-      exchange,
-      createdAt);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        symbol,
+        side,
+        entryPrice,
+        currentPrice,
+        quantity,
+        source,
+        exchangeOrderId,
+        leverage,
+        unrealizedPnl,
+        unrealizedPnlPct,
+        realizedPnl,
+        liquidationPrice,
+        marginUsed,
+        remainingQuantity,
+        syncStatus,
+        lastSyncedAt,
+        closedAt,
+        status,
+        isLocked,
+        const DeepCollectionEquality().hash(_tpLevels),
+        slPrice,
+        exchange,
+        createdAt
+      ]);
 
   @override
   String toString() {
-    return 'Position(id: $id, symbol: $symbol, side: $side, entryPrice: $entryPrice, currentPrice: $currentPrice, quantity: $quantity, leverage: $leverage, unrealizedPnl: $unrealizedPnl, unrealizedPnlPct: $unrealizedPnlPct, status: $status, isLocked: $isLocked, tpLevels: $tpLevels, slPrice: $slPrice, exchange: $exchange, createdAt: $createdAt)';
+    return 'Position(id: $id, symbol: $symbol, side: $side, entryPrice: $entryPrice, currentPrice: $currentPrice, quantity: $quantity, source: $source, exchangeOrderId: $exchangeOrderId, leverage: $leverage, unrealizedPnl: $unrealizedPnl, unrealizedPnlPct: $unrealizedPnlPct, realizedPnl: $realizedPnl, liquidationPrice: $liquidationPrice, marginUsed: $marginUsed, remainingQuantity: $remainingQuantity, syncStatus: $syncStatus, lastSyncedAt: $lastSyncedAt, closedAt: $closedAt, status: $status, isLocked: $isLocked, tpLevels: $tpLevels, slPrice: $slPrice, exchange: $exchange, createdAt: $createdAt)';
   }
 }
 
@@ -624,9 +839,18 @@ abstract mixin class _$PositionCopyWith<$Res>
       double entryPrice,
       double currentPrice,
       @JsonKey(readValue: _readQuantity) double quantity,
+      String source,
+      @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
       double leverage,
       double unrealizedPnl,
       double unrealizedPnlPct,
+      @JsonKey(name: 'realized_pnl') double realizedPnl,
+      @JsonKey(name: 'liquidation_price') double? liquidationPrice,
+      @JsonKey(name: 'margin_used') double? marginUsed,
+      @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
+      @JsonKey(name: 'sync_status') String syncStatus,
+      @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
+      @JsonKey(name: 'closed_at') String? closedAt,
       String status,
       bool isLocked,
       @JsonKey(name: 'tp_levels') List<double> tpLevels,
@@ -653,9 +877,18 @@ class __$PositionCopyWithImpl<$Res> implements _$PositionCopyWith<$Res> {
     Object? entryPrice = null,
     Object? currentPrice = null,
     Object? quantity = null,
+    Object? source = null,
+    Object? exchangeOrderId = freezed,
     Object? leverage = null,
     Object? unrealizedPnl = null,
     Object? unrealizedPnlPct = null,
+    Object? realizedPnl = null,
+    Object? liquidationPrice = freezed,
+    Object? marginUsed = freezed,
+    Object? remainingQuantity = freezed,
+    Object? syncStatus = null,
+    Object? lastSyncedAt = freezed,
+    Object? closedAt = freezed,
     Object? status = null,
     Object? isLocked = null,
     Object? tpLevels = null,
@@ -688,6 +921,14 @@ class __$PositionCopyWithImpl<$Res> implements _$PositionCopyWith<$Res> {
           ? _self.quantity
           : quantity // ignore: cast_nullable_to_non_nullable
               as double,
+      source: null == source
+          ? _self.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String,
+      exchangeOrderId: freezed == exchangeOrderId
+          ? _self.exchangeOrderId
+          : exchangeOrderId // ignore: cast_nullable_to_non_nullable
+              as String?,
       leverage: null == leverage
           ? _self.leverage
           : leverage // ignore: cast_nullable_to_non_nullable
@@ -700,6 +941,34 @@ class __$PositionCopyWithImpl<$Res> implements _$PositionCopyWith<$Res> {
           ? _self.unrealizedPnlPct
           : unrealizedPnlPct // ignore: cast_nullable_to_non_nullable
               as double,
+      realizedPnl: null == realizedPnl
+          ? _self.realizedPnl
+          : realizedPnl // ignore: cast_nullable_to_non_nullable
+              as double,
+      liquidationPrice: freezed == liquidationPrice
+          ? _self.liquidationPrice
+          : liquidationPrice // ignore: cast_nullable_to_non_nullable
+              as double?,
+      marginUsed: freezed == marginUsed
+          ? _self.marginUsed
+          : marginUsed // ignore: cast_nullable_to_non_nullable
+              as double?,
+      remainingQuantity: freezed == remainingQuantity
+          ? _self.remainingQuantity
+          : remainingQuantity // ignore: cast_nullable_to_non_nullable
+              as double?,
+      syncStatus: null == syncStatus
+          ? _self.syncStatus
+          : syncStatus // ignore: cast_nullable_to_non_nullable
+              as String,
+      lastSyncedAt: freezed == lastSyncedAt
+          ? _self.lastSyncedAt
+          : lastSyncedAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      closedAt: freezed == closedAt
+          ? _self.closedAt
+          : closedAt // ignore: cast_nullable_to_non_nullable
+              as String?,
       status: null == status
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable

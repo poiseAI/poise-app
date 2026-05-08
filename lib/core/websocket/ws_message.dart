@@ -37,7 +37,14 @@ sealed class WsMessage with _$WsMessage {
 /// Parse raw JSON payload from WS into a typed WsMessage.
 WsMessage? parseWsPayload(Map<String, dynamic> json) {
   final type = json['type'] as String?;
-  final data = json['data'] as Map<String, dynamic>? ?? {};
+  final envelope = json['data'] as Map<String, dynamic>? ?? {};
+  final data = switch (type) {
+    'order_update' =>
+      (envelope['order'] as Map<String, dynamic>?) ?? envelope,
+    'position_update' =>
+      (envelope['position'] as Map<String, dynamic>?) ?? envelope,
+    _ => envelope,
+  };
 
   return switch (type) {
     'order_update' => WsMessage.orderUpdate(

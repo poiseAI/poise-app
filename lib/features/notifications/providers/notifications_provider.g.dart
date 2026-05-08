@@ -7,7 +7,7 @@ part of 'notifications_provider.dart';
 // **************************************************************************
 
 String _$notificationUnreadCountHash() =>
-    r'589b1d279f02dbafa8d389086979c85bdb00830f';
+    r'59a8c6173f74ef8b6b67fd93e1e11c2e276100b7';
 
 /// See also [notificationUnreadCount].
 @ProviderFor(notificationUnreadCount)
@@ -24,12 +24,12 @@ final notificationUnreadCountProvider = AutoDisposeProvider<int>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef NotificationUnreadCountRef = AutoDisposeProviderRef<int>;
-String _$notificationsHash() => r'f963936253f7b0aa256287f793666671c78ea809';
+String _$notificationsHash() => r'3d59625dcd34e7e335b0441f9859858f3d6f37d2';
 
 /// See also [Notifications].
 @ProviderFor(Notifications)
-final notificationsProvider =
-    AutoDisposeNotifierProvider<Notifications, List<NotificationItem>>.internal(
+final notificationsProvider = AutoDisposeNotifierProvider<Notifications,
+    AsyncValue<List<NotificationItem>>>.internal(
   Notifications.new,
   name: r'notificationsProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -39,6 +39,7 @@ final notificationsProvider =
   allTransitiveDependencies: null,
 );
 
-typedef _$Notifications = AutoDisposeNotifier<List<NotificationItem>>;
+typedef _$Notifications
+    = AutoDisposeNotifier<AsyncValue<List<NotificationItem>>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

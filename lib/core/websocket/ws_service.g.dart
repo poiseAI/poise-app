@@ -6,7 +6,7 @@ part of 'ws_service.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$wsServiceHash() => r'a4a6c61487bc20329127585c9f579e8e059a4381';
+String _$wsServiceHash() => r'5a9afab1722ac938f87f7072117218d114e327df';
 
 /// See also [wsService].
 @ProviderFor(wsService)

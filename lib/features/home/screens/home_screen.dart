@@ -192,7 +192,7 @@ class _DashboardBody extends ConsumerWidget {
                     analytics: analytics,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  const _RiskPatternCard(),
+                  _RiskPatternCard(analytics: analytics),
                   const SizedBox(height: AppSpacing.md),
                   _GuardrailStatusCard(
                     openPositions: positions.length,
@@ -252,8 +252,7 @@ class _HomeHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider).valueOrNull;
     final email = authState is AuthAuthenticated ? authState.email : '';
-    final initial =
-        email.isNotEmpty ? email[0].toUpperCase() : '?';
+    final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
     // Mask email: show first char + domain with middle hidden
     final maskedEmail = _maskEmail(email);
 
@@ -672,8 +671,7 @@ class _OpportunityCostCard extends StatelessWidget {
 }
 
 class _AdherenceDetailCard extends StatelessWidget {
-  const _AdherenceDetailCard(
-      {required this.positionCount, this.analytics});
+  const _AdherenceDetailCard({required this.positionCount, this.analytics});
   final int positionCount;
   final HomeAnalytics? analytics;
 
@@ -743,14 +741,16 @@ class _AdherenceDetailCard extends StatelessWidget {
               _AdherenceTile(
                 label: 'Daily loss limit',
                 value: _guardrailProgress(analytics, 'Daily loss limit'),
-                progress: _guardrail(analytics, 'Daily loss limit')?.progress ?? 0,
+                progress:
+                    _guardrail(analytics, 'Daily loss limit')?.progress ?? 0,
                 color: _guardrailColor(
                     _guardrail(analytics, 'Daily loss limit')?.status),
               ),
               _AdherenceTile(
                 label: 'Weekly loss limit',
                 value: _guardrailProgress(analytics, 'Weekly loss limit'),
-                progress: _guardrail(analytics, 'Weekly loss limit')?.progress ?? 0,
+                progress:
+                    _guardrail(analytics, 'Weekly loss limit')?.progress ?? 0,
                 color: _guardrailColor(
                     _guardrail(analytics, 'Weekly loss limit')?.status),
               ),
@@ -776,32 +776,99 @@ class _AdherenceDetailCard extends StatelessWidget {
 }
 
 class _RiskPatternCard extends StatelessWidget {
-  const _RiskPatternCard();
+  const _RiskPatternCard({this.analytics});
+  final HomeAnalytics? analytics;
 
   @override
   Widget build(BuildContext context) {
-    return const _SectionCard(
+    final flags = analytics?.disciplineFlags ?? const <DisciplineFlag>[];
+    final source = analytics?.sourceBreakdown;
+    return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Current risk pattern', style: AppTypography.h3),
-          SizedBox(height: AppSpacing.md),
+          const Text('Current risk pattern', style: AppTypography.h3),
+          const SizedBox(height: AppSpacing.md),
           _PatternRow(
               label: 'Trade frequency',
-              status: 'Normal',
-              color: AppColors.profitGreen),
-          SizedBox(height: AppSpacing.sm),
+              status: flags.any((f) => f.label.contains('Blocked'))
+                  ? 'Elevated'
+                  : 'Normal',
+              color: flags.any((f) => f.label.contains('Blocked'))
+                  ? AppColors.lossRed
+                  : AppColors.profitGreen),
+          const SizedBox(height: AppSpacing.sm),
           _PatternRow(
               label: 'Position size variance',
-              status: 'Elevated',
-              color: AppColors.lossRed),
-          SizedBox(height: AppSpacing.sm),
+              status: flags.any((f) => f.label.contains('Position size'))
+                  ? 'Elevated'
+                  : 'Normal',
+              color: flags.any((f) => f.label.contains('Position size'))
+                  ? AppColors.lossRed
+                  : AppColors.profitGreen),
+          const SizedBox(height: AppSpacing.sm),
           _PatternRow(
-              label: 'Behaviour after losses',
-              status: 'Moderate',
-              color: AppColors.warningAmber),
-          SizedBox(height: AppSpacing.md),
-          _InsightCallout(),
+            label: 'Behaviour after losses',
+            status: flags.any((f) => f.label.toLowerCase().contains('revenge'))
+                ? 'Moderate'
+                : 'Normal',
+            color: flags.any((f) => f.label.toLowerCase().contains('revenge'))
+                ? AppColors.warningAmber
+                : AppColors.profitGreen,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _PatternRow(
+            label: 'External trade review',
+            status: (source?.externalOpen ?? 0) > 0
+                ? '${source!.externalOpen} open'
+                : 'Clear',
+            color: (source?.externalOpen ?? 0) > 0
+                ? AppColors.warningAmber
+                : AppColors.profitGreen,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (flags.isEmpty)
+            const _InsightCallout()
+          else
+            ...flags.take(2).map(
+                  (flag) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: _DisciplineFlagCallout(flag: flag),
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DisciplineFlagCallout extends StatelessWidget {
+  const _DisciplineFlagCallout({required this.flag});
+  final DisciplineFlag flag;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = flag.severity == 'elevated'
+        ? AppColors.lossRed
+        : AppColors.warningAmber;
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(flag.label,
+              style: AppTypography.bodyMedium.copyWith(color: color)),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            flag.description,
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+          ),
         ],
       ),
     );
@@ -834,42 +901,86 @@ class _GuardrailStatusCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
+          GridView.count(
+            crossAxisCount: 2,
+            childAspectRatio: 1.22,
+            crossAxisSpacing: AppSpacing.sm,
+            mainAxisSpacing: AppSpacing.sm,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             children: [
-              Expanded(
-                child: _GuardrailTile(
-                  title: _guardrail(analytics, 'Daily loss limit')?.label ??
-                      'Daily loss limit',
-                  subtitle:
-                      _guardrail(analytics, 'Daily loss limit')?.description ??
-                          'Resets at midnight',
-                  value: _guardrailValue(
-                      _guardrail(analytics, 'Daily loss limit')),
-                  progress:
-                      _guardrail(analytics, 'Daily loss limit')?.progress ??
-                          0.24,
-                  color: _guardrailColor(
-                    _guardrail(analytics, 'Daily loss limit')?.status,
-                  ),
+              _GuardrailTile(
+                title: _guardrail(analytics, 'Daily loss limit')?.label ??
+                    'Daily loss limit',
+                subtitle:
+                    _guardrail(analytics, 'Daily loss limit')?.description ??
+                        'Resets at midnight',
+                value:
+                    _guardrailValue(_guardrail(analytics, 'Daily loss limit')),
+                progress:
+                    _guardrail(analytics, 'Daily loss limit')?.progress ?? 0.24,
+                color: _guardrailColor(
+                  _guardrail(analytics, 'Daily loss limit')?.status,
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _GuardrailTile(
-                  title: 'Open positions',
-                  subtitle: 'Concurrent limit',
-                  value: _guardrailValue(
-                    _guardrail(analytics, 'Open positions'),
-                    fallback: '$openPositions/5',
-                  ),
-                  progress: _guardrail(analytics, 'Open positions')?.progress ??
-                      (openPositions / 5).clamp(0, 1).toDouble(),
-                  color: _guardrailColor(
-                    _guardrail(analytics, 'Open positions')?.status,
-                  ),
+              _GuardrailTile(
+                title: _guardrail(analytics, 'Weekly loss limit')?.label ??
+                    'Weekly loss limit',
+                subtitle:
+                    _guardrail(analytics, 'Weekly loss limit')?.description ??
+                        'Resets Monday',
+                value:
+                    _guardrailValue(_guardrail(analytics, 'Weekly loss limit')),
+                progress:
+                    _guardrail(analytics, 'Weekly loss limit')?.progress ??
+                        0.34,
+                color: _guardrailColor(
+                  _guardrail(analytics, 'Weekly loss limit')?.status,
+                ),
+              ),
+              _GuardrailTile(
+                title: 'Consecutive losses',
+                subtitle: 'Today\'s streak',
+                value: _guardrailValue(
+                  _guardrail(analytics, 'Consecutive losses'),
+                  fallback: '0 / 3',
+                ),
+                progress:
+                    _guardrail(analytics, 'Consecutive losses')?.progress ?? 0,
+                color: _guardrailColor(
+                  _guardrail(analytics, 'Consecutive losses')?.status,
+                ),
+              ),
+              _GuardrailTile(
+                title: 'Trades today',
+                subtitle: 'Max per day',
+                value: _guardrailValue(
+                  _guardrail(analytics, 'Trades today'),
+                  fallback: '${analytics?.tradesClosedToday ?? 0}/5',
+                ),
+                progress: _guardrail(analytics, 'Trades today')?.progress ??
+                    ((analytics?.tradesClosedToday ?? 0) / 5)
+                        .clamp(0, 1)
+                        .toDouble(),
+                color: _guardrailColor(
+                  _guardrail(analytics, 'Trades today')?.status,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _WideGuardrailTile(
+            title: 'Open positions',
+            subtitle: 'Concurrent limit',
+            value: _guardrailValue(
+              _guardrail(analytics, 'Open positions'),
+              fallback: '$openPositions/5',
+            ),
+            progress: _guardrail(analytics, 'Open positions')?.progress ??
+                (openPositions / 5).clamp(0, 1).toDouble(),
+            color: _guardrailColor(
+              _guardrail(analytics, 'Open positions')?.status,
+            ),
           ),
         ],
       ),
@@ -1075,15 +1186,91 @@ class _GuardrailTile extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(value, style: AppTypography.numericSm),
           const SizedBox(height: AppSpacing.sm),
-          LinearProgressIndicator(
-            value: progress,
-            minHeight: 8,
-            borderRadius: AppRadius.pillRadius,
-            color: color,
-            backgroundColor: AppColors.borderLight,
+          _SegmentBar(value: progress, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+class _WideGuardrailTile extends StatelessWidget {
+  const _WideGuardrailTile({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.progress,
+    required this.color,
+  });
+
+  final String title;
+  final String subtitle;
+  final String value;
+  final double progress;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTypography.bodyMedium),
+                Text(
+                  subtitle,
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          SizedBox(
+            width: 150,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(value, style: AppTypography.numericSm),
+                const SizedBox(height: AppSpacing.sm),
+                _SegmentBar(value: progress, color: color),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SegmentBar extends StatelessWidget {
+  const _SegmentBar({required this.value, required this.color});
+  final double value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = (value.clamp(0.0, 1.0) * 12).ceil();
+    return Row(
+      children: List.generate(12, (index) {
+        return Expanded(
+          child: Container(
+            height: 8,
+            margin: EdgeInsets.only(right: index == 11 ? 0 : 3),
+            decoration: BoxDecoration(
+              color: index < active ? color : AppColors.borderLight,
+              borderRadius: AppRadius.pillRadius,
+            ),
+          ),
+        );
+      }),
     );
   }
 }

@@ -75,11 +75,13 @@ class Auth extends _$Auth {
   }
 
   Future<Result<void, String>> register(
+    String fullName,
     String email,
     String password,
   ) async {
     state = const AsyncLoading();
     final result = await ref.read(authApiProvider).register(
+          fullName: fullName,
           email: email,
           password: password,
         );

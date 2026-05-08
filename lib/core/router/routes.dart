@@ -20,6 +20,7 @@ abstract final class Routes {
   static const positionExitOtp = '/app/position/:id/exit/otp';
   static const positionTpsl = '/app/position/:id/tpsl';
   static const tradePreview = '/app/trade/preview';
+  static const tradeValidation = '/app/trade/validation';
 
   // Helpers
   static String positionExitPath(String id) => '/app/position/$id/exit';

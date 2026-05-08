@@ -7,15 +7,17 @@ import 'app_typography.dart';
 
 abstract final class AppTheme {
   static ThemeData get light => _buildTheme(Brightness.light);
-  static ThemeData get dark  => _buildTheme(Brightness.dark);
+  static ThemeData get dark => _buildTheme(Brightness.dark);
 
   static ThemeData _buildTheme(Brightness brightness) {
-    final isDark       = brightness == Brightness.dark;
-    final bg           = isDark ? AppColors.bgPrimaryDark      : AppColors.bgPrimary;
-    final bgCard       = isDark ? AppColors.bgCardDark         : AppColors.bgCard;
-    final textPrimary  = isDark ? AppColors.textPrimaryDark    : AppColors.textPrimary;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
-    final border       = isDark ? AppColors.borderDark         : AppColors.borderLight;
+    final isDark = brightness == Brightness.dark;
+    final bg = isDark ? AppColors.bgPrimaryDark : AppColors.bgPrimary;
+    final bgCard = isDark ? AppColors.bgCardDark : AppColors.bgCard;
+    final textPrimary =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimary;
+    final textSecondary =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     final colorScheme = ColorScheme(
       brightness: brightness,
@@ -37,15 +39,19 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       fontFamily: 'Inter',
       scaffoldBackgroundColor: bg,
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: AppColors.primary,
+        selectionColor: AppColors.primary.withValues(alpha: 0.28),
+        selectionHandleColor: AppColors.primary,
+      ),
 
       // AppBar
       appBarTheme: AppBarTheme(
         backgroundColor: bg,
         elevation: 0,
         scrolledUnderElevation: 0,
-        systemOverlayStyle: isDark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: AppTypography.h3.copyWith(color: textPrimary),
         iconTheme: IconThemeData(color: textPrimary),
       ),
@@ -138,7 +144,12 @@ abstract final class AppTheme {
           borderSide: BorderSide(color: AppColors.lossRed, width: 2),
         ),
         labelStyle: AppTypography.body.copyWith(color: textSecondary),
-        hintStyle: AppTypography.body.copyWith(color: AppColors.textDisabled),
+        hintStyle: AppTypography.body.copyWith(
+          color: isDark ? AppColors.textDisabledDark : AppColors.textDisabled,
+        ),
+        helperStyle: AppTypography.bodySm.copyWith(color: textSecondary),
+        floatingLabelStyle:
+            AppTypography.body.copyWith(color: AppColors.primary),
         errorStyle: AppTypography.bodySm.copyWith(color: AppColors.lossRed),
       ),
 
@@ -210,8 +221,7 @@ abstract final class AppTheme {
 
       // Snack bar
       snackBarTheme: SnackBarThemeData(
-        backgroundColor:
-            isDark ? AppColors.bgCardDark : AppColors.textPrimary,
+        backgroundColor: isDark ? AppColors.bgCardDark : AppColors.textPrimary,
         contentTextStyle: AppTypography.body.copyWith(color: Colors.white),
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(

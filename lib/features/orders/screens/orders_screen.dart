@@ -151,6 +151,16 @@ class _OrderCard extends StatelessWidget {
             children: [
               _Pill(label: order.side.toUpperCase(), color: sideColor),
               const SizedBox(width: AppSpacing.xs),
+              _Pill(
+                label: order.exchange.toUpperCase(),
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _Pill(
+                label: order.source == 'external' ? 'EXTERNAL' : 'POISE',
+                color: AppColors.accent,
+              ),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 '${order.orderType.toUpperCase()} - ${order.leverage.toStringAsFixed(0)}x',
                 style: AppTypography.bodySm.copyWith(
@@ -168,10 +178,21 @@ class _OrderCard extends StatelessWidget {
               Expanded(child: _Metric(label: 'Price', value: price)),
               Expanded(
                   child: _Metric(
-                      label: 'SL',
-                      value: order.slPrice?.toStringAsFixed(2) ?? '-')),
+                      label: order.source == 'external' ? 'Exchange SL' : 'SL',
+                      value: order.source == 'external'
+                          ? order.slPrice?.toStringAsFixed(2) ?? 'Pending sync'
+                          : order.slPrice?.toStringAsFixed(2) ?? '-')),
             ],
           ),
+          if (order.source == 'external') ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Opened on ${order.exchange.toUpperCase()} and monitored by Poise.',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
         ],
       ),
     );

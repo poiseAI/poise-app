@@ -14,8 +14,8 @@ class OrderTypeToggle extends StatelessWidget {
   final OrderType selected;
   final ValueChanged<OrderType> onChanged;
 
-  static const _types = [OrderType.market, OrderType.limit, OrderType.stop];
-  static const _labels = ['Market', 'Limit', 'Stop'];
+  static const _types = [OrderType.market, OrderType.limit];
+  static const _labels = ['Market execution', 'Price limit'];
 
   @override
   Widget build(BuildContext context) {

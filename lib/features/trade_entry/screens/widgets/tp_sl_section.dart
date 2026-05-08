@@ -1,220 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 
-class TpSlSection extends StatefulWidget {
+class TpSlSection extends StatelessWidget {
   const TpSlSection({
     super.key,
-    required this.tpLevels,
-    required this.slPrice,
-    required this.onAddTp,
-    required this.onRemoveTp,
-    required this.onSlChanged,
+    required this.stopLoss,
+    required this.takeProfit1,
+    required this.takeProfit2,
+    required this.autoProgression,
+    required this.onStopLossChanged,
+    required this.onTakeProfit1Changed,
+    required this.onTakeProfit2Changed,
+    required this.onAutoProgressionChanged,
   });
 
-  final List<double> tpLevels;
-  final double? slPrice;
-  final ValueChanged<double> onAddTp;
-  final ValueChanged<int> onRemoveTp;
-  final ValueChanged<double?> onSlChanged;
-
-  @override
-  State<TpSlSection> createState() => _TpSlSectionState();
-}
-
-class _TpSlSectionState extends State<TpSlSection> {
-  bool _expanded = false;
-  final _tpCtrl = TextEditingController();
-  final _slCtrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.slPrice != null) {
-      _slCtrl.text = widget.slPrice!.toStringAsFixed(2);
-    }
-    _slCtrl.addListener(_onSlChanged);
-  }
-
-  void _onSlChanged() {
-    final val = double.tryParse(_slCtrl.text);
-    widget.onSlChanged(val);
-  }
-
-  void _addTp() {
-    final val = double.tryParse(_tpCtrl.text);
-    if (val != null && val > 0) {
-      widget.onAddTp(val);
-      _tpCtrl.clear();
-    }
-  }
-
-  @override
-  void dispose() {
-    _tpCtrl.dispose();
-    _slCtrl.dispose();
-    super.dispose();
-  }
+  final double? stopLoss;
+  final double? takeProfit1;
+  final double? takeProfit2;
+  final bool autoProgression;
+  final ValueChanged<double?> onStopLossChanged;
+  final ValueChanged<double?> onTakeProfit1Changed;
+  final ValueChanged<double?> onTakeProfit2Changed;
+  final ValueChanged<bool> onAutoProgressionChanged;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOutCubic,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.bgCard,
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(color: AppColors.borderLight),
-        ),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: () => setState(() => _expanded = !_expanded),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  children: [
-                    const Icon(Icons.tune_rounded,
-                        size: 16, color: AppColors.textSecondary),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text('TP / SL',
-                        style: AppTypography.label
-                            .copyWith(color: AppColors.textSecondary)),
-                    if (widget.tpLevels.isNotEmpty || widget.slPrice != null) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: AppColors.accent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-                    AnimatedRotation(
-                      turns: _expanded ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 200),
-                      child: const Icon(Icons.keyboard_arrow_down_rounded,
-                          size: 18, color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_expanded)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Divider(height: 1),
-                    const SizedBox(height: AppSpacing.md),
-                    // SL field
-                    _PriceField(
-                      label: 'Stop Loss',
-                      controller: _slCtrl,
-                      color: AppColors.lossRed,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    // TP levels
-                    Text('Take Profit levels',
-                        style: AppTypography.caption
-                            .copyWith(color: AppColors.textSecondary)),
-                    const SizedBox(height: AppSpacing.xs),
-                    ...widget.tpLevels.asMap().entries.map((e) {
-                      return _TpRow(
-                        index: e.key,
-                        price: e.value,
-                        onRemove: () => widget.onRemoveTp(e.key),
-                      )
-                          .animate()
-                          .slideY(
-                            begin: -0.3,
-                            end: 0,
-                            duration: 200.ms,
-                            curve: Curves.easeOutCubic,
-                          )
-                          .fadeIn(duration: 200.ms);
-                    }),
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _PriceField(
-                            label: 'Add TP level',
-                            controller: _tpCtrl,
-                            color: AppColors.profitGreen,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        GestureDetector(
-                          onTap: _addTp,
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.profitGreen.withValues(alpha: 0.12),
-                              borderRadius: AppRadius.chipRadius,
-                            ),
-                            child: const Icon(Icons.add_rounded,
-                                size: 18, color: AppColors.profitGreen),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
       ),
-    );
-  }
-}
-
-class _TpRow extends StatelessWidget {
-  const _TpRow(
-      {required this.index, required this.price, required this.onRemove});
-  final int index;
-  final double price;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: AppColors.profitGreen.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${index + 1}',
-              style: AppTypography.caption.copyWith(color: AppColors.profitGreen),
-            ),
+          Row(
+            children: [
+              const Text('TP/SL', style: AppTypography.h4),
+              const Spacer(),
+              Text('Add TP2',
+                  style: AppTypography.label.copyWith(color: AppColors.accent)),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Text('\$${price.toStringAsFixed(2)}', style: AppTypography.numericSm),
-          const Spacer(),
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onRemove();
-            },
-            child: const Icon(Icons.close_rounded,
-                size: 16, color: AppColors.textDisabled),
+          const SizedBox(height: AppSpacing.md),
+          _PriceField(
+            label: 'Stop Loss',
+            initialValue: stopLoss,
+            onChanged: onStopLossChanged,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _PriceField(
+            label: 'Take Profit',
+            hint: 'TP1',
+            initialValue: takeProfit1,
+            onChanged: onTakeProfit1Changed,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _PriceField(
+            label: 'Take Profit 2',
+            hint: 'Optional',
+            initialValue: takeProfit2,
+            onChanged: onTakeProfit2Changed,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: autoProgression,
+            onChanged: onAutoProgressionChanged,
+            title: const Text(
+              'Automatic Stop Loss progression',
+              style: AppTypography.body,
+            ),
           ),
         ],
       ),
@@ -222,39 +82,64 @@ class _TpRow extends StatelessWidget {
   }
 }
 
-class _PriceField extends StatelessWidget {
-  const _PriceField(
-      {required this.label,
-      required this.controller,
-      required this.color});
+class _PriceField extends StatefulWidget {
+  const _PriceField({
+    required this.label,
+    required this.initialValue,
+    required this.onChanged,
+    this.hint,
+  });
+
   final String label;
-  final TextEditingController controller;
-  final Color color;
+  final String? hint;
+  final double? initialValue;
+  final ValueChanged<double?> onChanged;
+
+  @override
+  State<_PriceField> createState() => _PriceFieldState();
+}
+
+class _PriceFieldState extends State<_PriceField> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(
+      text: widget.initialValue == null
+          ? ''
+          : widget.initialValue!.toStringAsFixed(2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return TextField(
-      controller: controller,
+      controller: _ctrl,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       style: AppTypography.numericSm,
       decoration: InputDecoration(
-        labelText: label,
-        labelStyle: AppTypography.caption.copyWith(color: AppColors.textSecondary),
-        prefixText: '\$ ',
-        prefixStyle: AppTypography.numericSm.copyWith(color: AppColors.textSecondary),
+        labelText: widget.label,
+        hintText: widget.hint ?? '\$1,000',
+        prefixText: '\$',
         filled: true,
-        fillColor: color.withValues(alpha: 0.04),
-        enabledBorder: OutlineInputBorder(
+        fillColor: AppColors.bgPrimary,
+        enabledBorder: const OutlineInputBorder(
           borderRadius: AppRadius.chipRadius,
-          borderSide: BorderSide(color: color.withValues(alpha: 0.3)),
+          borderSide: BorderSide(color: AppColors.borderLight),
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: const OutlineInputBorder(
           borderRadius: AppRadius.chipRadius,
-          borderSide: BorderSide(color: color, width: 1.5),
+          borderSide: BorderSide(color: AppColors.accent, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       ),
+      onChanged: (value) => widget.onChanged(double.tryParse(value)),
     );
   }
 }

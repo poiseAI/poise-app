@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -9,192 +10,299 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../providers/trade_form_provider.dart';
 import 'widgets/leverage_slider.dart';
-import 'widgets/order_preview_sheet.dart';
 import 'widgets/order_type_toggle.dart';
-import 'widgets/risk_score_badge.dart';
 import 'widgets/symbol_picker.dart';
 import 'widgets/tp_sl_section.dart';
 
-class TradeEntryScreen extends ConsumerStatefulWidget {
+class TradeEntryScreen extends ConsumerWidget {
   const TradeEntryScreen({super.key});
 
   @override
-  ConsumerState<TradeEntryScreen> createState() => _TradeEntryScreenState();
-}
-
-class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseCtrl;
-  bool _wasValid = false;
-  final _qtyCtrl = TextEditingController();
-  final _priceCtrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pulseCtrl.dispose();
-    _qtyCtrl.dispose();
-    _priceCtrl.dispose();
-    super.dispose();
-  }
-
-  void _onFormChanged(TradeFormState? prev, TradeFormState next) {
-    final isValid = ref.read(tradeFormProvider.notifier).isValid;
-    if (isValid && !_wasValid) {
-      _pulseCtrl.forward().then((_) => _pulseCtrl.reverse());
-    }
-    _wasValid = isValid;
-  }
-
-  void _showPreview() {
-    HapticFeedback.mediumImpact();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const OrderPreviewSheet(),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final form = ref.watch(tradeFormProvider);
     final notifier = ref.read(tradeFormProvider.notifier);
-
-    ref.listen(tradeFormProvider, _onFormChanged);
-
-    final isValid = notifier.isValid;
-    final isBuy = form.side == OrderSide.buy;
+    final preflight = form.preflight;
+    final blocked = preflight != null && !preflight.allowed;
+    final formError = form.validationError ?? notifier.localValidationError;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: AppSpacing.screenPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSpacing.lg),
-                    const Text('Trade', style: AppTypography.h1),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // ── Symbol picker ──────────────────────────────────────
-                    SymbolPicker(selected: form.symbol),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // ── Risk score (only when symbol selected) ─────────────
-                    if (form.symbol != null) ...[
-                      RiskScoreBadge(score: form.riskScore)
-                          .animate(key: ValueKey(form.symbol?.symbol))
-                          .fadeIn(duration: 300.ms)
-                          .slideX(begin: 0.1, end: 0),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-
-                    // ── Buy / Sell toggle ──────────────────────────────────
-                    Row(
-                      children: [
-                        _SideButton(
-                          label: 'Buy',
-                          active: isBuy,
-                          color: AppColors.profitGreen,
-                          onTap: () => notifier.setSide(OrderSide.buy),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        _SideButton(
-                          label: 'Sell',
-                          active: !isBuy,
-                          color: AppColors.lossRed,
-                          onTap: () => notifier.setSide(OrderSide.sell),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // ── Order type toggle (#38) ────────────────────────────
-                    OrderTypeToggle(
-                      selected: form.orderType,
-                      onChanged: notifier.setOrderType,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // ── Quantity ───────────────────────────────────────────
-                    _NumberField(
-                      label: 'Quantity',
-                      controller: _qtyCtrl,
-                      hint: form.symbol?.minQty.toStringAsFixed(4) ?? '0.001',
-                      suffix: form.symbol?.baseAsset ?? '',
-                      onChanged: (v) {
-                        final val = double.tryParse(v);
-                        if (val != null) notifier.setQuantity(val);
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // ── Limit price (only for limit/stop) ─────────────────
-                    if (form.orderType != OrderType.market) ...[
-                      _NumberField(
-                        label: form.orderType == OrderType.limit
-                            ? 'Limit price'
-                            : 'Stop price',
-                        controller: _priceCtrl,
-                        hint: '0.00',
-                        suffix: 'USDT',
-                        onChanged: (v) {
-                          notifier.setLimitPrice(double.tryParse(v));
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-
-                    // ── Leverage slider (#36) ──────────────────────────────
-                    LeverageSlider(
-                      value: form.leverage,
-                      max: form.symbol?.maxLeverage ?? 100,
-                      onChanged: notifier.setLeverage,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // ── TP / SL section (#39-40) ───────────────────────────
-                    TpSlSection(
-                      tpLevels: form.tpLevels,
-                      slPrice: form.slPrice,
-                      onAddTp: notifier.addTpLevel,
-                      onRemoveTp: notifier.removeTpLevel,
-                      onSlChanged: notifier.setSlPrice,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // ── Submit button (#41 pulse on valid) ─────────────────
-                    AnimatedBuilder(
-                      animation: _pulseCtrl,
-                      builder: (_, child) => Transform.scale(
-                        scale: 1.0 + (_pulseCtrl.value * 0.03),
-                        child: child,
-                      ),
-                      child: PPrimaryButton(
-                        label: 'Preview order',
-                        onPressed: isValid ? _showPreview : null,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxl),
-                  ],
+        child: RefreshIndicator(
+          onRefresh: notifier.loadPreflight,
+          color: AppColors.accent,
+          child: ListView(
+            padding: AppSpacing.screenPadding,
+            children: [
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.go(Routes.home),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  const Expanded(
+                    child: Text('Open a new trade', style: AppTypography.h1),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _BalanceRow(form: form),
+              const SizedBox(height: AppSpacing.md),
+              SymbolPicker(selected: form.symbol),
+              const SizedBox(height: AppSpacing.md),
+              _RiskStatusCard(form: form),
+              if (form.isLoadingPreflight) ...[
+                const SizedBox(height: AppSpacing.md),
+                const _InfoCard(
+                    message:
+                        'Checking exchange connection and live guardrails...'),
+              ],
+              if (form.preflightError != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                _BlockingCard(message: form.preflightError),
+              ],
+              if (blocked) ...[
+                const SizedBox(height: AppSpacing.md),
+                _BlockingCard(message: preflight.blockingReason),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              const Text('Execution mode', style: AppTypography.h3),
+              const SizedBox(height: AppSpacing.sm),
+              OrderTypeToggle(
+                selected: form.orderType,
+                onChanged: notifier.setOrderType,
+              ),
+              if (form.orderType == OrderType.limit) ...[
+                const SizedBox(height: AppSpacing.md),
+                _NumberField(
+                  label: 'Limit price',
+                  prefix: '\$',
+                  onChanged: (v) => notifier.setLimitPrice(double.tryParse(v)),
                 ),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              const Text('Margin', style: AppTypography.h3),
+              const SizedBox(height: AppSpacing.sm),
+              _MarginControl(form: form, notifier: notifier),
+              const SizedBox(height: AppSpacing.xl),
+              const Text('Leverage', style: AppTypography.h3),
+              const SizedBox(height: AppSpacing.sm),
+              LeverageSlider(
+                value: form.leverage,
+                max: _maxLeverage(form).round(),
+                onChanged: notifier.setLeverage,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              TpSlSection(
+                stopLoss: form.slPrice,
+                takeProfit1: form.takeProfit1,
+                takeProfit2: form.takeProfit2,
+                autoProgression: form.autoStopLossProgression,
+                onStopLossChanged: notifier.setSlPrice,
+                onTakeProfit1Changed: notifier.setTakeProfit1,
+                onTakeProfit2Changed: notifier.setTakeProfit2,
+                onAutoProgressionChanged: notifier.setAutoStopLossProgression,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SideButton(
+                      label: 'Buy/Long',
+                      active: form.side == OrderSide.long,
+                      color: AppColors.profitGreen,
+                      onTap: () => notifier.setSide(OrderSide.long),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _SideButton(
+                      label: 'Sell/Short',
+                      active: form.side == OrderSide.short,
+                      color: AppColors.lossRed,
+                      onTap: () => notifier.setSide(OrderSide.short),
+                    ),
+                  ),
+                ],
+              ),
+              if (formError != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                _BlockingCard(message: formError),
+              ],
+              const SizedBox(height: AppSpacing.xl),
+              PPrimaryButton(
+                label: form.isValidating ? 'Reviewing...' : 'Review trade',
+                state: form.isValidating
+                    ? PButtonState.loading
+                    : PButtonState.idle,
+                onPressed: notifier.isValid && !form.isValidating
+                    ? () async {
+                        HapticFeedback.mediumImpact();
+                        final ok = await notifier.validateTrade();
+                        if (ok && context.mounted) {
+                          context.push(Routes.tradeValidation);
+                        }
+                      }
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  double _maxLeverage(TradeFormState form) {
+    final fromRule = form.preflight?.maxLeverage ?? 10;
+    final fromSymbol = (form.symbol?.maxLeverage ?? fromRule).toDouble();
+    return fromRule < fromSymbol ? fromRule : fromSymbol;
+  }
+}
+
+class _BalanceRow extends StatelessWidget {
+  const _BalanceRow({required this.form});
+  final TradeFormState form;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text('Available balance:',
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
+        const Spacer(),
+        Text(
+          '${form.availableBalance.toStringAsFixed(0)} ${form.balanceCurrency}',
+          style: AppTypography.numericMd.copyWith(color: AppColors.textPrimary),
+        ),
+      ],
+    );
+  }
+}
+
+class _RiskStatusCard extends StatelessWidget {
+  const _RiskStatusCard({required this.form});
+  final TradeFormState form;
+
+  @override
+  Widget build(BuildContext context) {
+    final pf = form.preflight;
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Risk status', style: AppTypography.h3),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              _Chip('Exchange: ${(pf?.exchange ?? 'bybit').toUpperCase()}'),
+              _Chip(
+                  'Risk per trade: ${(pf?.riskPerTradePct ?? 2).toStringAsFixed(0)}%'),
+              _Chip(
+                  'Max leverage: ${(pf?.maxLeverage ?? 10).toStringAsFixed(0)}x'),
+              _Chip(
+                  'Trades today: ${pf?.tradesToday ?? 0} / ${pf?.maxTradesPerDay ?? 5}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarginControl extends StatelessWidget {
+  const _MarginControl({required this.form, required this.notifier});
+  final TradeFormState form;
+  final TradeForm notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPct = form.marginMode == MarginMode.percentage;
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _Segment(
+                label: 'Percentage',
+                active: isPct,
+                onTap: () => notifier.setMarginMode(MarginMode.percentage),
+              ),
+            ),
+            Expanded(
+              child: _Segment(
+                label: 'Fixed amount',
+                active: !isPct,
+                onTap: () => notifier.setMarginMode(MarginMode.fixed),
               ),
             ),
           ],
         ),
+        const SizedBox(height: AppSpacing.md),
+        if (isPct) ...[
+          Slider(
+            value: form.marginValue.clamp(1, 100),
+            min: 1,
+            max: 100,
+            divisions: 99,
+            onChanged: notifier.setMarginValue,
+          ),
+          Row(
+            children: [
+              Text(
+                  '${notifier.marginAmount.toStringAsFixed(0)} ${form.balanceCurrency}',
+                  style: AppTypography.numericSm),
+              const Spacer(),
+              Text('${form.marginValue.toStringAsFixed(0)}%',
+                  style: AppTypography.numericSm),
+            ],
+          ),
+        ] else
+          _NumberField(
+            label: 'Margin amount',
+            prefix: '\$',
+            onChanged: (v) => notifier.setMarginValue(double.tryParse(v) ?? 0),
+          ),
+      ],
+    );
+  }
+}
+
+class _Segment extends StatelessWidget {
+  const _Segment(
+      {required this.label, required this.active, required this.onTap});
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? AppColors.bgCard : AppColors.bgSecondary,
+          borderRadius: AppRadius.chipRadius,
+          border: Border.all(
+              color: active ? AppColors.accent : AppColors.borderLight),
+        ),
+        child: Text(label,
+            style: AppTypography.label.copyWith(
+              color: active ? AppColors.accent : AppColors.textSecondary,
+            )),
       ),
     );
   }
@@ -215,86 +323,109 @@ class _SideButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 44,
-          decoration: BoxDecoration(
-            color: active ? color : AppColors.bgCard,
-            borderRadius: AppRadius.chipRadius,
-            border: Border.all(
-              color: active ? color : AppColors.borderLight,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: AppTypography.label.copyWith(
-              color: active ? Colors.white : AppColors.textSecondary,
-            ),
-          ),
-        ),
+    return FilledButton.icon(
+      onPressed: onTap,
+      icon: Icon(active
+          ? Icons.check_box_rounded
+          : Icons.check_box_outline_blank_rounded),
+      label: FittedBox(child: Text(label)),
+      style: FilledButton.styleFrom(
+        backgroundColor: active ? color : color.withValues(alpha: 0.12),
+        foregroundColor: active ? Colors.white : color,
+        minimumSize: const Size.fromHeight(58),
+        shape: const StadiumBorder(),
       ),
     );
   }
 }
 
 class _NumberField extends StatelessWidget {
-  const _NumberField({
-    required this.label,
-    required this.controller,
-    required this.hint,
-    required this.suffix,
-    required this.onChanged,
-  });
-
+  const _NumberField(
+      {required this.label, required this.onChanged, this.prefix});
   final String label;
-  final TextEditingController controller;
-  final String hint;
-  final String suffix;
+  final String? prefix;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style:
-                AppTypography.caption.copyWith(color: AppColors.textSecondary)),
-        const SizedBox(height: AppSpacing.xs),
-        TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: AppTypography.numericSm,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle:
-                AppTypography.numericSm.copyWith(color: AppColors.textDisabled),
-            suffixText: suffix,
-            suffixStyle: AppTypography.caption
-                .copyWith(color: AppColors.textSecondary),
-            filled: true,
-            fillColor: AppColors.bgCard,
-            enabledBorder: const OutlineInputBorder(
-              borderRadius: AppRadius.chipRadius,
-              borderSide: BorderSide(color: AppColors.borderLight),
-            ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: AppRadius.chipRadius,
-              borderSide: BorderSide(color: AppColors.accent, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-          ),
-          onChanged: onChanged,
+    return TextField(
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: AppTypography.numericSm,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixText: prefix,
+        filled: true,
+        fillColor: AppColors.bgCard,
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: AppRadius.chipRadius,
+          borderSide: BorderSide(color: AppColors.borderLight),
         ),
-      ],
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: AppRadius.chipRadius,
+          borderSide: BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+      ),
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Text(label, style: AppTypography.bodyMedium),
+    );
+  }
+}
+
+class _BlockingCard extends StatelessWidget {
+  const _BlockingCard({this.message});
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.lossRed.withValues(alpha: 0.08),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.lossRed.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        message ?? 'Trading is temporarily unavailable.',
+        style: AppTypography.body.copyWith(color: AppColors.lossRed),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.08),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        message,
+        style: AppTypography.body.copyWith(color: AppColors.accent),
+      ),
     );
   }
 }

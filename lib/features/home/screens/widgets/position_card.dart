@@ -165,6 +165,18 @@ class _Header extends StatelessWidget {
           '${pos.side.toUpperCase()} ${pos.leverage.toStringAsFixed(0)}x',
           style: AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
         ),
+        const SizedBox(width: AppSpacing.xs),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.08),
+            borderRadius: AppRadius.pillRadius,
+          ),
+          child: Text(
+            pos.source == 'external' ? 'External' : 'Poise',
+            style: AppTypography.caption.copyWith(color: AppColors.accent),
+          ),
+        ),
         const Spacer(),
         if (pos.isLocked)
           const Icon(
@@ -269,14 +281,47 @@ class _Footer extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.xs),
             _CardIconButton(
-              tooltip: 'Request exit',
-              onTap: onExitTap,
-              icon: Icons.close_rounded,
-              color: AppColors.lossRed,
+              tooltip:
+                  'Edit or close this trade on your exchange. Poise will sync the update automatically.',
+              onTap: () => _showExchangeOnlyNotice(context),
+              icon: Icons.info_outline_rounded,
+              color: AppColors.textSecondary,
             ),
           ],
         ),
       ],
+    );
+  }
+
+  void _showExchangeOnlyNotice(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.bgSurface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetRadius),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Exchange-managed trade', style: AppTypography.h3),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Edit or close this trade on your exchange. Poise will sync the update automatically.',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -392,13 +437,16 @@ class _PositionContextMenu extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(
-                Icons.exit_to_app_rounded,
-                color: AppColors.lossRed,
+                Icons.info_outline_rounded,
+                color: AppColors.textSecondary,
               ),
-              title: const Text('Request exit', style: AppTypography.body),
+              title: const Text('Exchange-managed trade',
+                  style: AppTypography.body),
+              subtitle: const Text(
+                'Edit or close this trade on your exchange. Poise will sync the update automatically.',
+              ),
               onTap: () {
                 Navigator.pop(context);
-                onExitTap();
               },
             ),
             const SizedBox(height: AppSpacing.md),

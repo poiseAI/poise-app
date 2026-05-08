@@ -19,30 +19,46 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  final _nameFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmFocus = FocusNode();
 
   PButtonState _buttonState = PButtonState.idle;
+  PFieldState _nameState = PFieldState.idle;
   PFieldState _emailState = PFieldState.idle;
   PFieldState _passwordState = PFieldState.idle;
   PFieldState _confirmState = PFieldState.idle;
+  String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _confirmError;
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
+    _nameFocus.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
     _confirmFocus.dispose();
     super.dispose();
+  }
+
+  bool _validateName(String val) {
+    final ok =
+        val.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).length >= 2;
+    setState(() {
+      _nameState = ok ? PFieldState.valid : PFieldState.error;
+      _nameError = ok ? null : 'Enter your first and last name';
+    });
+    return ok;
   }
 
   bool _validateEmail(String val) {
@@ -73,14 +89,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _submit() async {
+    final nameOk = _validateName(_nameCtrl.text);
     final emailOk = _validateEmail(_emailCtrl.text.trim());
     final passOk = _validatePassword(_passwordCtrl.text);
     final confirmOk = _validateConfirm(_confirmCtrl.text);
-    if (!emailOk || !passOk || !confirmOk) return;
+    if (!nameOk || !emailOk || !passOk || !confirmOk) return;
 
     setState(() => _buttonState = PButtonState.loading);
 
     final result = await ref.read(authProvider.notifier).register(
+          _nameCtrl.text.trim(),
           _emailCtrl.text.trim(),
           _passwordCtrl.text,
         );
@@ -112,91 +130,112 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.lg),
-              const Text('Create account', style: AppTypography.h1),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Enter your details to get started.',
-                style: AppTypography.bodyLg
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              PTextField(
-                controller: _emailCtrl,
-                focusNode: _emailFocus,
-                label: 'Email',
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                fieldState: _emailState,
-                errorText: _emailError,
-                autofocus: true,
-                onChanged: (val) {
-                  if (_emailState != PFieldState.idle) _validateEmail(val);
-                },
-                onEditingComplete: () => _passwordFocus.requestFocus(),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              PTextField(
-                controller: _passwordCtrl,
-                focusNode: _passwordFocus,
-                label: 'Password',
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                fieldState: _passwordState,
-                errorText: _passwordError,
-                onChanged: (val) {
-                  setState(() {});
-                  if (_passwordState != PFieldState.idle) {
-                    _validatePassword(val);
-                  }
-                  if (_confirmState != PFieldState.idle) {
-                    _validateConfirm(_confirmCtrl.text);
-                  }
-                },
-                onEditingComplete: () => _confirmFocus.requestFocus(),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              PasswordRequirements(password: _passwordCtrl.text),
-              const SizedBox(height: AppSpacing.md),
-              PTextField(
-                controller: _confirmCtrl,
-                focusNode: _confirmFocus,
-                label: 'Confirm password',
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                fieldState: _confirmState,
-                errorText: _confirmError,
-                onChanged: (val) {
-                  if (_confirmState != PFieldState.idle) {
-                    _validateConfirm(val);
-                  }
-                },
-                onEditingComplete: _submit,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              PPrimaryButton(
-                label: 'Create account',
-                state: _buttonState,
-                onPressed: _submit,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.go(Routes.login),
-                  child: Text(
-                    'Already have an account? Log in',
-                    style: AppTypography.body
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: AppSpacing.screenPadding,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: AppSpacing.lg),
+                  const Text('Sign up', style: AppTypography.h1),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Create your trading operating system.',
+                    style: AppTypography.bodyLg
                         .copyWith(color: AppColors.textSecondary),
                   ),
-                ),
+                  SizedBox(
+                      height: constraints.maxHeight > 720
+                          ? AppSpacing.xxl
+                          : AppSpacing.lg),
+                  PTextField(
+                    controller: _nameCtrl,
+                    focusNode: _nameFocus,
+                    label: 'Full name',
+                    textInputAction: TextInputAction.next,
+                    fieldState: _nameState,
+                    errorText: _nameError,
+                    autofocus: true,
+                    onChanged: (val) {
+                      if (_nameState != PFieldState.idle) _validateName(val);
+                    },
+                    onEditingComplete: () => _emailFocus.requestFocus(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  PTextField(
+                    controller: _emailCtrl,
+                    focusNode: _emailFocus,
+                    label: 'Email address',
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    fieldState: _emailState,
+                    errorText: _emailError,
+                    onChanged: (val) {
+                      if (_emailState != PFieldState.idle) _validateEmail(val);
+                    },
+                    onEditingComplete: () => _passwordFocus.requestFocus(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  PTextField(
+                    controller: _passwordCtrl,
+                    focusNode: _passwordFocus,
+                    label: 'Create password',
+                    obscureText: true,
+                    textInputAction: TextInputAction.next,
+                    fieldState: _passwordState,
+                    errorText: _passwordError,
+                    onChanged: (val) {
+                      setState(() {});
+                      if (_passwordState != PFieldState.idle) {
+                        _validatePassword(val);
+                      }
+                      if (_confirmState != PFieldState.idle) {
+                        _validateConfirm(_confirmCtrl.text);
+                      }
+                    },
+                    onEditingComplete: () => _confirmFocus.requestFocus(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  PasswordRequirements(password: _passwordCtrl.text),
+                  const SizedBox(height: AppSpacing.md),
+                  PTextField(
+                    controller: _confirmCtrl,
+                    focusNode: _confirmFocus,
+                    label: 'Confirm password',
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    fieldState: _confirmState,
+                    errorText: _confirmError,
+                    onChanged: (val) {
+                      if (_confirmState != PFieldState.idle) {
+                        _validateConfirm(val);
+                      }
+                    },
+                    onEditingComplete: _submit,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  PPrimaryButton(
+                    label: 'Create account',
+                    state: _buttonState,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.go(Routes.login),
+                      child: Text(
+                        'Already have an account? Log in',
+                        style: AppTypography.body
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
+            ),
           ),
         ),
       ),

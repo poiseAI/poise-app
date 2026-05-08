@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -134,6 +135,15 @@ class _SearchPanel extends ConsumerWidget {
             child: TextField(
               controller: ctrl,
               autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                TextInputFormatter.withFunction(
+                  (oldValue, newValue) => newValue.copyWith(
+                    text: newValue.text.toUpperCase(),
+                    selection: newValue.selection,
+                  ),
+                ),
+              ],
               style: AppTypography.body,
               decoration: InputDecoration(
                 hintText: 'Search symbol...',
@@ -150,7 +160,8 @@ class _SearchPanel extends ConsumerWidget {
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
               ),
-              onChanged: ref.read(symbolSearchProvider.notifier).search,
+              onChanged: (value) =>
+                  ref.read(symbolSearchProvider.notifier).search(value),
             ),
           ),
           searchState.when(
@@ -162,37 +173,72 @@ class _SearchPanel extends ConsumerWidget {
               padding: EdgeInsets.all(AppSpacing.md),
               child: Text('Failed to load symbols'),
             ),
-            data: (symbols) => ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: symbols.length,
-              itemBuilder: (ctx, i) {
-                final sym = symbols[i];
-                final pct = sym.priceChangePct;
-                final pctColor = pct >= 0 ? AppColors.profitGreen : AppColors.lossRed;
-                return ListTile(
-                  dense: true,
-                  title: Text(sym.symbol, style: AppTypography.label),
-                  subtitle: Text(
-                    sym.lastPrice > 0
-                        ? '\$${sym.lastPrice.toStringAsFixed(2)}'
-                        : sym.baseAsset,
-                    style: AppTypography.caption
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                  trailing: pct != 0
-                      ? Text(
-                          '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
-                          style: AppTypography.numericSm.copyWith(color: pctColor),
-                        )
-                      : null,
-                  onTap: () => onSelect(sym),
-                )
-                    .animate(delay: (i * 25).ms)
-                    .fadeIn(duration: 150.ms)
-                    .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
-              },
-            ),
+            data: (symbols) {
+              if (symbols.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text('No symbols found',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body
+                          .copyWith(color: AppColors.textSecondary)),
+                );
+              }
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 320),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: symbols.length,
+                  itemBuilder: (ctx, i) {
+                    final sym = symbols[i];
+                    final pct = sym.priceChangePct;
+                    final pctColor =
+                        pct >= 0 ? AppColors.profitGreen : AppColors.lossRed;
+                    return ListTile(
+                      dense: true,
+                      title: Row(
+                        children: [
+                          Flexible(
+                              child:
+                                  Text(sym.symbol, style: AppTypography.label)),
+                          const SizedBox(width: AppSpacing.xs),
+                          if (sym.status.toLowerCase() == 'trading')
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.profitGreen.withValues(alpha: 0.1),
+                                borderRadius: AppRadius.pillRadius,
+                              ),
+                              child: Text('Active',
+                                  style: AppTypography.caption.copyWith(
+                                      color: AppColors.profitGreen)),
+                            ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        sym.lastPrice > 0
+                            ? '${sym.baseAsset}/${sym.quoteAsset} · \$${sym.lastPrice.toStringAsFixed(2)}'
+                            : '${sym.baseAsset}/${sym.quoteAsset}',
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                      trailing: pct != 0
+                          ? Text(
+                              '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
+                              style: AppTypography.numericSm
+                                  .copyWith(color: pctColor),
+                            )
+                          : null,
+                      onTap: () => onSelect(sym),
+                    )
+                        .animate(delay: (i * 25).ms)
+                        .fadeIn(duration: 150.ms)
+                        .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),

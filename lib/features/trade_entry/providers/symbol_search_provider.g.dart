@@ -6,7 +6,7 @@ part of 'symbol_search_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$symbolSearchHash() => r'a3efb825b77da2b68e88a10054611101f909842e';
+String _$symbolSearchHash() => r'7f7149fd2f87751d0bc703164c43a300c2255868';
 
 /// See also [SymbolSearch].
 @ProviderFor(SymbolSearch)

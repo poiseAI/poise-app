@@ -77,6 +77,8 @@ class _PTextFieldState extends State<PTextField>
   }
 
   Widget _buildSuffix() {
+    final iconColor = Theme.of(context).colorScheme.onSurfaceVariant;
+
     if (widget.obscureText) {
       return GestureDetector(
         onTap: () => setState(() => _obscured = !_obscured),
@@ -87,7 +89,7 @@ class _PTextFieldState extends State<PTextField>
                 ? Icons.visibility_off_outlined
                 : Icons.visibility_outlined,
             size: 20,
-            color: AppColors.textSecondary,
+            color: iconColor,
           ),
         ),
       );
@@ -116,6 +118,7 @@ class _PTextFieldState extends State<PTextField>
   @override
   Widget build(BuildContext context) {
     final isError = widget.fieldState == PFieldState.error;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return AnimatedBuilder(
       animation: _shakeCtrl,
@@ -136,7 +139,8 @@ class _PTextFieldState extends State<PTextField>
         maxLength: widget.maxLength,
         enabled: widget.enabled,
         autofocus: widget.autofocus,
-        style: AppTypography.body,
+        cursorColor: AppColors.primary,
+        style: AppTypography.body.copyWith(color: colorScheme.onSurface),
         decoration: InputDecoration(
           labelText: widget.label,
           hintText: widget.hint,

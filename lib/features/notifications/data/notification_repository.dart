@@ -53,4 +53,15 @@ class NotificationRepository {
           e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
     }
   }
+
+  Future<Result<void, AppError>> dismiss(String id) async {
+    try {
+      await _dio.delete<void>('/notifications/$id');
+      return const Ok(null);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return const Ok(null);
+      return Err(
+          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+    }
+  }
 }
