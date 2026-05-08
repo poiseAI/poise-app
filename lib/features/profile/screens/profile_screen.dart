@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -8,16 +10,41 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/feedback/p_error_state.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
+import '../../../core/widgets/inputs/p_text_field.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
+import '../../auth/widgets/password_requirements.dart';
 import '../../onboarding/screens/set_risk_appetite_screen.dart';
 import '../data/profile_api.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _handledInitialSheet = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_handledInitialSheet) return;
+    final sheet = GoRouterState.of(context).uri.queryParameters['sheet'];
+    if (sheet == 'exchange') {
+      _handledInitialSheet = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        showExchangeConnectionsSheet(context, ref).whenComplete(() {
+          if (mounted) context.go(Routes.profile);
+        });
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider).valueOrNull;
     if (authState is! AuthAuthenticated) {
       return const Scaffold(body: PErrorState(message: 'Not authenticated'));
@@ -51,7 +78,14 @@ class ProfileScreen extends ConsumerWidget {
           SizedBox(
             height: 48,
             child: OutlinedButton(
-              onPressed: () => _showEditProfileSheet(context, ref, authState),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => _EditProfileScreen(
+                    auth: authState,
+                    displayName: name,
+                  ),
+                ),
+              ),
               child: const Text('Edit profile'),
             ),
           ),
@@ -66,7 +100,7 @@ class ProfileScreen extends ConsumerWidget {
           _SettingsTile(
             icon: Icons.link_rounded,
             label: 'Exchange Connections',
-            onTap: () => _showExchangeConnectionsSheet(context, ref),
+            onTap: () => showExchangeConnectionsSheet(context, ref),
           ),
           _SettingsTile(
             icon: Icons.percent_rounded,
@@ -182,61 +216,366 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
-void _showEditProfileSheet(
-  BuildContext context,
-  WidgetRef ref,
-  AuthAuthenticated auth,
-) {
-  final emailCtrl = TextEditingController(text: auth.email);
-  bool saving = false;
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => _SheetFrame(
-        title: 'Edit profile',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+class _EditProfileScreen extends ConsumerStatefulWidget {
+  const _EditProfileScreen({
+    required this.auth,
+    required this.displayName,
+  });
+
+  final AuthAuthenticated auth;
+  final String displayName;
+
+  @override
+  ConsumerState<_EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
+  final _currentPasswordCtrl = TextEditingController();
+  final _newPasswordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _currentPasswordFocus = FocusNode();
+  final _newPasswordFocus = FocusNode();
+  final _confirmPasswordFocus = FocusNode();
+
+  PButtonState _profileButtonState = PButtonState.idle;
+  PButtonState _passwordButtonState = PButtonState.idle;
+  PFieldState _nameState = PFieldState.idle;
+  PFieldState _emailState = PFieldState.idle;
+  PFieldState _currentPasswordState = PFieldState.idle;
+  PFieldState _newPasswordState = PFieldState.idle;
+  PFieldState _confirmPasswordState = PFieldState.idle;
+  String? _nameError;
+  String? _emailError;
+  String? _currentPasswordError;
+  String? _newPasswordError;
+  String? _confirmPasswordError;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.displayName);
+    _emailCtrl = TextEditingController(text: widget.auth.email);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _currentPasswordCtrl.dispose();
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _currentPasswordFocus.dispose();
+    _newPasswordFocus.dispose();
+    _confirmPasswordFocus.dispose();
+    super.dispose();
+  }
+
+  bool _validateName() {
+    final ok = _nameCtrl.text.trim().isNotEmpty;
+    setState(() {
+      _nameState = ok ? PFieldState.valid : PFieldState.error;
+      _nameError = ok ? null : 'Enter your name';
+    });
+    return ok;
+  }
+
+  bool _validateEmail() {
+    final ok = RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$')
+        .hasMatch(_emailCtrl.text.trim());
+    setState(() {
+      _emailState = ok ? PFieldState.valid : PFieldState.error;
+      _emailError = ok ? null : 'Enter a valid email address';
+    });
+    return ok;
+  }
+
+  bool _validateCurrentPassword() {
+    final ok = _currentPasswordCtrl.text.isNotEmpty;
+    setState(() {
+      _currentPasswordState = ok ? PFieldState.valid : PFieldState.error;
+      _currentPasswordError = ok ? null : 'Enter your current password';
+    });
+    return ok;
+  }
+
+  bool _validateNewPassword() {
+    final ok = PasswordRequirements.isValid(_newPasswordCtrl.text);
+    setState(() {
+      _newPasswordState = ok ? PFieldState.valid : PFieldState.error;
+      _newPasswordError = ok ? null : 'Password does not meet all requirements';
+    });
+    return ok;
+  }
+
+  bool _validateConfirmPassword() {
+    final ok = _confirmPasswordCtrl.text == _newPasswordCtrl.text;
+    setState(() {
+      _confirmPasswordState = ok ? PFieldState.valid : PFieldState.error;
+      _confirmPasswordError = ok ? null : 'Passwords do not match';
+    });
+    return ok;
+  }
+
+  Future<void> _saveProfile() async {
+    final nameOk = _validateName();
+    final emailOk = _validateEmail();
+    if (!nameOk || !emailOk) return;
+
+    setState(() => _profileButtonState = PButtonState.loading);
+    final result = await ref.read(profileApiProvider).updateProfile(
+          fullName: _nameCtrl.text.trim(),
+          email: _emailCtrl.text.trim(),
+        );
+    if (!mounted) return;
+    result.fold(
+      onOk: (_) async {
+        setState(() => _profileButtonState = PButtonState.success);
+        ref.invalidate(_profileProvider);
+        await ref.read(authProvider.notifier).refreshSession();
+        if (!mounted) return;
+        PToast.success(context, 'Profile updated');
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) setState(() => _profileButtonState = PButtonState.idle);
+        });
+      },
+      onErr: (err) {
+        setState(() => _profileButtonState = PButtonState.error);
+        PToast.error(context, err.userMessage);
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) setState(() => _profileButtonState = PButtonState.idle);
+        });
+      },
+    );
+  }
+
+  Future<void> _changePassword() async {
+    final currentOk = _validateCurrentPassword();
+    final newOk = _validateNewPassword();
+    final confirmOk = _validateConfirmPassword();
+    if (!currentOk || !newOk || !confirmOk) return;
+
+    setState(() => _passwordButtonState = PButtonState.loading);
+    final result = await ref.read(profileApiProvider).updatePassword(
+          current: _currentPasswordCtrl.text,
+          newPassword: _newPasswordCtrl.text,
+        );
+    if (!mounted) return;
+    result.fold(
+      onOk: (_) {
+        setState(() => _passwordButtonState = PButtonState.success);
+        Future<void>.delayed(const Duration(milliseconds: 450), () {
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute<void>(
+              builder: (_) => const _PasswordChangedSuccessScreen(),
+            ),
+          );
+        });
+      },
+      onErr: (err) {
+        setState(() => _passwordButtonState = PButtonState.error);
+        PToast.error(context, err.userMessage);
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) setState(() => _passwordButtonState = PButtonState.idle);
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        title: const Text('Edit profile'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: AppSpacing.screenPadding,
           children: [
-            TextField(
-              controller: emailCtrl,
+            const SizedBox(height: AppSpacing.md),
+            const Text('Enter Details', style: AppTypography.h2),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Update your personal details and account password.',
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PTextField(
+              controller: _nameCtrl,
+              focusNode: _nameFocus,
+              label: 'Your name',
+              textInputAction: TextInputAction.next,
+              fieldState: _nameState,
+              errorText: _nameError,
+              onChanged: (_) {
+                if (_nameState != PFieldState.idle) _validateName();
+              },
+              onEditingComplete: () => _emailFocus.requestFocus(),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            PTextField(
+              controller: _emailCtrl,
+              focusNode: _emailFocus,
+              label: 'Email address',
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email address'),
+              textInputAction: TextInputAction.done,
+              fieldState: _emailState,
+              errorText: _emailError,
+              onChanged: (_) {
+                if (_emailState != PFieldState.idle) _validateEmail();
+              },
+              onEditingComplete: _saveProfile,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PPrimaryButton(
+              label: 'Save changes',
+              state: _profileButtonState,
+              onPressed: _profileButtonState == PButtonState.loading
+                  ? null
+                  : _saveProfile,
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            const Text('Change password', style: AppTypography.h2),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Create a new password for this account.',
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.lg),
-            PPrimaryButton(
-              label: saving ? 'Saving...' : 'Save changes',
-              state: saving ? PButtonState.loading : PButtonState.idle,
-              onPressed: saving
-                  ? null
-                  : () async {
-                      setState(() => saving = true);
-                      final result = await ref
-                          .read(profileApiProvider)
-                          .updateProfile(email: emailCtrl.text.trim());
-                      if (!context.mounted) return;
-                      setState(() => saving = false);
-                      result.fold(
-                        onOk: (_) {
-                          ref.invalidate(_profileProvider);
-                          ref.read(authProvider.notifier).refreshSession();
-                          Navigator.pop(context);
-                          PToast.success(context, 'Profile updated');
-                        },
-                        onErr: (err) => PToast.error(context, err.userMessage),
-                      );
-                    },
+            PTextField(
+              controller: _currentPasswordCtrl,
+              focusNode: _currentPasswordFocus,
+              label: 'Current password',
+              obscureText: true,
+              textInputAction: TextInputAction.next,
+              fieldState: _currentPasswordState,
+              errorText: _currentPasswordError,
+              onChanged: (_) {
+                if (_currentPasswordState != PFieldState.idle) {
+                  _validateCurrentPassword();
+                }
+              },
+              onEditingComplete: () => _newPasswordFocus.requestFocus(),
             ),
+            const SizedBox(height: AppSpacing.md),
+            PTextField(
+              controller: _newPasswordCtrl,
+              focusNode: _newPasswordFocus,
+              label: 'New password',
+              obscureText: true,
+              textInputAction: TextInputAction.next,
+              fieldState: _newPasswordState,
+              errorText: _newPasswordError,
+              onChanged: (_) {
+                setState(() {});
+                if (_newPasswordState != PFieldState.idle) {
+                  _validateNewPassword();
+                }
+                if (_confirmPasswordState != PFieldState.idle) {
+                  _validateConfirmPassword();
+                }
+              },
+              onEditingComplete: () => _confirmPasswordFocus.requestFocus(),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            PasswordRequirements(password: _newPasswordCtrl.text),
+            const SizedBox(height: AppSpacing.md),
+            PTextField(
+              controller: _confirmPasswordCtrl,
+              focusNode: _confirmPasswordFocus,
+              label: 'Confirm password',
+              hint: 'Repeat password',
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              fieldState: _confirmPasswordState,
+              errorText: _confirmPasswordError,
+              onChanged: (_) {
+                if (_confirmPasswordState != PFieldState.idle) {
+                  _validateConfirmPassword();
+                }
+              },
+              onEditingComplete: _changePassword,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PPrimaryButton(
+              label: 'Change password',
+              state: _passwordButtonState,
+              onPressed: _passwordButtonState == PButtonState.loading
+                  ? null
+                  : _changePassword,
+            ),
+            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),
-    ),
-  ).whenComplete(emailCtrl.dispose);
+    );
+  }
 }
 
-void _showExchangeConnectionsSheet(BuildContext context, WidgetRef ref) {
-  showModalBottomSheet<void>(
+class _PasswordChangedSuccessScreen extends StatelessWidget {
+  const _PasswordChangedSuccessScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              Image.asset(
+                'assets/images/success_lock.png',
+                width: 190,
+                height: 190,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+              const Spacer(),
+              const Text(
+                'Your password has been updated',
+                textAlign: TextAlign.center,
+                style: AppTypography.h2,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Your password has been changed successfully.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const Spacer(flex: 2),
+              PPrimaryButton(
+                label: 'Done',
+                onPressed: () => context.go(Routes.profile),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> showExchangeConnectionsSheet(BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

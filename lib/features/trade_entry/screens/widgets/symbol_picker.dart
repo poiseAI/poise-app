@@ -50,7 +50,7 @@ class _SymbolPickerState extends ConsumerState<SymbolPicker> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: _expanded ? _close : _open,
+          onTap: _expanded ? null : _open,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(
@@ -86,10 +86,25 @@ class _SymbolPickerState extends ConsumerState<SymbolPicker> {
                         .copyWith(color: AppColors.textSecondary),
                   ),
                 ] else
-                  Text('Select symbol',
-                      style: AppTypography.body
-                          .copyWith(color: AppColors.textDisabled)),
-                const Spacer(),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.search_rounded,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          'Search symbol',
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.textDisabled,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (sym != null) const Spacer(),
                 AnimatedRotation(
                   turns: _expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 200),
@@ -147,7 +162,7 @@ class _SearchPanel extends ConsumerWidget {
               ],
               style: AppTypography.body,
               decoration: InputDecoration(
-                hintText: 'Search symbol...',
+                hintText: 'Search symbol',
                 hintStyle:
                     AppTypography.body.copyWith(color: AppColors.textDisabled),
                 prefixIcon: const Icon(Icons.search_rounded,
@@ -207,13 +222,13 @@ class _SearchPanel extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color:
-                                    AppColors.profitGreen.withValues(alpha: 0.1),
+                                color: AppColors.profitGreen
+                                    .withValues(alpha: 0.1),
                                 borderRadius: AppRadius.pillRadius,
                               ),
                               child: Text('Active',
-                                  style: AppTypography.caption.copyWith(
-                                      color: AppColors.profitGreen)),
+                                  style: AppTypography.caption
+                                      .copyWith(color: AppColors.profitGreen)),
                             ),
                         ],
                       ),

@@ -16,28 +16,28 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 }
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
-  final _controller = PageController(initialPage: 1);
-  int _page = 1;
+  final _controller = PageController();
+  int _page = 0;
   bool _showSplash = true;
 
   static const _pages = [
     _WelcomePageData(
       asset: 'assets/images/onboarding_plant.png',
-      title: 'The Trading Operating System',
+      title: 'Trading Operating System',
       body:
-          'Stop losing to emotional mistakes. Poise enforces your strategy and discipline by evaluating every trade before it is executed.',
+          'Plan, review, and execute every trade with discipline. Poise checks your rules before emotion gets a vote.',
     ),
     _WelcomePageData(
       asset: 'assets/images/onboarding_shield.png',
       title: 'Automated Risk Guardrails',
       body:
-          'Define your limits--daily loss, max leverage, % risk per trade--and Poise automatically blocks trades that violate your rules.',
+          'Set daily loss, leverage, and risk-per-trade limits. Poise blocks trades that break the guardrails you chose.',
     ),
     _WelcomePageData(
       asset: 'assets/images/onboarding_light_bulb.png',
       title: 'Real-Time AI Coaching',
       body:
-          'Get immediate feedback on emotional patterns like overtrading or revenge trading. Chat with Poise AI before you execute to stay consistent.',
+          'Spot patterns like overtrading and revenge trading early. Chat with Poise AI before execution to stay consistent.',
     ),
   ];
 
@@ -175,8 +175,9 @@ class _WelcomeSlide extends StatelessWidget {
           style: AppTypography.display2.copyWith(
             color: AppColors.primary,
             fontFamily: 'Inter',
-            fontSize: 31,
-            height: 1.18,
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
+            height: 1.16,
             letterSpacing: 0,
           ),
         )
@@ -190,7 +191,8 @@ class _WelcomeSlide extends StatelessWidget {
           style: AppTypography.h2.copyWith(
             color: AppColors.textSecondary,
             fontWeight: FontWeight.w400,
-            height: 1.42,
+            fontSize: 16,
+            height: 1.5,
             letterSpacing: 0,
           ),
         )

@@ -132,7 +132,8 @@ class _NoExchangeBody extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 FilledButton(
-                  onPressed: () => context.go(Routes.profile),
+                  onPressed: () =>
+                      context.go('${Routes.profile}?sheet=exchange'),
                   child: const Text('Connect exchange'),
                 ),
               ],

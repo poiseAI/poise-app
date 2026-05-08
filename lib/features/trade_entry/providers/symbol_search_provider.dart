@@ -24,8 +24,10 @@ class SymbolSearch extends _$SymbolSearch {
       return;
     }
     try {
-        final prefs = await ref.read(appPreferencesProvider.future);
-      state = AsyncValue.data(_withHistory(result.value, prefs.symbolHistory));
+      final prefs = await ref.read(appPreferencesProvider.future);
+      state = AsyncValue.data(
+        _withHistory(result.value, prefs.symbolHistory).take(8).toList(),
+      );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -47,11 +49,12 @@ class SymbolSearch extends _$SymbolSearch {
     _debounce = Timer(const Duration(milliseconds: 300), () async {
       state = const AsyncValue.loading();
       final result =
-          await ref.read(symbolsApiProvider).search(normalized, limit: 20);
+          await ref.read(symbolsApiProvider).search(normalized, limit: 8);
       final prefs = await ref.read(appPreferencesProvider.future);
       state = result.fold(
-        onOk: (symbols) =>
-            AsyncValue.data(_rank(symbols, normalized, prefs.symbolHistory)),
+        onOk: (symbols) => AsyncValue.data(
+          _rank(symbols, normalized, prefs.symbolHistory).take(8).toList(),
+        ),
         onErr: (e) => AsyncValue.error(e, StackTrace.current),
       );
     });

@@ -26,10 +26,14 @@ class ProfileApi {
   }
 
   Future<Result<void, AppError>> updateProfile({
+    String? fullName,
     required String email,
   }) async {
     try {
-      await _dio.put<void>('/profile', data: {'email': email});
+      await _dio.put<void>('/profile', data: {
+        if (fullName != null) 'full_name': fullName,
+        'email': email,
+      });
       return const Ok(null);
     } on DioException catch (e) {
       return Err(e.error is AppError
@@ -71,8 +75,8 @@ class ProfileApi {
     required String token,
   }) async {
     try {
-      await _dio.post<void>('/2fa/enable',
-          data: {'secret': secret, 'token': token});
+      await _dio
+          .post<void>('/2fa/enable', data: {'secret': secret, 'token': token});
       return const Ok(null);
     } on DioException catch (e) {
       return Err(e.error is AppError

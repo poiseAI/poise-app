@@ -147,10 +147,6 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     setState(() => _buttonState = PButtonState.success);
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
-    final prefs = await ref.read(appPreferencesProvider.future);
-    await prefs.setOnboardingComplete();
-    if (!mounted) return;
-    ref.read(authProvider.notifier).markHasActiveStrategy();
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => const _RiskAppetiteSuccessScreen(),
@@ -416,11 +412,11 @@ class _RiskConfirmCard extends StatelessWidget {
   }
 }
 
-class _RiskAppetiteSuccessScreen extends StatelessWidget {
+class _RiskAppetiteSuccessScreen extends ConsumerWidget {
   const _RiskAppetiteSuccessScreen();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
@@ -457,7 +453,12 @@ class _RiskAppetiteSuccessScreen extends StatelessWidget {
               const Spacer(flex: 2),
               PPrimaryButton(
                 label: 'Continue',
-                onPressed: () => context.go(Routes.home),
+                onPressed: () async {
+                  final prefs = await ref.read(appPreferencesProvider.future);
+                  await prefs.setOnboardingComplete();
+                  ref.read(authProvider.notifier).markHasActiveStrategy();
+                  if (context.mounted) context.go(Routes.home);
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
             ],
