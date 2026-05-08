@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/websocket/ws_message.dart';
 import '../../../core/websocket/ws_service.dart';
+import '../../../core/storage/preferences.dart';
 import '../data/models/notification_item.dart';
 import '../data/notification_repository.dart';
 
@@ -107,9 +108,25 @@ class Notifications extends _$Notifications {
   }
 
   void _insert(NotificationItem notification) {
+    if (!_allows(notification.type)) return;
     final current = state.valueOrNull ?? const <NotificationItem>[];
     if (current.any((n) => n.id == notification.id)) return;
     state = AsyncData(_sort([notification, ...current]));
+  }
+
+  bool _allows(String type) {
+    final prefs = ref.read(appPreferencesProvider).valueOrNull;
+    if (prefs == null) return true;
+    if (type.contains('external_trade')) {
+      return prefs.externalTradeNotifications;
+    }
+    if (type.contains('guardrail') || type.contains('risk')) {
+      return prefs.guardrailNotifications;
+    }
+    if (type.contains('order') || type.contains('position')) {
+      return prefs.tradeUpdateNotifications;
+    }
+    return true;
   }
 
   Future<void> dismiss(String id) async {

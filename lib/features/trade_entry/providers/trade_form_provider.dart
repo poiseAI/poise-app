@@ -272,12 +272,14 @@ class TradeForm extends _$TradeForm {
     final result = await ref.read(tradeApiProvider).submit(
           draft: draftJson,
           submitToken: validation.submitToken,
+          proceedAfterWarnings: bypassWarnings,
           clientOrderId: clientOrderId,
         );
     result.fold(
       onOk: (order) => state = state.copyWith(
         isSubmitting: false,
         lastOrder: order,
+        validation: null,
       ),
       onErr: (err) => state = state.copyWith(
         isSubmitting: false,

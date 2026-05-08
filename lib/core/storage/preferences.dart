@@ -20,6 +20,10 @@ class AppPreferences {
   static const _onboardingCompleteKey = 'onboarding_complete';
   static const _hasSeenWelcomeKey = 'has_seen_welcome';
   static const _notifPermAskedKey = 'notif_perm_asked';
+  static const _notifTradeUpdatesKey = 'notif_trade_updates';
+  static const _notifGuardrailsKey = 'notif_guardrails';
+  static const _notifExternalTradesKey = 'notif_external_trades';
+  static const _notifEmailKey = 'notif_email';
 
   ThemeMode get themeMode {
     final raw = _prefs.getString(_themeKey);
@@ -55,4 +59,27 @@ class AppPreferences {
 
   Future<void> setNotifPermissionAsked() =>
       _prefs.setBool(_notifPermAskedKey, true);
+
+  bool get tradeUpdateNotifications =>
+      _prefs.getBool(_notifTradeUpdatesKey) ?? true;
+
+  Future<void> setTradeUpdateNotifications(bool value) =>
+      _prefs.setBool(_notifTradeUpdatesKey, value);
+
+  bool get guardrailNotifications =>
+      _prefs.getBool(_notifGuardrailsKey) ?? true;
+
+  Future<void> setGuardrailNotifications(bool value) =>
+      _prefs.setBool(_notifGuardrailsKey, value);
+
+  bool get externalTradeNotifications =>
+      _prefs.getBool(_notifExternalTradesKey) ?? true;
+
+  Future<void> setExternalTradeNotifications(bool value) =>
+      _prefs.setBool(_notifExternalTradesKey, value);
+
+  bool get emailNotifications => _prefs.getBool(_notifEmailKey) ?? false;
+
+  Future<void> setEmailNotifications(bool value) =>
+      _prefs.setBool(_notifEmailKey, value);
 }

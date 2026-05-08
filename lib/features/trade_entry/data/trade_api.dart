@@ -63,6 +63,7 @@ class TradeApi {
   Future<Result<Order, AppError>> submit({
     required Map<String, dynamic> draft,
     required String submitToken,
+    required bool proceedAfterWarnings,
     String? clientOrderId,
   }) async {
     try {
@@ -71,6 +72,7 @@ class TradeApi {
         data: {
           'draft': draft,
           'submit_token': submitToken,
+          'proceed_after_warnings': proceedAfterWarnings,
           if (clientOrderId != null) 'client_order_id': clientOrderId,
         },
       );
@@ -102,6 +104,8 @@ Map<String, dynamic> _legacyOrderPayload(
       'order_type': draft['execution_mode'] == 'limit' ? 'limit' : 'market',
       'quantity': draft['quantity'] ?? 1.0,
       'price': draft['limit_price'],
+      'margin_amount': draft['margin_amount'],
+      'entry_price': draft['entry_price'],
       'leverage': draft['leverage'] ?? 1.0,
       'tp_levels': [
         if (draft['take_profit_1'] != null) draft['take_profit_1'],

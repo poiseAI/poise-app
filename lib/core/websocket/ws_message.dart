@@ -56,7 +56,7 @@ WsMessage? parseWsPayload(Map<String, dynamic> json) {
         positionId: data['id'] as String? ?? '',
         data: data,
       ),
-    'token_score' => WsMessage.tokenScore(
+    'token_score' || 'token_risk_score' => WsMessage.tokenScore(
         symbol: data['symbol'] as String? ?? '',
         score: (data['risk_score'] as num?)?.toDouble() ?? 0,
         riskLevel: data['risk_level'] as String? ?? 'low',

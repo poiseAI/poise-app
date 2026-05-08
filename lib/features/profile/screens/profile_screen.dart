@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -40,6 +41,9 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           const _SectionHeader(title: 'Exchange connections'),
           _ExchangeConnectionsSection(),
+          const SizedBox(height: AppSpacing.md),
+          const _SectionHeader(title: 'Notifications'),
+          _NotificationPreferencesSection(),
           const SizedBox(height: AppSpacing.xl),
           _SignOutButton(),
         ],
@@ -800,6 +804,7 @@ class _ExchangeConnectionDialogState
     extends ConsumerState<_ExchangeConnectionDialog> {
   final _apiKeyCtrl = TextEditingController();
   final _apiSecretCtrl = TextEditingController();
+  String _exchange = 'bybit';
   bool _isTestnet = true;
   bool _isSaving = false;
 
@@ -815,11 +820,23 @@ class _ExchangeConnectionDialogState
     final colorScheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
-      title: const Text('Connect Bybit'),
+      title: Text('Connect ${_exchange.toUpperCase()}'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            DropdownButtonFormField<String>(
+              initialValue: _exchange,
+              decoration: const InputDecoration(labelText: 'Exchange'),
+              items: const [
+                DropdownMenuItem(value: 'bybit', child: Text('Bybit')),
+                DropdownMenuItem(value: 'binance', child: Text('Binance')),
+              ],
+              onChanged: _isSaving
+                  ? null
+                  : (value) => setState(() => _exchange = value ?? 'bybit'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _apiKeyCtrl,
               style: AppTypography.body.copyWith(color: colorScheme.onSurface),
@@ -876,7 +893,7 @@ class _ExchangeConnectionDialogState
 
     setState(() => _isSaving = true);
     final result = await ref.read(profileApiProvider).createExchangeConnection(
-          exchange: 'bybit',
+          exchange: _exchange,
           apiKey: apiKey,
           apiSecret: apiSecret,
           isTestnet: _isTestnet,
@@ -890,6 +907,99 @@ class _ExchangeConnectionDialogState
         Navigator.pop(context, true);
       },
       onErr: (err) => PToast.error(context, err.userMessage),
+    );
+  }
+}
+
+class _NotificationPreferencesSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefsState = ref.watch(appPreferencesProvider);
+    return prefsState.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.md),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, __) => Text(
+        'Failed to load notification settings',
+        style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+      ),
+      data: (prefs) => Column(
+        children: [
+          _PreferenceSwitch(
+            label: 'Trade execution updates',
+            value: prefs.tradeUpdateNotifications,
+            onChanged: (value) async {
+              await prefs.setTradeUpdateNotifications(value);
+              ref.invalidate(appPreferencesProvider);
+            },
+          ),
+          _PreferenceSwitch(
+            label: 'Guardrail warnings',
+            value: prefs.guardrailNotifications,
+            onChanged: (value) async {
+              await prefs.setGuardrailNotifications(value);
+              ref.invalidate(appPreferencesProvider);
+            },
+          ),
+          _PreferenceSwitch(
+            label: 'External trade capture',
+            value: prefs.externalTradeNotifications,
+            onChanged: (value) async {
+              await prefs.setExternalTradeNotifications(value);
+              ref.invalidate(appPreferencesProvider);
+            },
+          ),
+          _PreferenceSwitch(
+            label: 'Email notifications',
+            value: prefs.emailNotifications,
+            onChanged: (value) async {
+              await prefs.setEmailNotifications(value);
+              ref.invalidate(appPreferencesProvider);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreferenceSwitch extends StatelessWidget {
+  const _PreferenceSwitch({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        border: Border.all(color: colorScheme.outline),
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
+      ),
+      child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        value: value,
+        onChanged: onChanged,
+        title: Text(
+          label,
+          style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+        ),
+      ),
     );
   }
 }

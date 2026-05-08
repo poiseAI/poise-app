@@ -71,10 +71,9 @@ class WsService with WidgetsBindingObserver {
         cancelOnError: false,
       );
 
-      final wasConnected = _status == WsStatus.connected;
       _status = WsStatus.connected;
       _backoffSeconds = 1;
-      if (!wasConnected) _controller.add(const WsMessage.connected());
+      _controller.add(const WsMessage.connected());
     } catch (e) {
       _scheduleReconnect();
     }
