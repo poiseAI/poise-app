@@ -79,22 +79,44 @@ class TradeForm extends _$TradeForm {
   }
 
   void setSymbol(TradingSymbol symbol) {
-    final maxRule = state.preflight?.maxLeverage ?? symbol.maxLeverage.toDouble();
+    final maxRule =
+        state.preflight?.maxLeverage ?? symbol.maxLeverage.toDouble();
+    final entry = _entryFor(symbol);
+    final defaults = _defaultTpSl(entry, state.side);
     state = state.copyWith(
       symbol: symbol,
       riskScore: null,
-      leverage: state.leverage.clamp(1.0, _min(maxRule, symbol.maxLeverage.toDouble())),
+      leverage: state.leverage
+          .clamp(1.0, _min(maxRule, symbol.maxLeverage.toDouble())),
+      slPrice: state.slPrice ?? defaults.stopLoss,
+      takeProfit1: state.takeProfit1 ?? defaults.takeProfit,
       validation: null,
       validationError: null,
     );
     _fetchRisk(symbol.symbol);
   }
 
-  void setOrderType(OrderType type) =>
-      state = state.copyWith(orderType: type, validation: null);
+  void setOrderType(OrderType type) {
+    state = state.copyWith(
+      orderType: type,
+      limitPrice: type == OrderType.market
+          ? null
+          : state.limitPrice ?? state.symbol?.lastPrice,
+      validation: null,
+    );
+  }
 
-  void setSide(OrderSide side) =>
-      state = state.copyWith(side: side, validation: null);
+  void setSide(OrderSide side) {
+    final entry = entryPrice > 0 ? entryPrice : _entryFor(state.symbol);
+    final defaults = _defaultTpSl(entry, side);
+    state = state.copyWith(
+      side: side,
+      slPrice: defaults.stopLoss,
+      takeProfit1: defaults.takeProfit,
+      takeProfit2: null,
+      validation: null,
+    );
+  }
 
   void setQuantity(double qty) =>
       state = state.copyWith(quantity: qty, validation: null);
@@ -174,7 +196,8 @@ class TradeForm extends _$TradeForm {
 
   double get quantity {
     final price = entryPrice;
-    final raw = price > 0 ? (marginAmount * state.leverage) / price : state.quantity;
+    final raw =
+        price > 0 ? (marginAmount * state.leverage) / price : state.quantity;
     final step = state.symbol?.qtyStep ?? 0;
     final rounded = step > 0 ? (raw / step).floor() * step : raw;
     final minQty = state.symbol?.minQty ?? 0;
@@ -188,7 +211,8 @@ class TradeForm extends _$TradeForm {
     }
     final pf = state.preflight;
     if (pf != null && !pf.allowed) {
-      return pf.blockingReason ?? 'Connect an active exchange API key before opening a trade.';
+      return pf.blockingReason ??
+          'Connect an active exchange API key before opening a trade.';
     }
     if (sym == null) return 'Select a symbol to continue.';
     if (state.availableBalance <= 0) {
@@ -208,13 +232,25 @@ class TradeForm extends _$TradeForm {
     final tp1 = state.takeProfit1;
     final tp2 = state.takeProfit2;
     if (state.side == OrderSide.long) {
-      if (sl >= entryPrice) return 'For a long trade, stop loss must be below entry.';
-      if (tp1 != null && tp1 <= entryPrice) return 'For a long trade, take profit must be above entry.';
-      if (tp2 != null && tp2 <= entryPrice) return 'For a long trade, take profit 2 must be above entry.';
+      if (sl >= entryPrice) {
+        return 'For a long trade, stop loss must be below entry.';
+      }
+      if (tp1 != null && tp1 <= entryPrice) {
+        return 'For a long trade, take profit must be above entry.';
+      }
+      if (tp2 != null && tp2 <= entryPrice) {
+        return 'For a long trade, take profit 2 must be above entry.';
+      }
     } else {
-      if (sl <= entryPrice) return 'For a short trade, stop loss must be above entry.';
-      if (tp1 != null && tp1 >= entryPrice) return 'For a short trade, take profit must be below entry.';
-      if (tp2 != null && tp2 >= entryPrice) return 'For a short trade, take profit 2 must be below entry.';
+      if (sl <= entryPrice) {
+        return 'For a short trade, stop loss must be above entry.';
+      }
+      if (tp1 != null && tp1 >= entryPrice) {
+        return 'For a short trade, take profit must be below entry.';
+      }
+      if (tp2 != null && tp2 >= entryPrice) {
+        return 'For a short trade, take profit 2 must be below entry.';
+      }
     }
     return null;
   }
@@ -227,7 +263,8 @@ class TradeForm extends _$TradeForm {
       'side': state.side.name,
       'execution_mode': state.orderType == OrderType.limit ? 'limit' : 'market',
       'entry_price': entryPrice,
-      'limit_price': state.orderType == OrderType.limit ? state.limitPrice : null,
+      'limit_price':
+          state.orderType == OrderType.limit ? state.limitPrice : null,
       'margin_mode': state.marginMode.name,
       'margin_value': state.marginValue,
       'margin_amount': marginAmount,
@@ -290,3 +327,24 @@ class TradeForm extends _$TradeForm {
 }
 
 double _min(double a, double b) => a < b ? a : b;
+
+double _entryFor(TradingSymbol? symbol) => symbol?.lastPrice ?? 0;
+
+({double? stopLoss, double? takeProfit}) _defaultTpSl(
+  double entry,
+  OrderSide side,
+) {
+  if (entry <= 0) return (stopLoss: null, takeProfit: null);
+  final stopLoss = side == OrderSide.long ? entry * 0.98 : entry * 1.02;
+  final takeProfit = side == OrderSide.long ? entry * 1.04 : entry * 0.96;
+  return (
+    stopLoss: _roundPrice(stopLoss),
+    takeProfit: _roundPrice(takeProfit),
+  );
+}
+
+double _roundPrice(double value) {
+  if (value >= 100) return double.parse(value.toStringAsFixed(2));
+  if (value >= 1) return double.parse(value.toStringAsFixed(4));
+  return double.parse(value.toStringAsFixed(6));
+}

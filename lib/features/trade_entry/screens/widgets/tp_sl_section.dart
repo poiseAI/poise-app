@@ -106,9 +106,19 @@ class _PriceFieldState extends State<_PriceField> {
   void initState() {
     super.initState();
     _ctrl = TextEditingController(
-      text: widget.initialValue == null
-          ? ''
-          : widget.initialValue!.toStringAsFixed(2),
+      text: _format(widget.initialValue),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _PriceField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialValue == widget.initialValue) return;
+    final nextText = _format(widget.initialValue);
+    if (_ctrl.text == nextText) return;
+    _ctrl.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: nextText.length),
     );
   }
 
@@ -141,5 +151,12 @@ class _PriceFieldState extends State<_PriceField> {
       ),
       onChanged: (value) => widget.onChanged(double.tryParse(value)),
     );
+  }
+
+  String _format(double? value) {
+    if (value == null) return '';
+    if (value >= 100) return value.toStringAsFixed(2);
+    if (value >= 1) return value.toStringAsFixed(4);
+    return value.toStringAsFixed(6);
   }
 }
