@@ -42,6 +42,17 @@ class ProfileApi {
     }
   }
 
+  Future<Result<void, AppError>> deleteAccount() async {
+    try {
+      await _dio.delete<void>('/profile');
+      return const Ok(null);
+    } on DioException catch (e) {
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    }
+  }
+
   Future<Result<void, AppError>> updatePassword({
     required String current,
     required String newPassword,

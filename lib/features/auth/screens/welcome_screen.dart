@@ -199,6 +199,7 @@ class _WelcomeSlide extends StatelessWidget {
             .animate(target: active ? 1 : 0)
             .fadeIn(delay: 60.ms, duration: 260.ms, curve: Curves.easeOut)
             .slideY(begin: 0.12, end: 0, duration: 320.ms),
+        const Spacer(flex: 2),
       ],
     );
   }

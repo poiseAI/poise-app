@@ -51,5 +51,23 @@ class StrategiesNotifier extends _$StrategiesNotifier {
     return Ok(strategy);
   }
 
+  Future<Result<Strategy, AppError>> replaceActiveWith(
+      CreateStrategyRequest req) async {
+    final api = ref.read(strategiesApiProvider);
+    final activeResult = await api.getActiveStrategies();
+    if (activeResult.isErr) return Err(activeResult.error);
+
+    for (final strategy in activeResult.value) {
+      final result = await api.deactivateStrategy(strategy.id);
+      if (result.isErr) return Err(result.error);
+    }
+
+    final createResult = await api.createStrategy(req);
+    if (createResult.isErr) return Err(createResult.error);
+
+    await _load();
+    return Ok(createResult.value);
+  }
+
   Future<void> refresh() => _load();
 }

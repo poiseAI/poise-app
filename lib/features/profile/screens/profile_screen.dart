@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -136,7 +138,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: const Text('Log out'),
           ),
           TextButton(
-            onPressed: () => _showDeleteSheet(context),
+            onPressed: () => _showDeleteSheet(context, ref),
             child: Text(
               'Delete Account',
               style: AppTypography.button.copyWith(color: AppColors.lossRed),
@@ -1336,7 +1338,7 @@ void _showLogoutSheet(BuildContext context, WidgetRef ref) {
   );
 }
 
-void _showDeleteSheet(BuildContext context) {
+void _showDeleteSheet(BuildContext context, WidgetRef ref) {
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -1347,7 +1349,17 @@ void _showDeleteSheet(BuildContext context) {
       primaryLabel: 'Delete account',
       primaryColor: AppColors.lossRed,
       primaryIcon: Icons.delete_outline_rounded,
-      onPrimary: () => Navigator.pop(context),
+      onPrimary: () async {
+        final result = await ref.read(profileApiProvider).deleteAccount();
+        if (!context.mounted) return;
+        result.fold(
+          onOk: (_) {
+            Navigator.pop(context);
+            ref.read(authProvider.notifier).logout();
+          },
+          onErr: (err) => PToast.error(context, err.userMessage),
+        );
+      },
     ),
   );
 }
@@ -1366,7 +1378,7 @@ class _ConfirmSheet extends StatelessWidget {
   final String title;
   final String body;
   final String primaryLabel;
-  final VoidCallback onPrimary;
+  final FutureOr<void> Function() onPrimary;
   final Color? titleColor;
   final Color? primaryColor;
   final IconData? primaryIcon;
@@ -1391,7 +1403,7 @@ class _ConfirmSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
-            onPressed: onPrimary,
+            onPressed: () async => onPrimary(),
             icon: primaryIcon == null
                 ? const SizedBox.shrink()
                 : Icon(primaryIcon),
