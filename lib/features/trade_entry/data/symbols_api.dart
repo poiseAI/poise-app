@@ -17,37 +17,67 @@ class SymbolsApi {
   static const _cacheDuration = Duration(minutes: 5);
   final Map<String, ({DateTime at, List<TradingSymbol> data})> _cache = {};
 
-  Future<Result<List<TradingSymbol>, AppError>> getPopular() async {
-    final cached = _fresh('popular');
+  Future<Result<List<TradingSymbol>, AppError>> getPopular({
+    String exchange = 'bybit',
+    String quote = 'USDT',
+  }) async {
+    final normalizedExchange = _normalizeExchange(exchange);
+    final normalizedQuote = _normalizeQuote(quote);
+    final key = 'popular:$normalizedExchange:$normalizedQuote';
+    final cached = _fresh(key);
     if (cached != null) return Ok(cached);
     try {
-      final resp = await _dio.get<Map<String, dynamic>>('/symbols/popular');
+      final resp = await _dio.get<Map<String, dynamic>>(
+        '/symbols/popular',
+        queryParameters: {
+          'exchange': normalizedExchange,
+          'quote': normalizedQuote,
+        },
+      );
       final list = _extractList(resp.data, 'symbols')
           .map(TradingSymbol.fromJson)
+          .where((sym) => _matches(sym, normalizedExchange, normalizedQuote))
           .toList();
-      _cache['popular'] = (at: DateTime.now(), data: list);
+      _cache[key] = (at: DateTime.now(), data: list);
       return Ok(list);
     } on DioException catch (e) {
-      final stale = _cache['popular']?.data;
+      final stale = _cache[key]?.data;
       if (stale != null) return Ok(stale);
-      return _getAllAsPopular(e);
+      return _getAllAsPopular(
+        e,
+        exchange: normalizedExchange,
+        quote: normalizedQuote,
+      );
     }
   }
 
   Future<Result<List<TradingSymbol>, AppError>> search(String query,
-      {int limit = 20}) async {
+      {int limit = 20,
+      String exchange = 'bybit',
+      String quote = 'USDT'}) async {
     final normalized = query.trim().toUpperCase();
-    if (normalized.isEmpty) return getPopular();
-    final key = 'search:$normalized:$limit';
+    final normalizedExchange = _normalizeExchange(exchange);
+    final normalizedQuote = _normalizeQuote(quote);
+    if (normalized.isEmpty) {
+      return getPopular(exchange: normalizedExchange, quote: normalizedQuote);
+    }
+    final key =
+        'search:$normalized:$limit:$normalizedExchange:$normalizedQuote';
     final cached = _fresh(key);
     if (cached != null) return Ok(cached);
     try {
       final resp = await _dio.get<Map<String, dynamic>>(
         '/symbols/search',
-        queryParameters: {'q': normalized, 'limit': limit},
+        queryParameters: {
+          'q': normalized,
+          'limit': limit,
+          'exchange': normalizedExchange,
+          'quote': normalizedQuote,
+        },
       );
       final list = _extractList(resp.data, 'symbols')
           .map(TradingSymbol.fromJson)
+          .where((sym) => _matches(sym, normalizedExchange, normalizedQuote))
           .toList();
       _cache[key] = (at: DateTime.now(), data: list);
       return Ok(list);
@@ -68,15 +98,21 @@ class SymbolsApi {
   }
 
   Future<Result<List<TradingSymbol>, AppError>> _getAllAsPopular(
-    DioException original,
-  ) async {
+    DioException original, {
+    required String exchange,
+    required String quote,
+  }) async {
     try {
-      final resp = await _dio.get<Map<String, dynamic>>('/symbols');
+      final resp = await _dio.get<Map<String, dynamic>>(
+        '/symbols',
+        queryParameters: {'exchange': exchange, 'quote': quote},
+      );
       final list = _extractList(resp.data, 'symbols')
           .map(TradingSymbol.fromJson)
+          .where((sym) => _matches(sym, exchange, quote))
           .take(20)
           .toList();
-      _cache['popular'] = (at: DateTime.now(), data: list);
+      _cache['popular:$exchange:$quote'] = (at: DateTime.now(), data: list);
       return Ok(list);
     } on DioException {
       return Err(original.error is AppError
@@ -93,4 +129,20 @@ List<Map<String, dynamic>> _extractList(
   final raw = data?[key];
   if (raw is! List) return const [];
   return raw.whereType<Map<String, dynamic>>().toList();
+}
+
+String _normalizeExchange(String value) {
+  final normalized = value.trim().toLowerCase();
+  return normalized.isEmpty ? 'bybit' : normalized;
+}
+
+String _normalizeQuote(String value) {
+  final normalized = value.trim().toUpperCase();
+  return normalized.isEmpty ? 'USDT' : normalized;
+}
+
+bool _matches(TradingSymbol sym, String exchange, String quote) {
+  return sym.exchange.toLowerCase() == exchange &&
+      sym.quoteAsset.toUpperCase() == quote &&
+      sym.status.toLowerCase() == 'trading';
 }

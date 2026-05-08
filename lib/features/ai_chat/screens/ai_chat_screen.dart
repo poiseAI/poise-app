@@ -183,78 +183,83 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Spacer(),
-          Center(
-            child: Image.asset(
-              'assets/images/onboarding_light_bulb.png',
-              width: 210,
-              height: 210,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-            ).animate().fadeIn(duration: 260.ms).scale(
-                  begin: const Offset(0.92, 0.92),
-                  end: const Offset(1, 1),
-                  curve: Curves.easeOutBack,
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/images/onboarding_light_bulb.png',
+                      width: 210,
+                      height: 210,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ).animate().fadeIn(duration: 260.ms).scale(
+                          begin: const Offset(0.92, 0.92),
+                          end: const Offset(1, 1),
+                          curve: Curves.easeOutBack,
+                        ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Start a chat with Poise AI to get insight about your trades and your habits',
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.45,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Center(
-            child: Text(
-              'Start a chat with Poise AI to get insight about your trades and your habits',
-              style: AppTypography.h2.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w400,
-                height: 1.35,
               ),
-              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: FilledButton.icon(
-              onPressed: () => onPromptTap(_suggestedPrompts.first),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Start new chat'),
-            ),
-          ),
-          const Spacer(),
           Text(
             'Popular ways to get started',
-            style: AppTypography.h3.copyWith(
+            style: AppTypography.h4.copyWith(
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w400,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            alignment: WrapAlignment.start,
-            children: _suggestedPrompts.asMap().entries.map((e) {
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onPromptTap(e.value);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.04),
-                    borderRadius: AppRadius.pillRadius,
-                    border: Border.all(color: AppColors.brand100),
-                  ),
-                  child: Text(e.value,
-                      style: AppTypography.bodyLg
-                          .copyWith(color: AppColors.primary)),
+          const SizedBox(height: AppSpacing.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 132),
+            child: Scrollbar(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  alignment: WrapAlignment.start,
+                  children: _suggestedPrompts.asMap().entries.map((e) {
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onPromptTap(e.value);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.04),
+                          borderRadius: AppRadius.pillRadius,
+                          border: Border.all(color: AppColors.brand100),
+                        ),
+                        child: Text(
+                          e.value,
+                          style: AppTypography.bodyMedium
+                              .copyWith(color: AppColors.primary),
+                        ),
+                      ),
+                    )
+                        .animate(delay: (300 + e.key * 50).ms)
+                        .fadeIn(duration: 250.ms)
+                        .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
+                  }).toList(),
                 ),
-              )
-                  .animate(delay: (300 + e.key * 50).ms)
-                  .fadeIn(duration: 250.ms)
-                  .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
-            }).toList(),
+              ),
+            ),
           ),
         ],
       ),

@@ -64,7 +64,12 @@ class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
               const SizedBox(height: AppSpacing.md),
               _BalanceRow(form: form),
               const SizedBox(height: AppSpacing.md),
-              SymbolPicker(selected: form.symbol),
+              SymbolPicker(
+                selected: form.symbol,
+                exchange: form.preflight?.exchange ??
+                    form.symbol?.exchange ??
+                    'bybit',
+              ),
               const SizedBox(height: AppSpacing.md),
               _RiskStatusCard(form: form),
               if (form.isLoadingPreflight) ...[

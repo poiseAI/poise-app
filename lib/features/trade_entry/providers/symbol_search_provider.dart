@@ -9,6 +9,9 @@ part 'symbol_search_provider.g.dart';
 @riverpod
 class SymbolSearch extends _$SymbolSearch {
   Timer? _debounce;
+  int _requestId = 0;
+  String _activeExchange = 'bybit';
+  static const _quote = 'USDT';
 
   @override
   AsyncValue<List<TradingSymbol>> build() {
@@ -16,15 +19,22 @@ class SymbolSearch extends _$SymbolSearch {
     return const AsyncValue.loading();
   }
 
-  Future<void> loadPopular() async {
+  Future<void> loadPopular({String exchange = 'bybit'}) async {
+    final requestId = ++_requestId;
+    _activeExchange = _normalizeExchange(exchange);
+    _debounce?.cancel();
     state = const AsyncValue.loading();
-    final result = await ref.read(symbolsApiProvider).getPopular();
+    final result = await ref
+        .read(symbolsApiProvider)
+        .getPopular(exchange: _activeExchange, quote: _quote);
+    if (requestId != _requestId) return;
     if (result.isErr) {
       state = AsyncValue.error(result.error, StackTrace.current);
       return;
     }
     try {
       final prefs = await ref.read(appPreferencesProvider.future);
+      if (requestId != _requestId) return;
       state = AsyncValue.data(
         _withHistory(result.value, prefs.symbolHistory).take(8).toList(),
       );
@@ -39,18 +49,26 @@ class SymbolSearch extends _$SymbolSearch {
     ref.invalidate(appPreferencesProvider);
   }
 
-  void search(String query) {
+  void search(String query, {String? exchange}) {
     _debounce?.cancel();
+    final requestId = ++_requestId;
+    _activeExchange = _normalizeExchange(exchange ?? _activeExchange);
     final normalized = query.trim().toUpperCase();
     if (normalized.isEmpty) {
-      loadPopular();
+      loadPopular(exchange: _activeExchange);
       return;
     }
     _debounce = Timer(const Duration(milliseconds: 300), () async {
       state = const AsyncValue.loading();
-      final result =
-          await ref.read(symbolsApiProvider).search(normalized, limit: 8);
+      final result = await ref.read(symbolsApiProvider).search(
+            normalized,
+            limit: 8,
+            exchange: _activeExchange,
+            quote: _quote,
+          );
+      if (requestId != _requestId) return;
       final prefs = await ref.read(appPreferencesProvider.future);
+      if (requestId != _requestId) return;
       state = result.fold(
         onOk: (symbols) => AsyncValue.data(
           _rank(symbols, normalized, prefs.symbolHistory).take(8).toList(),
@@ -109,6 +127,11 @@ class SymbolSearch extends _$SymbolSearch {
     if (symbol.contains(query)) return 40;
     return 50;
   }
+}
+
+String _normalizeExchange(String value) {
+  final normalized = value.trim().toLowerCase();
+  return normalized.isEmpty ? 'bybit' : normalized;
 }
 
 int _popularRank(String symbol) {
