@@ -9,12 +9,16 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
+import '../../../core/widgets/feedback/p_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../strategies/data/models/strategy.dart';
 import '../../strategies/providers/strategies_provider.dart';
 
 class SetRiskAppetiteScreen extends ConsumerStatefulWidget {
-  const SetRiskAppetiteScreen({super.key});
+  const SetRiskAppetiteScreen(
+      {super.key, this.mode = RiskAppetiteMode.onboarding});
+
+  final RiskAppetiteMode mode;
 
   @override
   ConsumerState<SetRiskAppetiteScreen> createState() =>
@@ -25,6 +29,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   int _selected = 0;
   bool _confirming = false;
   PButtonState _buttonState = PButtonState.idle;
+  bool _initializedFromActive = false;
 
   static const _options = [
     _RiskPreset(
@@ -171,6 +176,20 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     ),
   ];
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initializedFromActive) return;
+    _initializedFromActive = true;
+    final state = ref.read(strategiesNotifierProvider);
+    if (state is StrategiesLoaded) {
+      final active = state.active;
+      if (active != null) _selected = _indexForStrategy(active);
+    } else {
+      _initializedFromActive = false;
+    }
+  }
+
   Future<void> _confirm() async {
     final preset = _options[_selected];
     setState(() => _buttonState = PButtonState.loading);
@@ -187,6 +206,14 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     setState(() => _buttonState = PButtonState.success);
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
+
+    ref.read(authProvider.notifier).markHasActiveStrategy();
+    if (widget.mode == RiskAppetiteMode.settings) {
+      PToast.success(context, 'Risk appetite updated');
+      Navigator.of(context).pop();
+      return;
+    }
+
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => const _RiskAppetiteSuccessScreen(),
@@ -196,19 +223,31 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strategies = ref.watch(strategiesNotifierProvider);
+    if (widget.mode == RiskAppetiteMode.settings &&
+        strategies is StrategiesLoaded &&
+        !_initializedFromActive) {
+      final active = strategies.active;
+      if (active != null) _selected = _indexForStrategy(active);
+      _initializedFromActive = true;
+    }
     return _confirming ? _buildConfirm(context) : _buildSelect(context);
   }
 
   Widget _buildSelect(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: widget.mode == RiskAppetiteMode.settings
+          ? AppBar(title: const Text('Risk Appetite'))
+          : null,
       body: SafeArea(
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: AppSpacing.xl),
+              if (widget.mode == RiskAppetiteMode.onboarding)
+                const SizedBox(height: AppSpacing.xl),
               const Text('Risk Appetite', style: AppTypography.h2),
               const SizedBox(height: AppSpacing.lg),
               Text(
@@ -306,6 +345,22 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
       ),
     );
   }
+}
+
+enum RiskAppetiteMode { onboarding, settings }
+
+int _indexForStrategy(Strategy strategy) {
+  final byName = _SetRiskAppetiteScreenState._options.indexWhere(
+    (option) => option.label.toLowerCase() == strategy.name.toLowerCase(),
+  );
+  if (byName != -1) return byName;
+
+  final riskPct = strategy.maxDailyLossPercent;
+  if (riskPct != null) {
+    if (riskPct <= 1) return 0;
+    if (riskPct >= 5) return 2;
+  }
+  return 1;
 }
 
 class _RiskPreset {

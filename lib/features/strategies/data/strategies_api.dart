@@ -9,8 +9,7 @@ import 'models/strategy.dart';
 part 'strategies_api.g.dart';
 
 @riverpod
-StrategiesApi strategiesApi(Ref ref) =>
-    StrategiesApi(ref.watch(dioProvider));
+StrategiesApi strategiesApi(Ref ref) => StrategiesApi(ref.watch(dioProvider));
 
 class StrategiesApi {
   StrategiesApi(this._dio);
@@ -25,8 +24,24 @@ class StrategiesApi {
       );
       return Ok(Strategy.fromJson(resp.data!));
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    }
+  }
+
+  Future<Result<Strategy, AppError>> replaceActiveStrategy(
+      CreateStrategyRequest req) async {
+    try {
+      final resp = await _dio.post<Map<String, dynamic>>(
+        '/strategies/replace-active',
+        data: req.toJson(),
+      );
+      return Ok(Strategy.fromJson(resp.data!));
+    } on DioException catch (e) {
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -39,8 +54,9 @@ class StrategiesApi {
           .toList();
       return Ok(list);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -53,8 +69,9 @@ class StrategiesApi {
           .toList();
       return Ok(list);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -63,8 +80,9 @@ class StrategiesApi {
       await _dio.post<void>('/strategies/$id/activate');
       return const Ok(null);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -73,8 +91,9 @@ class StrategiesApi {
       await _dio.post<void>('/strategies/$id/deactivate');
       return const Ok(null);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -83,8 +102,9 @@ class StrategiesApi {
       await _dio.delete<void>('/strategies/$id');
       return const Ok(null);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 }

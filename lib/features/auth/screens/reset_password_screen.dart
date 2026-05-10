@@ -111,6 +111,41 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.email.trim().isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go(Routes.login),
+          ),
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: AppSpacing.screenPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.lg),
+                const Text('Reset password', style: AppTypography.display2),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Enter your email first so Poise can send a reset code.',
+                  style: AppTypography.bodyLg.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                PPrimaryButton(
+                  label: 'Enter email',
+                  onPressed: () => context.go(Routes.forgotPassword),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(

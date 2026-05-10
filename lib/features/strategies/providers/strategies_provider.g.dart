@@ -7,7 +7,7 @@ part of 'strategies_provider.dart';
 // **************************************************************************
 
 String _$strategiesNotifierHash() =>
-    r'9da3abcdc0b3e295326b76a070da7af5207832de';
+    r'23021c50ffd89b87238642dd48cf37de4e96d3a4';
 
 /// See also [StrategiesNotifier].
 @ProviderFor(StrategiesNotifier)

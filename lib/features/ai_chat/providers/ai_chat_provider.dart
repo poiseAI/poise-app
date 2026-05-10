@@ -152,6 +152,17 @@ class AiChat extends _$AiChat {
     _onDone();
   }
 
+  Future<void> loadSession(String sessionId) async {
+    if (_isStreaming) stopStreaming();
+    final result = await ref.read(aiChatApiProvider).getSession(sessionId);
+    if (result.isErr) return;
+    _sessionId = sessionId;
+    state = result.value
+        .map(_messageFromSessionJson)
+        .whereType<ChatMessage>()
+        .toList();
+  }
+
   Future<void> confirm(String toolCallId, bool confirmed) async {
     if (_sessionId == null) return;
 
@@ -186,4 +197,23 @@ class AiChat extends _$AiChat {
           onError: (_) => _onDone(),
         );
   }
+}
+
+ChatMessage? _messageFromSessionJson(Map<String, dynamic> json) {
+  final role = json['role'] as String? ?? '';
+  final content = json['content'];
+  final text = switch (content) {
+    String value => value,
+    List value => value.map((item) => item.toString()).join('\n'),
+    Map value => value['text']?.toString() ?? value.toString(),
+    null => '',
+    _ => content.toString(),
+  };
+  if (text.trim().isEmpty) return null;
+  final at = DateTime.now();
+  if (role == 'user') return ChatMessage.user(text: text, at: at);
+  if (role == 'assistant') {
+    return ChatMessage.ai(text: text, at: at);
+  }
+  return null;
 }

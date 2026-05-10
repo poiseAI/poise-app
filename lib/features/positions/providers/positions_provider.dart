@@ -121,7 +121,8 @@ class PositionsNotifier extends _$PositionsNotifier {
     if (id == null || id.isEmpty || symbol == null || symbol.isEmpty) {
       return null;
     }
-    final entry = _num(data['entry_price'] ?? data['entryPrice'] ?? data['avg_price']);
+    final entry =
+        _num(data['entry_price'] ?? data['entryPrice'] ?? data['avg_price']);
     final current =
         _num(data['current_price'] ?? data['mark_price'] ?? data['markPrice']);
     return Position(
@@ -148,7 +149,8 @@ class PositionsNotifier extends _$PositionsNotifier {
       tpLevels: _tpLevels(data['tp_levels']),
       slPrice: _nullableNum(data['sl_price'] ?? data['stop_loss']),
       exchange: data['exchange'] as String? ?? 'bybit',
-      createdAt: data['created_at'] as String? ?? DateTime.now().toIso8601String(),
+      createdAt:
+          data['created_at'] as String? ?? DateTime.now().toIso8601String(),
     );
   }
 
@@ -170,11 +172,6 @@ class PositionsNotifier extends _$PositionsNotifier {
 
   Future<void> unlockPosition(String id) async {
     await ref.read(positionsApiProvider).unlockPosition(id);
-    await _fetch();
-  }
-
-  Future<void> closePosition(String id) async {
-    await ref.read(positionsApiProvider).closePosition(id);
     await _fetch();
   }
 }

@@ -6,6 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/feedback/p_toast.dart';
+import '../data/ai_chat_api.dart';
 import '../data/models/chat_message.dart';
 import '../providers/ai_chat_provider.dart';
 import 'widgets/chat_bubbles.dart';
@@ -20,7 +22,9 @@ const _suggestedPrompts = [
 ];
 
 class AiChatScreen extends ConsumerStatefulWidget {
-  const AiChatScreen({super.key});
+  const AiChatScreen({super.key, this.initialPrompt});
+
+  final String? initialPrompt;
 
   @override
   ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
@@ -30,6 +34,19 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _inputCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   bool _isMultiline = false;
+  bool _sentInitialPrompt = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final prompt = widget.initialPrompt?.trim();
+      if (_sentInitialPrompt || prompt == null || prompt.isEmpty) return;
+      _sentInitialPrompt = true;
+      ref.read(aiChatProvider.notifier).send(prompt);
+      _scrollToBottom();
+    });
+  }
 
   @override
   void dispose() {
@@ -81,7 +98,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
               child: Row(
                 children: [
-                  const SizedBox(width: 48),
+                  IconButton(
+                    onPressed: () => _showSessions(context),
+                    icon: const Icon(Icons.history_rounded),
+                  ),
                   const Expanded(
                     child: Center(
                       child: Text('Poise AI', style: AppTypography.h1),
@@ -94,11 +114,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                           style: AppTypography.caption
                               .copyWith(color: AppColors.textSecondary)),
                     ),
-                  if (messages.isEmpty)
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.error_outline_rounded),
-                    ),
+                  if (messages.isEmpty) const SizedBox(width: 48),
                 ],
               ),
             ),
@@ -169,6 +185,114 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         ),
       ToolResultMessage() => const SizedBox.shrink(),
     };
+  }
+
+  Future<void> _showSessions(BuildContext context) async {
+    final result = await ref.read(aiChatApiProvider).getSessions();
+    if (!context.mounted) return;
+    if (result.isErr) {
+      PToast.error(context, result.error.userMessage);
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _SessionSheet(
+        sessions: result.value,
+        onOpen: (session) async {
+          Navigator.pop(context);
+          await ref.read(aiChatProvider.notifier).loadSession(session.id);
+          _scrollToBottom();
+        },
+        onDelete: (session) async {
+          final deleteResult =
+              await ref.read(aiChatApiProvider).deleteSession(session.id);
+          if (context.mounted && deleteResult.isErr) {
+            PToast.error(context, deleteResult.error.userMessage);
+          }
+        },
+      ),
+    );
+  }
+}
+
+class _SessionSheet extends StatefulWidget {
+  const _SessionSheet({
+    required this.sessions,
+    required this.onOpen,
+    required this.onDelete,
+  });
+
+  final List<AiSession> sessions;
+  final ValueChanged<AiSession> onOpen;
+  final ValueChanged<AiSession> onDelete;
+
+  @override
+  State<_SessionSheet> createState() => _SessionSheetState();
+}
+
+class _SessionSheetState extends State<_SessionSheet> {
+  late final List<AiSession> _sessions = [...widget.sessions];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: AppSpacing.screenPadding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Chat history', style: AppTypography.h3),
+            const SizedBox(height: AppSpacing.md),
+            if (_sessions.isEmpty)
+              Text(
+                'No saved AI conversations yet.',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _sessions.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(color: AppColors.borderLight),
+                  itemBuilder: (context, index) {
+                    final session = _sessions[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        session.title.isEmpty ? 'Untitled chat' : session.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        session.updatedAt.toLocal().toString().split('.').first,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      onTap: () => widget.onOpen(session),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        onPressed: () {
+                          widget.onDelete(session);
+                          setState(() => _sessions.removeAt(index));
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

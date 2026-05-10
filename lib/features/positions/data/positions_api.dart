@@ -61,17 +61,6 @@ class PositionsApi {
           : UnknownError(e.message ?? ''));
     }
   }
-
-  Future<Result<void, AppError>> closePosition(String id) async {
-    try {
-      await _dio.post<void>('/positions/$id/close');
-      return const Ok(null);
-    } on DioException catch (e) {
-      return Err(e.error is AppError
-          ? e.error as AppError
-          : UnknownError(e.message ?? ''));
-    }
-  }
 }
 
 List<Map<String, dynamic>> _extractList(

@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/errors/app_error.dart';
@@ -21,9 +20,6 @@ class TradeApi {
       final resp = await _dio.get<Map<String, dynamic>>('/trade/preflight');
       return Ok(TradePreflight.fromJson(resp.data ?? const {}));
     } on DioException catch (e) {
-      if (kDebugMode && e.response?.statusCode == 404) {
-        return Ok(TradePreflight.fallback());
-      }
       return Err(_err(e));
     }
   }
@@ -36,9 +32,6 @@ class TradeApi {
       );
       return Ok(ExchangeBalance.fromJson(resp.data ?? const {}));
     } on DioException catch (e) {
-      if (kDebugMode && e.response?.statusCode == 404) {
-        return const Ok(ExchangeBalance(available: 0, currency: 'USD'));
-      }
       return Err(_err(e));
     }
   }
@@ -53,9 +46,6 @@ class TradeApi {
       );
       return Ok(TradeValidationResult.fromJson(resp.data ?? const {}));
     } on DioException catch (e) {
-      if (kDebugMode && e.response?.statusCode == 404) {
-        return Ok(TradeValidationResult.localFallback(draft));
-      }
       return Err(_err(e));
     }
   }
@@ -78,13 +68,6 @@ class TradeApi {
       );
       return Ok(Order.fromJson(resp.data ?? const {}));
     } on DioException catch (e) {
-      if (kDebugMode && e.response?.statusCode == 404) {
-        final resp = await _dio.post<Map<String, dynamic>>(
-          '/orders',
-          data: _legacyOrderPayload(draft, clientOrderId),
-        );
-        return Ok(Order.fromJson(resp.data ?? const {}));
-      }
       return Err(_err(e));
     }
   }
@@ -92,29 +75,6 @@ class TradeApi {
   AppError _err(DioException e) =>
       e.error is AppError ? e.error as AppError : UnknownError(e.message ?? '');
 }
-
-Map<String, dynamic> _legacyOrderPayload(
-  Map<String, dynamic> draft,
-  String? clientOrderId,
-) => {
-      'exchange': draft['exchange'] ?? 'bybit',
-      'symbol': draft['symbol'],
-      if (clientOrderId != null) 'client_order_id': clientOrderId,
-      'side': draft['side'] == 'short' ? 'sell' : 'buy',
-      'order_type': draft['execution_mode'] == 'limit' ? 'limit' : 'market',
-      'quantity': draft['quantity'] ?? 1.0,
-      'price': draft['limit_price'],
-      'margin_amount': draft['margin_amount'],
-      'entry_price': draft['entry_price'],
-      'leverage': draft['leverage'] ?? 1.0,
-      'tp_levels': [
-        if (draft['take_profit_1'] != null) draft['take_profit_1'],
-        if (draft['take_profit_2'] != null) draft['take_profit_2'],
-      ],
-      'sl_price': draft['stop_loss'],
-      'immediate_tp': draft['take_profit_1'],
-      'immediate_sl': draft['stop_loss'],
-    };
 
 class TradePreflight {
   const TradePreflight({
@@ -129,15 +89,6 @@ class TradePreflight {
     required this.maxTradesPerDay,
   });
 
-  factory TradePreflight.fallback() => const TradePreflight(
-        allowed: true,
-        exchange: 'bybit',
-        riskPerTradePct: 2,
-        maxLeverage: 10,
-        tradesToday: 0,
-        maxTradesPerDay: 5,
-      );
-
   factory TradePreflight.fromJson(Map<String, dynamic> json) {
     final rules = (json['rules'] as Map<String, dynamic>?) ?? json;
     return TradePreflight(
@@ -146,10 +97,10 @@ class TradePreflight {
       dailyResetAt: json['daily_reset_at'] as String?,
       weeklyResetAt: json['weekly_reset_at'] as String?,
       exchange: json['exchange'] as String? ?? 'bybit',
-      riskPerTradePct:
-          ((rules['risk_per_trade_pct'] ?? rules['riskPerTradePct'] ?? 2)
-                  as num)
-              .toDouble(),
+      riskPerTradePct: ((rules['risk_per_trade_pct'] ??
+              rules['riskPerTradePct'] ??
+              2) as num)
+          .toDouble(),
       maxLeverage:
           ((rules['max_leverage'] ?? rules['maxLeverage'] ?? 10) as num)
               .toDouble(),
@@ -193,7 +144,8 @@ class GuardrailResult {
 
   factory GuardrailResult.fromJson(Map<String, dynamic> json) =>
       GuardrailResult(
-        title: json['title'] as String? ?? json['name'] as String? ?? 'Guardrail',
+        title:
+            json['title'] as String? ?? json['name'] as String? ?? 'Guardrail',
         message: json['message'] as String? ??
             json['reason'] as String? ??
             'Review this trade before continuing.',
@@ -224,56 +176,23 @@ class TradeValidationResult {
   factory TradeValidationResult.fromJson(Map<String, dynamic> json) {
     final summary = (json['summary'] as Map<String, dynamic>?) ?? json;
     return TradeValidationResult(
-      submitToken: json['submit_token'] as String? ?? 'validated-local',
-      riskPct: ((summary['risk_pct'] ?? summary['risk'] ?? 0) as num).toDouble(),
+      submitToken: json['submit_token'] as String? ?? '',
+      riskPct:
+          ((summary['risk_pct'] ?? summary['risk'] ?? 0) as num).toDouble(),
       margin: ((summary['margin'] ?? summary['margin_amount'] ?? 0) as num)
           .toDouble(),
-      positionSize:
-          ((summary['position_size'] ?? 0) as num).toDouble(),
-      riskRewardRatio:
-          summary['risk_reward_ratio'] as String? ?? summary['rr'] as String? ?? '-',
-      possibleLoss:
-          ((summary['possible_loss'] ?? 0) as num).toDouble(),
-      possibleProfit:
-          ((summary['possible_profit'] ?? 0) as num).toDouble(),
+      positionSize: ((summary['position_size'] ?? 0) as num).toDouble(),
+      riskRewardRatio: summary['risk_reward_ratio'] as String? ??
+          summary['rr'] as String? ??
+          '-',
+      possibleLoss: ((summary['possible_loss'] ?? 0) as num).toDouble(),
+      possibleProfit: ((summary['possible_profit'] ?? 0) as num).toDouble(),
       blockingGuardrails: _guardrails(json['blocking_guardrails']),
       warningGuardrails: [
         ..._guardrails(json['warning_guardrails']),
         ..._guardrails(json['behavioural_warnings']),
       ],
       aiSessionId: json['ai_session_id'] as String?,
-    );
-  }
-
-  factory TradeValidationResult.localFallback(Map<String, dynamic> draft) {
-    final margin = ((draft['margin_amount'] ?? 0) as num).toDouble();
-    final leverage = ((draft['leverage'] ?? 1) as num).toDouble();
-    final entry = ((draft['entry_price'] ?? draft['limit_price'] ?? 0) as num)
-        .toDouble();
-    final sl = (draft['stop_loss'] as num?)?.toDouble();
-    final tp1 = (draft['take_profit_1'] as num?)?.toDouble();
-    final positionSize = margin * leverage;
-    final possibleLoss = entry > 0 && sl != null
-        ? positionSize * ((entry - sl).abs() / entry)
-        : 0.0;
-    final possibleProfit = entry > 0 && tp1 != null
-        ? positionSize * ((tp1 - entry).abs() / entry)
-        : 0.0;
-    final riskPct =
-        margin > 0 && possibleLoss > 0 ? (possibleLoss / margin) * 100 : 0.0;
-    final rr = possibleLoss > 0
-        ? '1:${(possibleProfit / possibleLoss).toStringAsFixed(1)}'
-        : '-';
-    return TradeValidationResult(
-      submitToken: 'validated-local',
-      riskPct: riskPct,
-      margin: margin,
-      positionSize: positionSize,
-      riskRewardRatio: rr,
-      possibleLoss: possibleLoss,
-      possibleProfit: possibleProfit,
-      blockingGuardrails: const [],
-      warningGuardrails: const [],
     );
   }
 

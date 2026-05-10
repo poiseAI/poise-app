@@ -23,7 +23,6 @@ import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/trade_validation/screens/exit_request_screen.dart';
 import '../../features/trade_validation/screens/exit_otp_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
-import '../../features/tpsl/screens/tpsl_screen.dart';
 import '../widgets/p_bottom_nav.dart';
 import '../widgets/ws_status_banner.dart';
 
@@ -107,8 +106,10 @@ GoRouter appRouter(Ref ref) {
           ),
           GoRoute(
             path: Routes.ai,
-            pageBuilder: (context, state) =>
-                _fadeTransition(state, const AiChatScreen()),
+            pageBuilder: (context, state) => _fadeTransition(
+              state,
+              AiChatScreen(initialPrompt: state.extra as String?),
+            ),
           ),
           GoRoute(
             path: Routes.notifications,
@@ -141,13 +142,6 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (context, state) => _slideTransition(
           state,
           ExitOtpScreen(positionId: state.pathParameters['id']!),
-        ),
-      ),
-      GoRoute(
-        path: Routes.positionTpsl,
-        pageBuilder: (context, state) => _sheetTransition(
-          state,
-          TpSlScreen(positionId: state.pathParameters['id']!),
         ),
       ),
     ],

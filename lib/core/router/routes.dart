@@ -19,12 +19,10 @@ abstract final class Routes {
   // Full-screen overlays (no bottom nav)
   static const positionExit = '/app/position/:id/exit';
   static const positionExitOtp = '/app/position/:id/exit/otp';
-  static const positionTpsl = '/app/position/:id/tpsl';
   static const tradePreview = '/app/trade/preview';
   static const tradeValidation = '/app/trade/validation';
 
   // Helpers
   static String positionExitPath(String id) => '/app/position/$id/exit';
   static String positionExitOtpPath(String id) => '/app/position/$id/exit/otp';
-  static String positionTpslPath(String id) => '/app/position/$id/tpsl';
 }

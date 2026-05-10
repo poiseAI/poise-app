@@ -209,4 +209,33 @@ class ProfileApi {
           : UnknownError(e.message ?? ''));
     }
   }
+
+  Future<Result<Map<String, dynamic>, AppError>>
+      getNotificationPreferences() async {
+    try {
+      final resp =
+          await _dio.get<Map<String, dynamic>>('/notification-preferences');
+      return Ok(resp.data ?? const {});
+    } on DioException catch (e) {
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    }
+  }
+
+  Future<Result<Map<String, dynamic>, AppError>> updateNotificationPreferences(
+    Map<String, dynamic> prefs,
+  ) async {
+    try {
+      final resp = await _dio.put<Map<String, dynamic>>(
+        '/notification-preferences',
+        data: prefs,
+      );
+      return Ok(resp.data ?? const {});
+    } on DioException catch (e) {
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
+    }
+  }
 }

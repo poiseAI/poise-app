@@ -15,7 +15,8 @@ class ExitReason {
 
   factory ExitReason.fromJson(Map<String, dynamic> json) => ExitReason(
         id: json['id'] as String,
-        name: json['name'] as String? ?? '',
+        name: json['name'] as String? ??
+            (json['category'] as String? ?? 'Exit reason').replaceAll('_', ' '),
         description: json['description'] as String?,
       );
 
@@ -39,8 +40,10 @@ Future<List<ExitReason>> exitReasons(Ref ref) async {
             .whereType<Map<String, dynamic>>()
             .toList();
     return list.map(ExitReason.fromJson).toList();
-  } on DioException {
-    return const [];
+  } on DioException catch (e) {
+    throw e.error is AppError
+        ? e.error as AppError
+        : UnknownError(e.message ?? 'Failed to load exit reasons');
   }
 }
 
@@ -49,12 +52,12 @@ Future<List<ExitReason>> exitReasons(Ref ref) async {
 @freezed
 abstract class ExitRequestState with _$ExitRequestState {
   const factory ExitRequestState({
-    @Default('') String reasonId,        // UUID from GET /exit-reasons
+    @Default('') String reasonId, // UUID from GET /exit-reasons
     @Default('') String description,
     @Default(false) bool isSubmitting,
     String? error,
     @Default(false) bool submitted,
-    String? exitRequestId,               // captured from POST response
+    String? exitRequestId, // captured from POST response
   }) = _ExitRequestState;
 }
 

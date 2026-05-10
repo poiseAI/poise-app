@@ -6,7 +6,7 @@ part of 'exit_request_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$exitReasonsHash() => r'4c760f55d7b36364ada3a13400ad3b48badd71d6';
+String _$exitReasonsHash() => r'032848f1e99556264525d8793f31775aa5dc0981';
 
 /// See also [exitReasons].
 @ProviderFor(exitReasons)

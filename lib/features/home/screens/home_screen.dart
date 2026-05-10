@@ -146,7 +146,7 @@ class _NoExchangeBody extends StatelessWidget {
   }
 }
 
-class _DashboardBody extends ConsumerWidget {
+class _DashboardBody extends ConsumerStatefulWidget {
   const _DashboardBody({
     required this.positions,
     required this.summary,
@@ -158,12 +158,19 @@ class _DashboardBody extends ConsumerWidget {
   final Future<void> Function() onRefresh;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final analytics = ref.watch(homeAnalyticsProvider('today')).valueOrNull;
+  ConsumerState<_DashboardBody> createState() => _DashboardBodyState();
+}
+
+class _DashboardBodyState extends ConsumerState<_DashboardBody> {
+  String _period = 'today';
+
+  @override
+  Widget build(BuildContext context) {
+    final analytics = ref.watch(homeAnalyticsProvider(_period)).valueOrNull;
 
     return RefreshIndicator(
       color: AppColors.accent,
-      onRefresh: onRefresh,
+      onRefresh: widget.onRefresh,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
@@ -176,27 +183,36 @@ class _DashboardBody extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.lg),
                   const _HomeHeader(),
                   const SizedBox(height: AppSpacing.xl),
-                  const _PeriodTabs(),
+                  _PeriodTabs(
+                    selected: _period,
+                    onChanged: (period) => setState(() => _period = period),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   _AdherenceHero(
-                    summary: summary,
-                    positions: positions,
+                    summary: widget.summary,
+                    positions: widget.positions,
                     analytics: analytics,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _CostlyMistakeCard(summary: summary, analytics: analytics),
+                  _CostlyMistakeCard(
+                    summary: widget.summary,
+                    analytics: analytics,
+                  ),
                   const SizedBox(height: AppSpacing.md),
-                  _OpportunityCostCard(summary: summary, analytics: analytics),
+                  _OpportunityCostCard(
+                    summary: widget.summary,
+                    analytics: analytics,
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   _AdherenceDetailCard(
-                    positionCount: positions.length,
+                    positionCount: widget.positions.length,
                     analytics: analytics,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   _RiskPatternCard(analytics: analytics),
                   const SizedBox(height: AppSpacing.md),
                   _GuardrailStatusCard(
-                    openPositions: positions.length,
+                    openPositions: widget.positions.length,
                     analytics: analytics,
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -206,7 +222,7 @@ class _DashboardBody extends ConsumerWidget {
               ),
             ),
           ),
-          if (positions.isEmpty)
+          if (widget.positions.isEmpty)
             SliverPadding(
               padding: AppSpacing.screenPadding.copyWith(top: 0),
               sliver: SliverToBoxAdapter(
@@ -219,11 +235,11 @@ class _DashboardBody extends ConsumerWidget {
             SliverPadding(
               padding: AppSpacing.screenPadding.copyWith(top: 0),
               sliver: SliverList.separated(
-                itemCount: positions.length,
+                itemCount: widget.positions.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, i) {
-                  final position = positions[i];
+                  final position = widget.positions[i];
                   return PositionCard(
                     position: position,
                     onLockToggle: () =>
@@ -323,27 +339,29 @@ class _HomeHeader extends ConsumerWidget {
   }
 }
 
-class _PeriodTabs extends StatefulWidget {
-  const _PeriodTabs();
+class _PeriodTabs extends StatelessWidget {
+  const _PeriodTabs({
+    required this.selected,
+    required this.onChanged,
+  });
 
-  @override
-  State<_PeriodTabs> createState() => _PeriodTabsState();
-}
-
-class _PeriodTabsState extends State<_PeriodTabs> {
-  var _selected = 0;
-  static const _labels = ['Today', 'Weekly', 'Custom'];
+  final String selected;
+  final ValueChanged<String> onChanged;
+  static const _periods = {
+    'today': 'Today',
+    'weekly': 'Weekly',
+  };
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
       spacing: AppSpacing.sm,
-      children: List.generate(_labels.length, (index) {
-        final selected = index == _selected;
+      children: _periods.entries.map((entry) {
+        final selected = entry.key == this.selected;
         return ChoiceChip(
           selected: selected,
           showCheckmark: false,
-          label: Text(_labels[index]),
+          label: Text(entry.value),
           labelStyle: AppTypography.bodyMedium.copyWith(
             color: selected ? const Color(0xFF0057FF) : AppColors.textSecondary,
           ),
@@ -356,10 +374,10 @@ class _PeriodTabsState extends State<_PeriodTabs> {
           shape: const StadiumBorder(),
           onSelected: (_) {
             HapticFeedback.selectionClick();
-            setState(() => _selected = index);
+            onChanged(entry.key);
           },
         );
-      }),
+      }).toList(),
     );
   }
 }
@@ -430,7 +448,7 @@ class _AdherenceHero extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${analytics?.compliantTradeStreak ?? positions.length + 12}\nCompliant trades in a row',
+                  '${analytics?.compliantTradeStreak ?? 0}\nCompliant trades in a row',
                   style: AppTypography.bodyLg.copyWith(
                     color: Colors.white,
                     height: 1.5,
@@ -518,11 +536,17 @@ class _CostlyMistakeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mistake = analytics?.mostCostlyMistake;
-    final missed = mistake?.missedPnl ??
-        (summary.dayPnl.abs() * 0.53).clamp(60, 480).roundToDouble();
-    final symbol =
-        mistake?.symbol.isNotEmpty == true ? mistake!.symbol : 'BTC/USDT';
-    final reason = mistake?.reason ?? 'Early exit';
+    if (mistake == null) {
+      return const _SectionCard(
+        child: _NoAnalyticsMessage(
+          title: 'Most costly mistake',
+          message: 'No completed trade mistakes have been detected yet.',
+        ),
+      );
+    }
+    final missed = mistake.missedPnl;
+    final symbol = mistake.symbol.isNotEmpty ? mistake.symbol : 'Unknown pair';
+    final reason = mistake.reason;
     return _SectionCard(
       borderColor: AppColors.lossRed.withValues(alpha: 0.28),
       backgroundColor: AppColors.lossRed.withValues(alpha: 0.05),
@@ -607,11 +631,18 @@ class _OpportunityCostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cost = analytics?.opportunityCostTotal ??
-        (summary.dayPnl == 0 ? -340.0 : -summary.dayPnl.abs());
+    final cost = analytics?.opportunityCostTotal ?? 0;
     final items = analytics?.opportunityItems ?? const [];
     final first = items.isNotEmpty ? items[0] : null;
     final second = items.length > 1 ? items[1] : null;
+    if (first == null && second == null) {
+      return const _SectionCard(
+        child: _NoAnalyticsMessage(
+          title: 'Opportunity cost',
+          message: 'No opportunity-cost events have been measured yet.',
+        ),
+      );
+    }
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,8 +679,8 @@ class _OpportunityCostCard extends StatelessWidget {
                 child: _SmallInsightCard(
                   title: first?.label ?? 'Early exit',
                   subtitle:
-                      '${first?.count ?? 1} trade - ${first?.symbol.isNotEmpty == true ? first!.symbol : 'BTC/USDT'}',
-                  value: _money(first?.value ?? -180),
+                      '${first?.count ?? 0} trade - ${first?.symbol.isNotEmpty == true ? first!.symbol : 'Unknown pair'}',
+                  value: _money(first?.value ?? 0),
                   color: const Color(0xFFD46A00),
                 ),
               ),
@@ -658,8 +689,8 @@ class _OpportunityCostCard extends StatelessWidget {
                 child: _SmallInsightCard(
                   title: second?.label ?? 'Outside session',
                   subtitle:
-                      '${second?.count ?? 1} trade - ${second?.symbol.isNotEmpty == true ? second!.symbol : 'ETH/USDT'}',
-                  value: _money(second?.value ?? -60),
+                      '${second?.count ?? 0} trade - ${second?.symbol.isNotEmpty == true ? second!.symbol : 'Unknown pair'}',
+                  value: _money(second?.value ?? 0),
                   color: AppColors.lossRed,
                 ),
               ),
@@ -829,7 +860,11 @@ class _RiskPatternCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           if (flags.isEmpty)
-            const _InsightCallout()
+            const _NoAnalyticsMessage(
+              title: 'No risk pattern detected',
+              message:
+                  'Poise will show patterns after enough trade history is available.',
+            )
           else
             ...flags.take(2).map(
                   (flag) => Padding(
@@ -919,7 +954,7 @@ class _GuardrailStatusCard extends StatelessWidget {
                 value:
                     _guardrailValue(_guardrail(analytics, 'Daily loss limit')),
                 progress:
-                    _guardrail(analytics, 'Daily loss limit')?.progress ?? 0.24,
+                    _guardrail(analytics, 'Daily loss limit')?.progress ?? 0,
                 color: _guardrailColor(
                   _guardrail(analytics, 'Daily loss limit')?.status,
                 ),
@@ -933,8 +968,7 @@ class _GuardrailStatusCard extends StatelessWidget {
                 value:
                     _guardrailValue(_guardrail(analytics, 'Weekly loss limit')),
                 progress:
-                    _guardrail(analytics, 'Weekly loss limit')?.progress ??
-                        0.34,
+                    _guardrail(analytics, 'Weekly loss limit')?.progress ?? 0,
                 color: _guardrailColor(
                   _guardrail(analytics, 'Weekly loss limit')?.status,
                 ),
@@ -944,7 +978,7 @@ class _GuardrailStatusCard extends StatelessWidget {
                 subtitle: 'Today\'s streak',
                 value: _guardrailValue(
                   _guardrail(analytics, 'Consecutive losses'),
-                  fallback: '0 / 3',
+                  fallback: 'No limit data',
                 ),
                 progress:
                     _guardrail(analytics, 'Consecutive losses')?.progress ?? 0,
@@ -957,7 +991,7 @@ class _GuardrailStatusCard extends StatelessWidget {
                 subtitle: 'Max per day',
                 value: _guardrailValue(
                   _guardrail(analytics, 'Trades today'),
-                  fallback: '${analytics?.tradesClosedToday ?? 0}/5',
+                  fallback: '${analytics?.tradesClosedToday ?? 0}',
                 ),
                 progress: _guardrail(analytics, 'Trades today')?.progress ??
                     ((analytics?.tradesClosedToday ?? 0) / 5)
@@ -975,7 +1009,7 @@ class _GuardrailStatusCard extends StatelessWidget {
             subtitle: 'Concurrent limit',
             value: _guardrailValue(
               _guardrail(analytics, 'Open positions'),
-              fallback: '$openPositions/5',
+              fallback: '$openPositions',
             ),
             progress: _guardrail(analytics, 'Open positions')?.progress ??
                 (openPositions / 5).clamp(0, 1).toDouble(),
@@ -1011,6 +1045,31 @@ class _SectionCard extends StatelessWidget {
         border: Border.all(color: borderColor),
       ),
       child: child,
+    );
+  }
+}
+
+class _NoAnalyticsMessage extends StatelessWidget {
+  const _NoAnalyticsMessage({
+    required this.title,
+    required this.message,
+  });
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppTypography.h3),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          message,
+          style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+        ),
+      ],
     );
   }
 }
@@ -1126,27 +1185,6 @@ class _PatternRow extends StatelessWidget {
           Expanded(child: Text(label, style: AppTypography.body)),
           _StatusPill(label: status, color: color),
         ],
-      ),
-    );
-  }
-}
-
-class _InsightCallout extends StatelessWidget {
-  const _InsightCallout();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF4FF),
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: const Color(0xFFD8EAFF)),
-      ),
-      child: Text(
-        'Your position sizing is varying more than usual today. Consider keeping your next trade within your average capital band.',
-        style: AppTypography.bodyLg.copyWith(color: AppColors.textPrimary),
       ),
     );
   }

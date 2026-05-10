@@ -167,11 +167,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   }
 }
 
-class _EmailVerifiedSuccessScreen extends StatelessWidget {
+class _EmailVerifiedSuccessScreen extends ConsumerWidget {
   const _EmailVerifiedSuccessScreen();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
@@ -208,7 +208,14 @@ class _EmailVerifiedSuccessScreen extends StatelessWidget {
               const Spacer(flex: 2),
               PPrimaryButton(
                 label: 'Done',
-                onPressed: () => context.go(Routes.riskAppetite),
+                onPressed: () {
+                  final auth = ref.read(authProvider).valueOrNull;
+                  if (auth is AuthAuthenticated && auth.hasActiveStrategy) {
+                    context.go(Routes.home);
+                  } else {
+                    context.go(Routes.riskAppetite);
+                  }
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
             ],

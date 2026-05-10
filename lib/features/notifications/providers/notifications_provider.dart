@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/websocket/ws_message.dart';
 import '../../../core/websocket/ws_service.dart';
-import '../../../core/storage/preferences.dart';
+import '../../profile/providers/notification_preferences_provider.dart';
 import '../data/models/notification_item.dart';
 import '../data/notification_repository.dart';
 
@@ -58,7 +58,8 @@ class Notifications extends _$Notifications {
       body: data['body'] as String? ?? '',
       type: data['notification_type'] as String? ?? 'system',
       read: data['read'] as bool? ?? false,
-      createdAt: data['created_at'] as String? ?? DateTime.now().toIso8601String(),
+      createdAt:
+          data['created_at'] as String? ?? DateTime.now().toIso8601String(),
       meta: (data['meta'] as Map<String, dynamic>?) ?? data,
     ));
   }
@@ -115,16 +116,26 @@ class Notifications extends _$Notifications {
   }
 
   bool _allows(String type) {
-    final prefs = ref.read(appPreferencesProvider).valueOrNull;
+    final prefs =
+        ref.read(notificationPreferencesControllerProvider).valueOrNull;
     if (prefs == null) return true;
     if (type.contains('external_trade')) {
-      return prefs.externalTradeNotifications;
+      return prefs.externalTrades;
+    }
+    if (type.contains('loss_limit')) {
+      return prefs.lossLimits;
+    }
+    if (type.contains('ai')) {
+      return prefs.aiFeedback;
+    }
+    if (type.contains('weekly')) {
+      return prefs.weeklyInsights;
     }
     if (type.contains('guardrail') || type.contains('risk')) {
-      return prefs.guardrailNotifications;
+      return prefs.guardrails;
     }
     if (type.contains('order') || type.contains('position')) {
-      return prefs.tradeUpdateNotifications;
+      return prefs.tradeUpdates;
     }
     return true;
   }
@@ -176,7 +187,8 @@ String _stableId(
       data['exchange_order_id'] ??
       data['position_id'] ??
       fallbackId;
-  final updated = data['updated_at'] ?? data['last_synced_at'] ?? data['status'];
+  final updated =
+      data['updated_at'] ?? data['last_synced_at'] ?? data['status'];
   if (id != null && id.toString().isNotEmpty) return '$prefix-$id-$updated';
   return '$prefix-${DateTime.now().microsecondsSinceEpoch}';
 }

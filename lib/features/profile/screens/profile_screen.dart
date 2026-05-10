@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/router/routes.dart';
-import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -17,7 +16,9 @@ import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
 import '../../auth/widgets/password_requirements.dart';
 import '../../onboarding/screens/set_risk_appetite_screen.dart';
+import '../../strategies/providers/strategies_provider.dart';
 import '../data/profile_api.dart';
+import '../providers/notification_preferences_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -107,16 +108,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _SettingsTile(
             icon: Icons.percent_rounded,
             label: 'Risk Appetite',
+            subtitle: _riskAppetiteSubtitle(ref),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => const SetRiskAppetiteScreen(),
+                builder: (_) => const SetRiskAppetiteScreen(
+                  mode: RiskAppetiteMode.settings,
+                ),
               ),
             ),
           ),
           _SettingsTile(
             icon: Icons.lock_outline_rounded,
             label: 'Security',
-            onTap: () => _showSecuritySheet(context, ref, authState),
+            onTap: () => _showSecuritySheet(context, ref),
           ),
           _SettingsTile(
             icon: Icons.notifications_none_rounded,
@@ -171,11 +175,13 @@ class _SettingsTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.subtitle,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -194,17 +200,35 @@ class _SettingsTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.borderLight),
             ),
+            constraints: const BoxConstraints(minHeight: 60),
             child: Row(
               children: [
                 Icon(icon, color: AppColors.textSecondary, size: 22),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Text(
-                    label,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: 15,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (subtitle != null && subtitle!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textDisabled,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const Icon(Icons.chevron_right_rounded,
@@ -216,6 +240,21 @@ class _SettingsTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _riskAppetiteSubtitle(WidgetRef ref) {
+  final state = ref.watch(strategiesNotifierProvider);
+  if (state is StrategiesLoaded) {
+    final active = state.active;
+    if (active == null) return 'Not configured';
+    final pct = active.maxDailyLossPercent;
+    final risk = pct == null
+        ? ''
+        : ' • ${pct.toStringAsFixed(pct % 1 == 0 ? 0 : 1)}% risk';
+    return '${active.name}$risk';
+  }
+  if (state is StrategiesError) return 'Could not load current setting';
+  return 'Loading current setting...';
 }
 
 class _EditProfileScreen extends ConsumerStatefulWidget {
@@ -867,22 +906,20 @@ class _ExchangeConnectionDialogState
 void _showSecuritySheet(
   BuildContext context,
   WidgetRef ref,
-  AuthAuthenticated auth,
 ) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _SheetFrame(
+    builder: (_) => const _SheetFrame(
       title: 'Security',
-      child: _TotpTile(totpEnabled: auth.totpEnabled),
+      child: _TotpTile(),
     ),
   );
 }
 
 class _TotpTile extends ConsumerStatefulWidget {
-  const _TotpTile({required this.totpEnabled});
-  final bool totpEnabled;
+  const _TotpTile();
 
   @override
   ConsumerState<_TotpTile> createState() => _TotpTileState();
@@ -927,13 +964,15 @@ class _TotpTileState extends ConsumerState<_TotpTile> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = ref.watch(authProvider).valueOrNull;
+    final totpEnabled = auth is AuthAuthenticated && auth.totpEnabled;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: const Text('Two-factor authentication'),
-      subtitle: Text(widget.totpEnabled ? 'Enabled' : 'Not enabled'),
+      subtitle: Text(totpEnabled ? 'Enabled' : 'Not enabled'),
       trailing: TextButton(
-        onPressed: widget.totpEnabled ? _disable : _setup,
-        child: Text(widget.totpEnabled ? 'Disable' : 'Set up'),
+        onPressed: totpEnabled ? _disable : _setup,
+        child: Text(totpEnabled ? 'Disable' : 'Set up'),
       ),
     );
   }
@@ -1106,7 +1145,7 @@ void _showNotificationSheet(BuildContext context, WidgetRef ref) {
 class _NotificationPreferencesSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefsState = ref.watch(appPreferencesProvider);
+    final prefsState = ref.watch(notificationPreferencesControllerProvider);
     return prefsState.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => const Text('Failed to load notification settings'),
@@ -1114,39 +1153,84 @@ class _NotificationPreferencesSection extends ConsumerWidget {
         children: [
           _PreferenceSwitch(
             label: 'Trade execution updates',
-            value: prefs.tradeUpdateNotifications,
-            onChanged: (value) async {
-              await prefs.setTradeUpdateNotifications(value);
-              ref.invalidate(appPreferencesProvider);
-            },
+            value: prefs.tradeUpdates,
+            onChanged: (value) => _updateNotificationPreference(
+              context,
+              ref,
+              prefs.copyWith(tradeUpdates: value),
+            ),
           ),
           _PreferenceSwitch(
             label: 'Guardrail warnings',
-            value: prefs.guardrailNotifications,
-            onChanged: (value) async {
-              await prefs.setGuardrailNotifications(value);
-              ref.invalidate(appPreferencesProvider);
-            },
+            value: prefs.guardrails,
+            onChanged: (value) => _updateNotificationPreference(
+              context,
+              ref,
+              prefs.copyWith(guardrails: value),
+            ),
           ),
           _PreferenceSwitch(
             label: 'External trade capture',
-            value: prefs.externalTradeNotifications,
-            onChanged: (value) async {
-              await prefs.setExternalTradeNotifications(value);
-              ref.invalidate(appPreferencesProvider);
-            },
+            value: prefs.externalTrades,
+            onChanged: (value) => _updateNotificationPreference(
+              context,
+              ref,
+              prefs.copyWith(externalTrades: value),
+            ),
+          ),
+          _PreferenceSwitch(
+            label: 'Loss limit alerts',
+            value: prefs.lossLimits,
+            onChanged: (value) => _updateNotificationPreference(
+              context,
+              ref,
+              prefs.copyWith(lossLimits: value),
+            ),
+          ),
+          _PreferenceSwitch(
+            label: 'Weekly insights',
+            value: prefs.weeklyInsights,
+            onChanged: (value) => _updateNotificationPreference(
+              context,
+              ref,
+              prefs.copyWith(weeklyInsights: value),
+            ),
+          ),
+          _PreferenceSwitch(
+            label: 'AI feedback',
+            value: prefs.aiFeedback,
+            onChanged: (value) => _updateNotificationPreference(
+              context,
+              ref,
+              prefs.copyWith(aiFeedback: value),
+            ),
           ),
           _PreferenceSwitch(
             label: 'Email notifications',
             value: prefs.emailNotifications,
-            onChanged: (value) async {
-              await prefs.setEmailNotifications(value);
-              ref.invalidate(appPreferencesProvider);
-            },
+            onChanged: (value) => _updateNotificationPreference(
+              context,
+              ref,
+              prefs.copyWith(emailNotifications: value),
+            ),
           ),
         ],
       ),
     );
+  }
+}
+
+Future<void> _updateNotificationPreference(
+  BuildContext context,
+  WidgetRef ref,
+  NotificationPreferences prefs,
+) async {
+  try {
+    await ref
+        .read(notificationPreferencesControllerProvider.notifier)
+        .save(prefs);
+  } catch (e) {
+    if (context.mounted) PToast.error(context, 'Failed to update preference');
   }
 }
 
@@ -1192,7 +1276,7 @@ class _DataPrivacyScreen extends StatelessWidget {
         padding: AppSpacing.screenPadding,
         children: [
           Text(
-            'Poise uses your data exclusively to operate as your Trading Operating System and help you improve discipline. We securely connect to your exchange (Binance or Bybit) using your encrypted API and secret keys.',
+            'Poise uses your exchange connection to show balances, synchronize supported positions, validate trades, and provide discipline feedback.',
             style: AppTypography.bodyLg.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
@@ -1211,9 +1295,8 @@ class _DataPrivacyScreen extends StatelessWidget {
             rest: ' and support real-time trade execution.',
           ),
           const _PrivacyBullet(
-            strong: 'Ingest all trading activity',
-            rest:
-                ' (historical and real-time) to establish a performance baseline.',
+            strong: 'Synchronize supported trading activity',
+            rest: ' as it becomes available from your connected exchange.',
           ),
           const _PrivacyBullet(
             strong: 'Analyze trade data',
@@ -1226,7 +1309,7 @@ class _DataPrivacyScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Your API keys are stored securely and your trade data is only used to provide you with execution discipline and performance analysis.',
+            'API keys are encrypted before storage and are not returned to the app after they are saved.',
             style: AppTypography.bodyLg.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
