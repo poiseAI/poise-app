@@ -86,9 +86,9 @@ platform :ios do
       clean: true,
       output_directory: "../build/ios/ipa",
       output_name: "Poise.ipa",
-      export_method: "app-store-connect",
+      export_method: "app-store",
       export_options: {
-        method: "app-store-connect",
+        method: "app-store",
         signingStyle: "automatic",
         teamID: team_id,
         manageAppVersionAndBuildNumber: false
