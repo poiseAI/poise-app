@@ -1,0 +1,76 @@
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      changelog:
+        description: "TestFlight build notes"
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+      - "ios-v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Build and Upload
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.poiseai.poiseAi' }}
+      APP_STORE_APP_ID: ${{ vars.APP_STORE_APP_ID || '6768316006' }}
+      FLUTTER_BUILD_NUMBER: ${{ github.run_number }}
+      TESTFLIGHT_CHANGELOG: ${{ inputs.changelog || format('Poise build {0}', github.run_number) }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      IOS_PROVISIONING_PROFILE_UUID: ${{ secrets.IOS_PROVISIONING_PROFILE_UUID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.7"
+          channel: stable
+          cache: true
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Validate release secrets
+        run: |
+          test -n "$APPLE_TEAM_ID" || (echo "APPLE_TEAM_ID is missing" && exit 1)
+          test -n "$ASC_KEY_ID" || (echo "ASC_KEY_ID is missing" && exit 1)
+          test -n "$ASC_ISSUER_ID" || (echo "ASC_ISSUER_ID is missing" && exit 1)
+          test -n "$ASC_KEY_P8" || (echo "ASC_KEY_P8 is missing" && exit 1)
+          test -n "$IOS_PROVISIONING_PROFILE_BASE64" || (echo "IOS_PROVISIONING_PROFILE_BASE64 is missing" && exit 1)
+          test -n "$IOS_PROVISIONING_PROFILE_UUID" || (echo "IOS_PROVISIONING_PROFILE_UUID is missing" && exit 1)
+
+      - name: Install provisioning profile
+        run: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/$IOS_PROVISIONING_PROFILE_UUID.mobileprovision"
+
+      - name: Build and upload to TestFlight
+        working-directory: ios
+        run: bundle exec fastlane ios beta

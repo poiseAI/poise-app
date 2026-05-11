@@ -34,6 +34,12 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Fastlane/App Store Connect CI material generated from GitHub secrets.
+AuthKey_*.p8
+*.mobileprovision
+ios/fastlane/AuthKey_*.p8
+ios/fastlane/ExportOptions.generated.plist
+
 # Symbolication related
 app.*.symbols
 

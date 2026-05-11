@@ -1,0 +1,108 @@
+require "shellwords"
+
+default_platform(:ios)
+
+def required_env(name)
+  value = ENV[name]
+  UI.user_error!("Missing required environment variable: #{name}") if value.to_s.strip.empty?
+  value
+end
+
+def normalized_private_key(value)
+  key = value.to_s.strip
+  key = key.gsub("\\n", "\n")
+  unless key.include?("BEGIN PRIVATE KEY") && key.include?("END PRIVATE KEY")
+    UI.user_error!("ASC_KEY_P8 must contain the full App Store Connect .p8 private key")
+  end
+  key
+end
+
+def pubspec_version_name
+  pubspec = File.read(File.expand_path("../../pubspec.yaml", __dir__))
+  version_line = pubspec.lines.find { |line| line.start_with?("version:") }
+  UI.user_error!("pubspec.yaml is missing a version line") unless version_line
+
+  version_line.split(":", 2).last.strip.split("+", 2).first
+end
+
+def write_app_store_key_file(key_id, key_content)
+  path = File.expand_path("AuthKey_#{key_id}.p8", __dir__)
+  File.write(path, key_content)
+  File.chmod(0o600, path)
+  path
+end
+
+platform :ios do
+  desc "Build the Flutter iOS app and upload it to TestFlight"
+  lane :beta do
+    app_identifier = ENV.fetch("IOS_BUNDLE_ID", "com.poiseai.poiseAi")
+    team_id = required_env("APPLE_TEAM_ID")
+    key_id = required_env("ASC_KEY_ID")
+    issuer_id = required_env("ASC_ISSUER_ID")
+    key_content = normalized_private_key(required_env("ASC_KEY_P8"))
+    build_name = ENV.fetch("FLUTTER_BUILD_NAME", pubspec_version_name)
+    build_number = ENV.fetch("FLUTTER_BUILD_NUMBER", Time.now.utc.strftime("%Y%m%d%H%M"))
+    changelog = ENV.fetch("TESTFLIGHT_CHANGELOG", "Poise CI build #{build_number}")
+    apple_id = ENV["APP_STORE_APP_ID"]
+    key_path = write_app_store_key_file(key_id, key_content)
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_content: key_content,
+      duration: 1200,
+      in_house: false
+    )
+
+    update_code_signing_settings(
+      path: "Runner.xcodeproj",
+      use_automatic_signing: true,
+      team_id: team_id,
+      targets: ["Runner"]
+    )
+
+    sh("cd .. && flutter pub get")
+    sh("cd .. && flutter analyze")
+    sh("cd .. && flutter test")
+    sh("cd .. && flutter build ios --release --no-codesign --build-name=#{Shellwords.escape(build_name)} --build-number=#{Shellwords.escape(build_number)}")
+
+    signing_xcargs = [
+      "-allowProvisioningUpdates",
+      "-authenticationKeyPath #{Shellwords.escape(key_path)}",
+      "-authenticationKeyID #{Shellwords.escape(key_id)}",
+      "-authenticationKeyIssuerID #{Shellwords.escape(issuer_id)}",
+      "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}",
+      "PRODUCT_BUNDLE_IDENTIFIER=#{Shellwords.escape(app_identifier)}"
+    ].join(" ")
+
+    ipa_path = build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      clean: true,
+      output_directory: "../build/ios/ipa",
+      output_name: "Poise.ipa",
+      export_method: "app-store-connect",
+      export_options: {
+        method: "app-store-connect",
+        signingStyle: "automatic",
+        teamID: team_id,
+        manageAppVersionAndBuildNumber: false
+      },
+      xcargs: signing_xcargs,
+      export_xcargs: signing_xcargs
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: app_identifier,
+      apple_id: apple_id,
+      ipa: ipa_path,
+      changelog: changelog,
+      distribute_external: false,
+      skip_waiting_for_build_processing: true
+    )
+  ensure
+    File.delete(key_path) if defined?(key_path) && key_path && File.exist?(key_path)
+  end
+end
