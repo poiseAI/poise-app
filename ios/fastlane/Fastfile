@@ -2,6 +2,8 @@ require "shellwords"
 
 default_platform(:ios)
 
+REPO_ROOT = File.expand_path("../..", __dir__)
+
 def required_env(name)
   value = ENV[name]
   UI.user_error!("Missing required environment variable: #{name}") if value.to_s.strip.empty?
@@ -61,10 +63,10 @@ platform :ios do
       targets: ["Runner"]
     )
 
-    sh("cd .. && flutter pub get")
-    sh("cd .. && flutter analyze")
-    sh("cd .. && flutter test")
-    sh("cd .. && flutter build ios --release --no-codesign --build-name=#{Shellwords.escape(build_name)} --build-number=#{Shellwords.escape(build_number)}")
+    sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter pub get")
+    sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter analyze")
+    sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter test")
+    sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter build ios --release --no-codesign --build-name=#{Shellwords.escape(build_name)} --build-number=#{Shellwords.escape(build_number)}")
 
     signing_xcargs = [
       "-allowProvisioningUpdates",
