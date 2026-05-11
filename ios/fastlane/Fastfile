@@ -38,7 +38,7 @@ end
 platform :ios do
   desc "Build the Flutter iOS app and upload it to TestFlight"
   lane :beta do
-    app_identifier = ENV.fetch("IOS_BUNDLE_ID", "com.poiseai.poiseAi")
+    app_identifier = ENV.fetch("IOS_BUNDLE_ID", "com.poiseai.app")
     team_id = required_env("APPLE_TEAM_ID")
     key_id = required_env("ASC_KEY_ID")
     issuer_id = required_env("ASC_ISSUER_ID")

@@ -5,7 +5,7 @@ This repo is wired for GitHub Actions + Fastlane TestFlight uploads from a macOS
 ## App Store Connect
 
 - App name: `Poise`
-- Bundle ID: `com.poiseai.poiseAi`
+- Bundle ID: `com.poiseai.app`
 - App Store Connect app ID: `6768316006`
 - SKU: `poise-ai-ios`
 - Primary language: English
@@ -26,7 +26,7 @@ Set these repository secrets:
 
 Set this repository variable:
 
-- `IOS_BUNDLE_ID`: `com.poiseai.poiseAi`
+- `IOS_BUNDLE_ID`: `com.poiseai.app`
 - `APP_STORE_APP_ID`: `6768316006`
 
 ## Release

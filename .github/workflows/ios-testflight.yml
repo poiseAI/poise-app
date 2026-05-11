@@ -25,7 +25,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 60
     env:
-      IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.poiseai.poiseAi' }}
+      IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.poiseai.app' }}
       APP_STORE_APP_ID: ${{ vars.APP_STORE_APP_ID || '6768316006' }}
       FLUTTER_BUILD_NUMBER: ${{ github.run_number }}
       TESTFLIGHT_CHANGELOG: ${{ inputs.changelog || format('Poise build {0}', github.run_number) }}
