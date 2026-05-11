@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/app_radius.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_spacing.dart';
@@ -53,6 +52,7 @@ class _PCardState extends State<PCard> with SingleTickerProviderStateMixin {
     final interactive = widget.onTap != null || widget.onLongPress != null;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: interactive
           ? (_) {
               HapticFeedback.lightImpact();
@@ -78,12 +78,14 @@ class _PCardState extends State<PCard> with SingleTickerProviderStateMixin {
           duration: const Duration(milliseconds: 150),
           padding: widget.padding ?? AppSpacing.cardPadding,
           decoration: BoxDecoration(
-            color: widget.color ?? AppColors.bgCard,
+            color: widget.color ?? Theme.of(context).cardTheme.color,
             borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: AppColors.borderLight, width: 1),
-            boxShadow: _pressCtrl.value > 0
-                ? AppShadows.cardPressed
-                : AppShadows.sm,
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline,
+              width: 1,
+            ),
+            boxShadow:
+                _pressCtrl.value > 0 ? AppShadows.cardPressed : AppShadows.sm,
           ),
           child: widget.child,
         ),

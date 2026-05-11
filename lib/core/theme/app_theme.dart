@@ -47,13 +47,14 @@ abstract final class AppTheme {
 
       // AppBar
       appBarTheme: AppBarTheme(
-        backgroundColor: bg,
+        backgroundColor: AppColors.bgPrimary,
+        surfaceTintColor: AppColors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        systemOverlayStyle:
-            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-        titleTextStyle: AppTypography.h3.copyWith(color: textPrimary),
-        iconTheme: IconThemeData(color: textPrimary),
+        centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        titleTextStyle: AppTypography.h4.copyWith(color: AppColors.textPrimary),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
 
       // Card

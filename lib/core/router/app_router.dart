@@ -129,6 +129,17 @@ GoRouter appRouter(Ref ref) {
         ],
       ),
 
+      GoRoute(
+        path: Routes.dataPrivacy,
+        pageBuilder: (context, state) =>
+            _slideTransition(state, const DataPrivacyScreen()),
+      ),
+      GoRoute(
+        path: Routes.exchangeConnections,
+        pageBuilder: (context, state) =>
+            _slideTransition(state, const ExchangeConnectionsScreen()),
+      ),
+
       // ── Full-screen overlays (push over shell) ──────────────────
       GoRoute(
         path: Routes.positionExit,

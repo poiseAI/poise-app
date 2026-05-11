@@ -50,27 +50,33 @@ class _ExitRequestScreenState extends ConsumerState<ExitRequestScreen> {
       }
     });
 
-    final canSubmit =
-        form.reasonId.isNotEmpty && !form.isSubmitting;
+    final canSubmit = form.reasonId.isNotEmpty && !form.isSubmitting;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        backgroundColor: AppColors.bgPrimary,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Request exit', style: AppTypography.h4),
+        title: const Text('Request Exit'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
       ),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Position ${widget.positionId}',
                 style: AppTypography.bodySm
@@ -83,7 +89,7 @@ class _ExitRequestScreenState extends ConsumerState<ExitRequestScreen> {
                   .slideY(begin: 0.1, end: 0),
               const SizedBox(height: AppSpacing.md),
 
-              // Reason list — loaded from API
+              // Reason list loaded from API.
               reasonsAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -109,8 +115,7 @@ class _ExitRequestScreenState extends ConsumerState<ExitRequestScreen> {
                         duration: const Duration(milliseconds: 180),
                         margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.sm),
+                            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: active
                               ? AppColors.lossRed.withValues(alpha: 0.06)
@@ -147,9 +152,7 @@ class _ExitRequestScreenState extends ConsumerState<ExitRequestScreen> {
                                 Icons.check_circle_rounded,
                                 size: 18,
                                 color: AppColors.lossRed,
-                              )
-                                  .animate()
-                                  .scale(
+                              ).animate().scale(
                                     begin: const Offset(0, 0),
                                     curve: Curves.easeOutBack,
                                   ),
@@ -159,14 +162,15 @@ class _ExitRequestScreenState extends ConsumerState<ExitRequestScreen> {
                     )
                         .animate(delay: (entry.key * 40).ms)
                         .fadeIn(duration: 220.ms)
-                        .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic);
+                        .slideY(
+                            begin: 0.08, end: 0, curve: Curves.easeOutCubic);
                   }).toList(),
                 ),
               ),
 
               const SizedBox(height: AppSpacing.md),
 
-              // Description — required, min 10 chars per backend validation
+              // Description required by backend validation.
               _DescriptionField(
                 controller: _descCtrl,
                 onChanged: notifier.setDescription,
@@ -196,9 +200,7 @@ class _ExitRequestScreenState extends ConsumerState<ExitRequestScreen> {
                     ? PButtonState.loading
                     : PButtonState.idle,
                 onPressed: canSubmit ? notifier.submit : null,
-              )
-                  .animate(delay: 200.ms)
-                  .fadeIn(duration: 250.ms),
+              ).animate(delay: 200.ms).fadeIn(duration: 250.ms),
 
               const SizedBox(height: AppSpacing.lg),
             ],
@@ -210,8 +212,7 @@ class _ExitRequestScreenState extends ConsumerState<ExitRequestScreen> {
 }
 
 class _DescriptionField extends StatelessWidget {
-  const _DescriptionField(
-      {required this.controller, required this.onChanged});
+  const _DescriptionField({required this.controller, required this.onChanged});
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
 
@@ -230,7 +231,7 @@ class _DescriptionField extends StatelessWidget {
           maxLines: 3,
           style: AppTypography.body,
           decoration: InputDecoration(
-            hintText: 'Describe the reason for exit (min 10 characters)…',
+            hintText: 'Describe the reason for exit (min 10 characters)...',
             hintStyle:
                 AppTypography.body.copyWith(color: AppColors.textDisabled),
             filled: true,

@@ -20,7 +20,7 @@ class UserBubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         decoration: const BoxDecoration(
-          color: AppColors.textPrimary,
+          color: AppColors.brand600,
           borderRadius: AppRadius.bubbleOutgoing,
         ),
         child: Text(
@@ -61,10 +61,9 @@ class AiBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: AppColors.bgCard,
+        decoration: const BoxDecoration(
+          color: Color(0xFFEAF4FF),
           borderRadius: AppRadius.bubbleIncoming,
-          border: Border.all(color: AppColors.borderLight),
         ),
         child: text.isEmpty && isStreaming
             ? const TypingIndicator()
@@ -73,8 +72,7 @@ class AiBubble extends StatelessWidget {
                   style: AppTypography.body,
                   children: [
                     TextSpan(text: text),
-                    if (isStreaming)
-                      const WidgetSpan(child: _BlinkingCursor()),
+                    if (isStreaming) const WidgetSpan(child: _BlinkingCursor()),
                   ],
                 ),
               ),
@@ -163,9 +161,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
             animation: _ctrl,
             builder: (_, __) {
               final phase = ((_ctrl.value - i * 0.15) % 1.0).clamp(0.0, 1.0);
-              final bounce = phase < 0.5
-                  ? phase * 2
-                  : (1.0 - phase) * 2;
+              final bounce = phase < 0.5 ? phase * 2 : (1.0 - phase) * 2;
               return Container(
                 width: 7,
                 height: 7,

@@ -125,7 +125,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         title: const Text('Sign up'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
       ),

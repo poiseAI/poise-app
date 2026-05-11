@@ -216,7 +216,7 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
                     analytics: analytics,
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  const Text('Current trades', style: AppTypography.h3),
+                  const Text('Recent Activity', style: AppTypography.h3),
                   const SizedBox(height: AppSpacing.sm),
                 ],
               ),
@@ -225,10 +225,8 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
           if (widget.positions.isEmpty)
             SliverPadding(
               padding: AppSpacing.screenPadding.copyWith(top: 0),
-              sliver: SliverToBoxAdapter(
-                child: _EmptyCurrentTrades(
-                  onNewTrade: () => context.go(Routes.trade),
-                ),
+              sliver: const SliverToBoxAdapter(
+                child: _EmptyCurrentTrades(),
               ),
             )
           else
@@ -269,15 +267,14 @@ class _HomeHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider).valueOrNull;
     final email = authState is AuthAuthenticated ? authState.email : '';
+    final identity = _maskedIdentity(email);
     final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
-    // Mask email: show first char + domain with middle hidden
-    final maskedEmail = _maskEmail(email);
 
     return Row(
       children: [
         Container(
-          width: 56,
-          height: 56,
+          width: 32,
+          height: 32,
           decoration: const BoxDecoration(
             color: AppColors.bgSecondary,
             shape: BoxShape.circle,
@@ -288,21 +285,22 @@ class _HomeHeader extends ConsumerWidget {
             style: AppTypography.h3.copyWith(color: AppColors.textSecondary),
           ),
         ),
-        const SizedBox(width: AppSpacing.md),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                maskedEmail,
-                style: AppTypography.h4.copyWith(fontWeight: FontWeight.w500),
+                identity,
+                style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
                 _greeting(),
-                style: AppTypography.h3.copyWith(
+                style: AppTypography.body.copyWith(
                   color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],
@@ -314,21 +312,19 @@ class _HomeHeader extends ConsumerWidget {
           icon: const Icon(
             Icons.notifications_none_rounded,
             color: AppColors.textPrimary,
-            size: 28,
+            size: 24,
           ),
         ),
       ],
     );
   }
 
-  static String _maskEmail(String email) {
-    if (email.isEmpty) return '';
-    final parts = email.split('@');
-    if (parts.length != 2) return email;
-    final local = parts[0];
-    final domain = parts[1];
-    final visible = local.length > 2 ? local.substring(0, 2) : local[0];
-    return '$visible***@$domain';
+  static String _maskedIdentity(String email) {
+    if (email.isEmpty) return 'Poise user';
+    final local = email.split('@').first.trim();
+    if (local.isEmpty) return 'Poise user';
+    final visible = local.length >= 4 ? local.substring(0, 4) : local;
+    return '$visible**@***';
   }
 
   static String _greeting() {
@@ -350,6 +346,7 @@ class _PeriodTabs extends StatelessWidget {
   static const _periods = {
     'today': 'Today',
     'weekly': 'Weekly',
+    'custom': 'Custom',
   };
 
   @override
@@ -400,68 +397,141 @@ class _AdherenceHero extends StatelessWidget {
         analytics?.adherenceScore ?? _adherenceScore(summary, positions.length);
     final pnlColor = AppColors.pnlColor(dayPnl);
 
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.cardPaddingLg,
-      decoration: BoxDecoration(
-        color: const Color(0xFF073B9A),
-        borderRadius: AppRadius.cardRadiusLg,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF073B9A).withValues(alpha: 0.16),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _HeroMetric(
-                  label: 'Adherence score',
-                  value: '$adherence%',
-                  valueColor: Colors.white,
-                  footer:
-                      '${(analytics?.adherenceChangePct ?? 0).toStringAsFixed(0)}% vs previous',
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: _HeroMetric(
-                  label: 'Today\'s PnL',
-                  value: _money(dayPnl, signed: true),
-                  valueColor: pnlColor,
-                  footer:
-                      '${analytics?.tradesClosedToday ?? summary.positionCount.clamp(positions.length, 999)} trades closed',
-                  alignEnd: true,
-                ),
+    return Stack(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: AppSpacing.cardPaddingLg,
+          decoration: BoxDecoration(
+            color: const Color(0xFF004CE6),
+            borderRadius: AppRadius.cardRadiusLg,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0057FF).withValues(alpha: 0.12),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Divider(color: Colors.white.withValues(alpha: 0.28), height: 1),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
+          child: const _HeroPattern(),
+        ),
+        Container(
+          width: double.infinity,
+          padding: AppSpacing.cardPaddingLg,
+          child: Column(
             children: [
-              Expanded(
-                child: Text(
-                  '${analytics?.compliantTradeStreak ?? 0}\nCompliant trades in a row',
-                  style: AppTypography.bodyLg.copyWith(
-                    color: Colors.white,
-                    height: 1.5,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _HeroMetric(
+                      label: 'Adherence score',
+                      value: '$adherence%',
+                      valueColor: Colors.white,
+                      footer:
+                          '${(analytics?.adherenceChangePct ?? 0).toStringAsFixed(0)}% vs yesterday',
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _HeroMetric(
+                      label: 'Today\'s PnL',
+                      value: _money(dayPnl, signed: true),
+                      valueColor: pnlColor,
+                      footer:
+                          '${analytics?.tradesClosedToday ?? summary.positionCount.clamp(positions.length, 999)} trades closed',
+                      alignEnd: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Divider(color: Colors.white.withValues(alpha: 0.28), height: 1),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${analytics?.compliantTradeStreak ?? 0}\nCompliant trades in a row',
+                      style: AppTypography.bodyLg.copyWith(
+                        color: Colors.white,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.local_fire_department_rounded,
+                    color: Color(0xFFFF7043),
+                    size: 36,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.04, end: 0);
+  }
+}
+
+class _HeroPattern extends StatelessWidget {
+  const _HeroPattern();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 176,
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          Positioned(
+            right: 24,
+            top: -24,
+            child: Transform.rotate(
+              angle: -0.2,
+              child: Container(
+                width: 112,
+                height: 180,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              const Icon(Icons.local_fire_department_rounded,
-                  color: Color(0xFFFF7043), size: 36),
-            ],
+            ),
+          ),
+          Positioned(
+            right: 78,
+            bottom: -36,
+            child: Transform.rotate(
+              angle: -0.2,
+              child: Container(
+                width: 96,
+                height: 170,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 110,
+            top: 16,
+            child: Transform.rotate(
+              angle: -0.2,
+              child: Container(
+                width: 56,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.035),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
           ),
         ],
       ),
-    ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.04, end: 0);
+    );
   }
 }
 
@@ -779,14 +849,6 @@ class _AdherenceDetailCard extends StatelessWidget {
                     _guardrail(analytics, 'Daily loss limit')?.status),
               ),
               _AdherenceTile(
-                label: 'Weekly loss limit',
-                value: _guardrailProgress(analytics, 'Weekly loss limit'),
-                progress:
-                    _guardrail(analytics, 'Weekly loss limit')?.progress ?? 0,
-                color: _guardrailColor(
-                    _guardrail(analytics, 'Weekly loss limit')?.status),
-              ),
-              _AdherenceTile(
                 label: 'Trades today',
                 value: '${analytics?.tradesClosedToday ?? 0}',
                 progress: score / 100.0,
@@ -800,6 +862,10 @@ class _AdherenceDetailCard extends StatelessWidget {
                 color: AppColors.profitGreen,
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _SnapshotStatusRow(
+            metric: _guardrail(analytics, 'Balance snapshot'),
           ),
         ],
       ),
@@ -960,20 +1026,6 @@ class _GuardrailStatusCard extends StatelessWidget {
                 ),
               ),
               _GuardrailTile(
-                title: _guardrail(analytics, 'Weekly loss limit')?.label ??
-                    'Weekly loss limit',
-                subtitle:
-                    _guardrail(analytics, 'Weekly loss limit')?.description ??
-                        'Resets Monday',
-                value:
-                    _guardrailValue(_guardrail(analytics, 'Weekly loss limit')),
-                progress:
-                    _guardrail(analytics, 'Weekly loss limit')?.progress ?? 0,
-                color: _guardrailColor(
-                  _guardrail(analytics, 'Weekly loss limit')?.status,
-                ),
-              ),
-              _GuardrailTile(
                 title: 'Consecutive losses',
                 subtitle: 'Today\'s streak',
                 value: _guardrailValue(
@@ -1002,6 +1054,10 @@ class _GuardrailStatusCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _SnapshotStatusRow(
+            metric: _guardrail(analytics, 'Balance snapshot'),
           ),
           const SizedBox(height: AppSpacing.sm),
           _WideGuardrailTile(
@@ -1190,6 +1246,34 @@ class _PatternRow extends StatelessWidget {
   }
 }
 
+class _SnapshotStatusRow extends StatelessWidget {
+  const _SnapshotStatusRow({required this.metric});
+
+  final GuardrailMetric? metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = metric?.status == 'normal';
+    final color = complete ? AppColors.textTertiary : AppColors.warningAmber;
+    return Row(
+      children: [
+        Icon(
+          complete ? Icons.check_circle_outline_rounded : Icons.sync_rounded,
+          size: 16,
+          color: color,
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            metric?.description ?? 'UTC all-exchange baseline syncing',
+            style: AppTypography.caption.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _GuardrailTile extends StatelessWidget {
   const _GuardrailTile({
     required this.title,
@@ -1340,8 +1424,7 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _EmptyCurrentTrades extends StatelessWidget {
-  const _EmptyCurrentTrades({required this.onNewTrade});
-  final VoidCallback onNewTrade;
+  const _EmptyCurrentTrades();
 
   @override
   Widget build(BuildContext context) {
@@ -1356,22 +1439,16 @@ class _EmptyCurrentTrades extends StatelessWidget {
       child: Column(
         children: [
           const Icon(
-            Icons.show_chart_rounded,
-            size: 36,
+            Icons.inventory_2_outlined,
+            size: 42,
             color: AppColors.textDisabled,
           ),
           const SizedBox(height: AppSpacing.sm),
-          const Text('No open trades', style: AppTypography.h4),
-          const SizedBox(height: AppSpacing.xs),
           Text(
-            'Your current trade information will appear here as soon as a position opens.',
-            textAlign: TextAlign.center,
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          OutlinedButton(
-            onPressed: onNewTrade,
-            child: const Text('Start a trade'),
+            'No activity yet',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -1389,10 +1466,10 @@ class _NewTradeButton extends StatelessWidget {
       padding: AppSpacing.screenH,
       child: SizedBox(
         width: double.infinity,
-        height: 58,
+        height: 48,
         child: FilledButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.add_rounded, size: 26),
+          icon: const Icon(Icons.add_rounded, size: 20),
           label: const Text('New Trade'),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF0057FF),
@@ -1466,6 +1543,9 @@ GuardrailMetric? _guardrail(HomeAnalytics? analytics, String label) {
 
 String _guardrailValue(GuardrailMetric? metric, {String? fallback}) {
   if (metric == null) return fallback ?? '\$0 / \$0';
+  if (metric.unit == 'status') {
+    return metric.status == 'normal' ? 'Complete' : 'Incomplete';
+  }
   if (metric.unit == 'usd') {
     return '${_money(metric.value)} / ${_money(metric.limit)}';
   }

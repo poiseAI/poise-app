@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../providers/trade_form_provider.dart';
 
@@ -20,10 +19,12 @@ class OrderTypeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
-      decoration: const BoxDecoration(
-        color: AppColors.bgPrimary,
-        borderRadius: AppRadius.chipRadius,
+      height: 46,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.borderLight),
       ),
       child: Row(
         children: List.generate(_types.length, (i) {
@@ -34,16 +35,18 @@ class OrderTypeToggle extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
-                margin: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: active ? AppColors.bgCard : Colors.transparent,
-                  borderRadius: AppRadius.chipRadius,
+                  color: active ? AppColors.bgPrimary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: active ? AppColors.borderLight : Colors.transparent,
+                  ),
                   boxShadow: active
                       ? [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           )
                         ]
                       : null,

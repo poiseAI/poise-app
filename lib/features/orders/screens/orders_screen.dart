@@ -27,11 +27,26 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        title: const Text('Trades'),
+        actions: [
+          IconButton(
+            tooltip: 'New trade',
+            onPressed: () => context.go(Routes.trade),
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _NewTradeButton(
         onPressed: () => context.go(Routes.trade),
       ),
       body: SafeArea(
+        top: false,
         child: ordersState.when(
           loading: () => const _OrdersLoading(),
           error: (error, _) => PErrorState(
@@ -43,9 +58,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 orders.where((order) => _tab.matches(order)).toList();
             if (orders.isEmpty) {
               return PEmptyState(
-                title: 'No orders yet',
+                title: 'No trades yet',
                 subtitle:
-                    'Validated Poise orders and synced exchange orders will appear here.',
+                    'Validated Poise trades and synced exchange trades will appear here.',
                 ctaLabel: 'New Trade',
                 onCtaTap: () => context.go(Routes.trade),
               );
@@ -70,11 +85,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       sliver: SliverToBoxAdapter(
                         child: PEmptyState(
                           title: _tab == _OrdersTab.open
-                              ? 'No open orders'
-                              : 'No order history yet',
+                              ? 'No open trades'
+                              : 'No trade history yet',
                           subtitle: _tab == _OrdersTab.open
-                              ? 'Pending and partially filled orders will appear here.'
-                              : 'Filled, cancelled, and rejected orders will appear here.',
+                              ? 'Pending and partially filled trades will appear here.'
+                              : 'Filled, cancelled, and rejected trades will appear here.',
                         ),
                       ),
                     )
@@ -128,28 +143,11 @@ class _OrdersHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Orders', style: AppTypography.h2),
-                    SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Open orders, fills, and exchange-synced history',
-                      style: AppTypography.bodySm,
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'New trade',
-                onPressed: () => context.go(Routes.trade),
-                icon: const Icon(Icons.add_rounded),
-              ),
-            ],
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Open trades, fills, and exchange-synced history',
+            style:
+                AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.md),
           SegmentedButton<_OrdersTab>(
@@ -157,12 +155,10 @@ class _OrdersHeader extends StatelessWidget {
               ButtonSegment(
                 value: _OrdersTab.open,
                 label: Text('Open'),
-                icon: Icon(Icons.pending_actions_rounded),
               ),
               ButtonSegment(
                 value: _OrdersTab.history,
                 label: Text('History'),
-                icon: Icon(Icons.history_rounded),
               ),
             ],
             selected: {tab},
@@ -421,7 +417,6 @@ class _OrdersLoading extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: AppSpacing.lg),
-          Text('Trades', style: AppTypography.h2),
           SizedBox(height: AppSpacing.md),
           _LoadingCard(),
           SizedBox(height: AppSpacing.sm),

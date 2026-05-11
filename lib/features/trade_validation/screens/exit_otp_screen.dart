@@ -91,26 +91,29 @@ class _ExitOtpScreenState extends ConsumerState<ExitOtpScreen>
       );
     }
 
-    final otpFieldState =
-        otpState.wrongCode ? POtpState.error : POtpState.idle;
+    final otpFieldState = otpState.wrongCode ? POtpState.error : POtpState.idle;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        backgroundColor: AppColors.bgPrimary,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
+        title: const Text('Confirm Exit'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
       ),
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
 
               // Padlock animation (#51)
               AnimatedBuilder(
@@ -146,26 +149,24 @@ class _ExitOtpScreenState extends ConsumerState<ExitOtpScreen>
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              const Text('Confirm exit', style: AppTypography.h2)
+              const Text('Enter OTP', style: AppTypography.h2)
                   .animate(delay: 200.ms)
                   .fadeIn(duration: 300.ms)
                   .slideY(begin: 0.1, end: 0),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Enter the OTP sent to your email.',
-                style: AppTypography.body
-                    .copyWith(color: AppColors.textSecondary),
+                style:
+                    AppTypography.body.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
-              )
-                  .animate(delay: 300.ms)
-                  .fadeIn(duration: 300.ms),
+              ).animate(delay: 300.ms).fadeIn(duration: 300.ms),
               const SizedBox(height: AppSpacing.xxl),
 
               // OTP field with shake (#20, 52)
               AnimatedBuilder(
                 animation: _shakeAnim,
-                builder: (_, child) =>
-                    Transform.translate(offset: Offset(_shakeAnim.value, 0), child: child),
+                builder: (_, child) => Transform.translate(
+                    offset: Offset(_shakeAnim.value, 0), child: child),
                 child: POtpField(
                   length: 6,
                   state: otpFieldState,
@@ -246,9 +247,7 @@ class _SuccessBody extends StatelessWidget {
         Text(
           'Your exit request has been submitted.',
           style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-        )
-            .animate(delay: 400.ms)
-            .fadeIn(duration: 300.ms),
+        ).animate(delay: 400.ms).fadeIn(duration: 300.ms),
       ],
     );
   }

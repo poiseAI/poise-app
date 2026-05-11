@@ -28,6 +28,7 @@ class SetRiskAppetiteScreen extends ConsumerStatefulWidget {
 class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   int _selected = 0;
   bool _confirming = false;
+  bool _editingSettings = false;
   PButtonState _buttonState = PButtonState.idle;
   bool _initializedFromActive = false;
 
@@ -42,9 +43,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         name: 'Conservative',
         maxPositionSize: 500,
         maxPositionValueUsd: 2000,
-        maxDailyLossUsd: 5000,
+        dailyLossLimitType: 'percent_balance',
+        maxDailyLossUsd: 0,
         maxDailyLossPercent: 1,
-        maxWeeklyLossUsd: 10000,
         maxOpenPositions: 5,
         maxTradesPerDay: 5,
         maxConsecutiveLosses: 3,
@@ -56,10 +57,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('Percentage risk per trade', '1%'),
+        ('Daily loss mode', '% of balance'),
         ('Max leverage per asset', '4'),
-        ('Daily maximum loss', '\$5,000'),
-        ('Weekly maximum loss', '\$10,000'),
+        ('Daily maximum loss', '1% of UTC balance'),
         ('Max trades per day', '5'),
         ('Max consecutive losses', '3'),
         ('Minimum risk/reward', '1:1.5'),
@@ -77,9 +77,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         name: 'Balanced',
         maxPositionSize: 1000,
         maxPositionValueUsd: 5000,
-        maxDailyLossUsd: 5000,
+        dailyLossLimitType: 'percent_balance',
+        maxDailyLossUsd: 0,
         maxDailyLossPercent: 2,
-        maxWeeklyLossUsd: 15000,
         maxOpenPositions: 5,
         maxTradesPerDay: 8,
         maxConsecutiveLosses: 3,
@@ -91,10 +91,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('Percentage risk per trade', '2%'),
+        ('Daily loss mode', '% of balance'),
         ('Max leverage per asset', '10'),
-        ('Daily maximum loss', '\$5,000'),
-        ('Weekly maximum loss', '\$15,000'),
+        ('Daily maximum loss', '2% of UTC balance'),
         ('Max trades per day', '8'),
         ('Max consecutive losses', '3'),
         ('Minimum risk/reward', '1:1.5'),
@@ -112,9 +111,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         name: 'Aggressive',
         maxPositionSize: 2500,
         maxPositionValueUsd: 10000,
-        maxDailyLossUsd: 10000,
+        dailyLossLimitType: 'percent_balance',
+        maxDailyLossUsd: 0,
         maxDailyLossPercent: 5,
-        maxWeeklyLossUsd: 25000,
         maxOpenPositions: 10,
         maxTradesPerDay: 12,
         maxConsecutiveLosses: 5,
@@ -126,10 +125,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: false,
       ),
       rows: [
-        ('Percentage risk per trade', '5%'),
+        ('Daily loss mode', '% of balance'),
         ('Max leverage per asset', '20'),
-        ('Daily maximum loss', '\$10,000'),
-        ('Weekly maximum loss', '\$25,000'),
+        ('Daily maximum loss', '5% of UTC balance'),
         ('Max trades per day', '12'),
         ('Max consecutive losses', '5'),
         ('Minimum risk/reward', '1:1.2'),
@@ -148,9 +146,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         name: 'Customizable',
         maxPositionSize: 1000,
         maxPositionValueUsd: 5000,
+        dailyLossLimitType: 'fixed_usd',
         maxDailyLossUsd: 5000,
         maxDailyLossPercent: 2,
-        maxWeeklyLossUsd: 15000,
         maxOpenPositions: 5,
         maxTradesPerDay: 8,
         maxConsecutiveLosses: 3,
@@ -162,10 +160,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('Percentage risk per trade', '2%'),
+        ('Daily loss mode', 'Fixed USD'),
         ('Max leverage per asset', '10'),
         ('Daily maximum loss', '\$5,000'),
-        ('Weekly maximum loss', '\$15,000'),
         ('Max trades per day', '8'),
         ('Max consecutive losses', '3'),
         ('Minimum risk/reward', '1:1.5'),
@@ -231,14 +228,80 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
       if (active != null) _selected = _indexForStrategy(active);
       _initializedFromActive = true;
     }
-    return _confirming ? _buildConfirm(context) : _buildSelect(context);
+    if (_confirming) return _buildConfirm(context);
+    if (widget.mode == RiskAppetiteMode.settings && !_editingSettings) {
+      return _buildSettingsSummary(context);
+    }
+    return _buildSelect(context);
+  }
+
+  Widget _buildSettingsSummary(BuildContext context) {
+    final preset = _options[_selected];
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        title: const Text('Risk appetite'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Your Risk Appetite determines the trading rules (Conservative, Balanced, Aggressive, or Custom) that Poise enforces to align every trade with your chosen tolerance.',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _RiskSummaryCard(
+                preset: preset,
+                onEdit: () => setState(() => _editingSettings = true),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: () => setState(() => _editingSettings = true),
+                  child: const Text('Change risk appetite'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSelect(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: widget.mode == RiskAppetiteMode.settings
-          ? AppBar(title: const Text('Risk Appetite'))
+          ? AppBar(
+              title: const Text('Change risk appetite'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => setState(() => _editingSettings = false),
+              ),
+              bottom: const PreferredSize(
+                preferredSize: Size.fromHeight(1),
+                child: Divider(height: 1, color: AppColors.borderLight),
+              ),
+            )
           : null,
       body: SafeArea(
         child: Padding(
@@ -248,8 +311,10 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
             children: [
               if (widget.mode == RiskAppetiteMode.onboarding)
                 const SizedBox(height: AppSpacing.xl),
-              const Text('Risk Appetite', style: AppTypography.h2),
-              const SizedBox(height: AppSpacing.lg),
+              if (widget.mode == RiskAppetiteMode.onboarding)
+                const Text('Risk Appetite', style: AppTypography.h2),
+              if (widget.mode == RiskAppetiteMode.onboarding)
+                const SizedBox(height: AppSpacing.lg),
               Text(
                 'Each risk appetite has specific trading rules that dictate how Poise enforces limits and guardrails.',
                 style: AppTypography.body.copyWith(
@@ -300,9 +365,13 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        title: const Text('Confirm configuration'),
+        title: Text(
+          widget.mode == RiskAppetiteMode.settings
+              ? 'Customize risk settings'
+              : 'Confirm configuration',
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => setState(() => _confirming = false),
         ),
       ),
@@ -333,7 +402,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
               _RiskConfirmCard(preset: preset),
               const Spacer(),
               PPrimaryButton(
-                label: 'Confirm',
+                label: widget.mode == RiskAppetiteMode.settings
+                    ? 'Confirm and save'
+                    : 'Confirm',
                 state: _buttonState,
                 onPressed:
                     _buttonState == PButtonState.loading ? null : _confirm,
@@ -363,6 +434,16 @@ int _indexForStrategy(Strategy strategy) {
   return 1;
 }
 
+String _riskLabel(_RiskPreset preset) =>
+    preset.label == 'Customizable' ? 'Custom' : preset.label;
+
+String _summaryLabel(String label) {
+  return switch (label) {
+    'Max consecutive losses' => 'Max consecutive losses in a day',
+    _ => label,
+  };
+}
+
 class _RiskPreset {
   const _RiskPreset({
     required this.label,
@@ -377,6 +458,98 @@ class _RiskPreset {
   final String reviewDesc;
   final CreateStrategyRequest request;
   final List<(String, String)> rows;
+}
+
+class _RiskSummaryCard extends StatelessWidget {
+  const _RiskSummaryCard({required this.preset, required this.onEdit});
+
+  final _RiskPreset preset;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleRows = [
+      for (final row in preset.rows)
+        if (_summaryLabels.contains(row.$1)) row,
+    ];
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.primary, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.18),
+            blurRadius: 0,
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_riskLabel(preset), style: AppTypography.h4),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Customize your risk settings',
+            style: AppTypography.bodySm.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            height: 38,
+            child: OutlinedButton(
+              onPressed: onEdit,
+              child: const Text('Edit risk settings'),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...visibleRows.map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSurface,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _summaryLabel(row.$1),
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(row.$2, style: AppTypography.bodyMedium),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const _summaryLabels = {
+    'Daily loss mode',
+    'Max leverage per asset',
+    'Max trades per day',
+    'Daily maximum loss',
+    'Max concurrent open positions',
+    'Max consecutive losses',
+  };
 }
 
 class _RiskSelectCard extends StatelessWidget {

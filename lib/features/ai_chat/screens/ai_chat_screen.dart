@@ -7,7 +7,6 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
-import '../data/ai_chat_api.dart';
 import '../data/models/chat_message.dart';
 import '../providers/ai_chat_provider.dart';
 import 'widgets/chat_bubbles.dart';
@@ -32,6 +31,7 @@ class AiChatScreen extends ConsumerStatefulWidget {
 
 class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _inputCtrl = TextEditingController();
+  final _inputFocus = FocusNode();
   final _scrollCtrl = ScrollController();
   bool _isMultiline = false;
   bool _sentInitialPrompt = false;
@@ -51,6 +51,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   @override
   void dispose() {
     _inputCtrl.dispose();
+    _inputFocus.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -89,40 +90,49 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        leading: messages.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Back to chats',
+                onPressed: () => ref.invalidate(aiChatProvider),
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+        title: const Text('Poise AI'),
+        actions: [
+          if (messages.isNotEmpty)
+            IconButton(
+              tooltip: 'About Poise AI',
+              onPressed: () => PToast.info(
+                context,
+                'Poise AI helps you review trade habits and risk decisions.',
+              ),
+              icon: const Icon(Icons.info_outline_rounded),
+            )
+          else
+            IconButton(
+              tooltip: 'About Poise AI',
+              onPressed: () => PToast.info(
+                context,
+                'Poise AI helps you review trade habits and risk decisions.',
+              ),
+              icon: const Icon(Icons.info_outline_rounded),
+            ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => _showSessions(context),
-                    icon: const Icon(Icons.history_rounded),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text('Poise AI', style: AppTypography.h1),
-                    ),
-                  ),
-                  if (messages.isNotEmpty)
-                    TextButton(
-                      onPressed: () => ref.invalidate(aiChatProvider),
-                      child: Text('Clear',
-                          style: AppTypography.caption
-                              .copyWith(color: AppColors.textSecondary)),
-                    ),
-                  if (messages.isEmpty) const SizedBox(width: 48),
-                ],
-              ),
-            ),
-
             // Messages
             Expanded(
               child: messages.isEmpty
                   ? _EmptyState(
+                      onStartTap: () => _inputFocus.requestFocus(),
                       onPromptTap: (p) {
                         _inputCtrl.text = p;
                         _send();
@@ -142,6 +152,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             // Input bar
             _InputBar(
               controller: _inputCtrl,
+              focusNode: _inputFocus,
               isStreaming: isStreaming,
               onSend: _send,
               onStop: _stop,
@@ -186,118 +197,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       ToolResultMessage() => const SizedBox.shrink(),
     };
   }
-
-  Future<void> _showSessions(BuildContext context) async {
-    final result = await ref.read(aiChatApiProvider).getSessions();
-    if (!context.mounted) return;
-    if (result.isErr) {
-      PToast.error(context, result.error.userMessage);
-      return;
-    }
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.bgCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _SessionSheet(
-        sessions: result.value,
-        onOpen: (session) async {
-          Navigator.pop(context);
-          await ref.read(aiChatProvider.notifier).loadSession(session.id);
-          _scrollToBottom();
-        },
-        onDelete: (session) async {
-          final deleteResult =
-              await ref.read(aiChatApiProvider).deleteSession(session.id);
-          if (context.mounted && deleteResult.isErr) {
-            PToast.error(context, deleteResult.error.userMessage);
-          }
-        },
-      ),
-    );
-  }
-}
-
-class _SessionSheet extends StatefulWidget {
-  const _SessionSheet({
-    required this.sessions,
-    required this.onOpen,
-    required this.onDelete,
-  });
-
-  final List<AiSession> sessions;
-  final ValueChanged<AiSession> onOpen;
-  final ValueChanged<AiSession> onDelete;
-
-  @override
-  State<_SessionSheet> createState() => _SessionSheetState();
-}
-
-class _SessionSheetState extends State<_SessionSheet> {
-  late final List<AiSession> _sessions = [...widget.sessions];
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: AppSpacing.screenPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Chat history', style: AppTypography.h3),
-            const SizedBox(height: AppSpacing.md),
-            if (_sessions.isEmpty)
-              Text(
-                'No saved AI conversations yet.',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              )
-            else
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: _sessions.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(color: AppColors.borderLight),
-                  itemBuilder: (context, index) {
-                    final session = _sessions[index];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        session.title.isEmpty ? 'Untitled chat' : session.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        session.updatedAt.toLocal().toString().split('.').first,
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      onTap: () => widget.onOpen(session),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded),
-                        onPressed: () {
-                          widget.onDelete(session);
-                          setState(() => _sessions.removeAt(index));
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onPromptTap});
+  const _EmptyState({required this.onStartTap, required this.onPromptTap});
+  final VoidCallback onStartTap;
   final ValueChanged<String> onPromptTap;
 
   @override
@@ -309,81 +213,81 @@ class _EmptyState extends StatelessWidget {
         children: [
           Expanded(
             child: Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/images/onboarding_light_bulb.png',
-                      width: 210,
-                      height: 210,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                    ).animate().fadeIn(duration: 260.ms).scale(
-                          begin: const Offset(0.92, 0.92),
-                          end: const Offset(1, 1),
-                          curve: Curves.easeOutBack,
-                        ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Start a chat with Poise AI to get insight about your trades and your habits',
-                      style: AppTypography.body.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.45,
-                      ),
-                      textAlign: TextAlign.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Start a chat with Poise AI to get insight about your trades and your habits',
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.45,
                     ),
-                  ],
-                ),
-              ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: FilledButton.icon(
+                      onPressed: onStartTap,
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text('Start new chat'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: const StadiumBorder(),
+                        textStyle: AppTypography.button,
+                      ),
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(duration: 260.ms).slideY(
+                    begin: 0.04,
+                    end: 0,
+                    curve: Curves.easeOutCubic,
+                  ),
             ),
           ),
           Text(
             'Popular ways to get started',
-            style: AppTypography.h4.copyWith(
+            style: AppTypography.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 132),
-            child: Scrollbar(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  alignment: WrapAlignment.start,
-                  children: _suggestedPrompts.asMap().entries.map((e) {
-                    return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        onPromptTap(e.value);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.04),
-                          borderRadius: AppRadius.pillRadius,
-                          border: Border.all(color: AppColors.brand100),
-                        ),
-                        child: Text(
-                          e.value,
-                          style: AppTypography.bodyMedium
-                              .copyWith(color: AppColors.primary),
-                        ),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            alignment: WrapAlignment.start,
+            children: _suggestedPrompts.take(3).toList().asMap().entries.map(
+              (e) {
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onPromptTap(e.value);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.04),
+                      borderRadius: AppRadius.pillRadius,
+                      border: Border.all(color: AppColors.brand100),
+                    ),
+                    child: Text(
+                      e.value,
+                      style: AppTypography.labelSm.copyWith(
+                        color: AppColors.primary,
                       ),
-                    )
-                        .animate(delay: (300 + e.key * 50).ms)
-                        .fadeIn(duration: 250.ms)
-                        .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
-                  }).toList(),
-                ),
-              ),
-            ),
+                    ),
+                  ),
+                ).animate(delay: (260 + e.key * 40).ms).fadeIn(
+                      duration: 220.ms,
+                    );
+              },
+            ).toList(),
           ),
         ],
       ),
@@ -394,6 +298,7 @@ class _EmptyState extends StatelessWidget {
 class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
+    required this.focusNode,
     required this.isStreaming,
     required this.onSend,
     required this.onStop,
@@ -401,6 +306,7 @@ class _InputBar extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool isStreaming;
   final VoidCallback onSend;
   final VoidCallback onStop;
@@ -428,6 +334,7 @@ class _InputBar extends StatelessWidget {
               ),
               child: TextField(
                 controller: controller,
+                focusNode: focusNode,
                 maxLines: 5,
                 minLines: 1,
                 style: AppTypography.body,

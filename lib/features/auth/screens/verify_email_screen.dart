@@ -109,7 +109,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       appBar: AppBar(
         title: const Text('Verify new email address'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => ref.read(authProvider.notifier).logout(),
         ),
       ),

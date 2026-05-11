@@ -28,12 +28,12 @@ mixin _$Strategy {
   double get maxPositionValueUsd;
   @JsonKey(name: 'position_size_type')
   String get positionSizeType;
+  @JsonKey(name: 'daily_loss_limit_type')
+  String get dailyLossLimitType;
   @JsonKey(name: 'max_daily_loss_usd')
   double get maxDailyLossUsd;
   @JsonKey(name: 'max_daily_loss_percent')
   double? get maxDailyLossPercent;
-  @JsonKey(name: 'max_weekly_loss_usd')
-  double get maxWeeklyLossUsd;
   @JsonKey(name: 'max_open_positions')
   int get maxOpenPositions;
   @JsonKey(name: 'max_trades_per_day')
@@ -83,12 +83,12 @@ mixin _$Strategy {
                 other.maxPositionValueUsd == maxPositionValueUsd) &&
             (identical(other.positionSizeType, positionSizeType) ||
                 other.positionSizeType == positionSizeType) &&
+            (identical(other.dailyLossLimitType, dailyLossLimitType) ||
+                other.dailyLossLimitType == dailyLossLimitType) &&
             (identical(other.maxDailyLossUsd, maxDailyLossUsd) ||
                 other.maxDailyLossUsd == maxDailyLossUsd) &&
             (identical(other.maxDailyLossPercent, maxDailyLossPercent) ||
                 other.maxDailyLossPercent == maxDailyLossPercent) &&
-            (identical(other.maxWeeklyLossUsd, maxWeeklyLossUsd) ||
-                other.maxWeeklyLossUsd == maxWeeklyLossUsd) &&
             (identical(other.maxOpenPositions, maxOpenPositions) ||
                 other.maxOpenPositions == maxOpenPositions) &&
             (identical(other.maxTradesPerDay, maxTradesPerDay) ||
@@ -123,9 +123,9 @@ mixin _$Strategy {
         maxPositionSize,
         maxPositionValueUsd,
         positionSizeType,
+        dailyLossLimitType,
         maxDailyLossUsd,
         maxDailyLossPercent,
-        maxWeeklyLossUsd,
         maxOpenPositions,
         maxTradesPerDay,
         maxConsecutiveLosses,
@@ -140,7 +140,7 @@ mixin _$Strategy {
 
   @override
   String toString() {
-    return 'Strategy(id: $id, userId: $userId, name: $name, isActive: $isActive, isSystem: $isSystem, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxWeeklyLossUsd: $maxWeeklyLossUsd, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit, createdAt: $createdAt)';
+    return 'Strategy(id: $id, userId: $userId, name: $name, isActive: $isActive, isSystem: $isSystem, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, dailyLossLimitType: $dailyLossLimitType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit, createdAt: $createdAt)';
   }
 }
 
@@ -158,9 +158,9 @@ abstract mixin class $StrategyCopyWith<$Res> {
       @JsonKey(name: 'max_position_size') double maxPositionSize,
       @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
       @JsonKey(name: 'position_size_type') String positionSizeType,
+      @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
       @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
       @JsonKey(name: 'max_daily_loss_percent') double? maxDailyLossPercent,
-      @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
       @JsonKey(name: 'max_open_positions') int maxOpenPositions,
       @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
       @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -193,9 +193,9 @@ class _$StrategyCopyWithImpl<$Res> implements $StrategyCopyWith<$Res> {
     Object? maxPositionSize = null,
     Object? maxPositionValueUsd = null,
     Object? positionSizeType = null,
+    Object? dailyLossLimitType = null,
     Object? maxDailyLossUsd = null,
     Object? maxDailyLossPercent = freezed,
-    Object? maxWeeklyLossUsd = null,
     Object? maxOpenPositions = null,
     Object? maxTradesPerDay = null,
     Object? maxConsecutiveLosses = null,
@@ -240,6 +240,10 @@ class _$StrategyCopyWithImpl<$Res> implements $StrategyCopyWith<$Res> {
           ? _self.positionSizeType
           : positionSizeType // ignore: cast_nullable_to_non_nullable
               as String,
+      dailyLossLimitType: null == dailyLossLimitType
+          ? _self.dailyLossLimitType
+          : dailyLossLimitType // ignore: cast_nullable_to_non_nullable
+              as String,
       maxDailyLossUsd: null == maxDailyLossUsd
           ? _self.maxDailyLossUsd
           : maxDailyLossUsd // ignore: cast_nullable_to_non_nullable
@@ -248,10 +252,6 @@ class _$StrategyCopyWithImpl<$Res> implements $StrategyCopyWith<$Res> {
           ? _self.maxDailyLossPercent
           : maxDailyLossPercent // ignore: cast_nullable_to_non_nullable
               as double?,
-      maxWeeklyLossUsd: null == maxWeeklyLossUsd
-          ? _self.maxWeeklyLossUsd
-          : maxWeeklyLossUsd // ignore: cast_nullable_to_non_nullable
-              as double,
       maxOpenPositions: null == maxOpenPositions
           ? _self.maxOpenPositions
           : maxOpenPositions // ignore: cast_nullable_to_non_nullable
@@ -398,10 +398,10 @@ extension StrategyPatterns on Strategy {
             @JsonKey(name: 'max_position_size') double maxPositionSize,
             @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
             @JsonKey(name: 'position_size_type') String positionSizeType,
+            @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
             @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
             @JsonKey(name: 'max_daily_loss_percent')
             double? maxDailyLossPercent,
-            @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
             @JsonKey(name: 'max_open_positions') int maxOpenPositions,
             @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
             @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -427,9 +427,9 @@ extension StrategyPatterns on Strategy {
             _that.maxPositionSize,
             _that.maxPositionValueUsd,
             _that.positionSizeType,
+            _that.dailyLossLimitType,
             _that.maxDailyLossUsd,
             _that.maxDailyLossPercent,
-            _that.maxWeeklyLossUsd,
             _that.maxOpenPositions,
             _that.maxTradesPerDay,
             _that.maxConsecutiveLosses,
@@ -469,10 +469,10 @@ extension StrategyPatterns on Strategy {
             @JsonKey(name: 'max_position_size') double maxPositionSize,
             @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
             @JsonKey(name: 'position_size_type') String positionSizeType,
+            @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
             @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
             @JsonKey(name: 'max_daily_loss_percent')
             double? maxDailyLossPercent,
-            @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
             @JsonKey(name: 'max_open_positions') int maxOpenPositions,
             @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
             @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -497,9 +497,9 @@ extension StrategyPatterns on Strategy {
             _that.maxPositionSize,
             _that.maxPositionValueUsd,
             _that.positionSizeType,
+            _that.dailyLossLimitType,
             _that.maxDailyLossUsd,
             _that.maxDailyLossPercent,
-            _that.maxWeeklyLossUsd,
             _that.maxOpenPositions,
             _that.maxTradesPerDay,
             _that.maxConsecutiveLosses,
@@ -538,10 +538,10 @@ extension StrategyPatterns on Strategy {
             @JsonKey(name: 'max_position_size') double maxPositionSize,
             @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
             @JsonKey(name: 'position_size_type') String positionSizeType,
+            @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
             @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
             @JsonKey(name: 'max_daily_loss_percent')
             double? maxDailyLossPercent,
-            @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
             @JsonKey(name: 'max_open_positions') int maxOpenPositions,
             @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
             @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -566,9 +566,9 @@ extension StrategyPatterns on Strategy {
             _that.maxPositionSize,
             _that.maxPositionValueUsd,
             _that.positionSizeType,
+            _that.dailyLossLimitType,
             _that.maxDailyLossUsd,
             _that.maxDailyLossPercent,
-            _that.maxWeeklyLossUsd,
             _that.maxOpenPositions,
             _that.maxTradesPerDay,
             _that.maxConsecutiveLosses,
@@ -597,9 +597,10 @@ class _Strategy implements Strategy {
       @JsonKey(name: 'max_position_size') this.maxPositionSize = 0.0,
       @JsonKey(name: 'max_position_value_usd') this.maxPositionValueUsd = 0.0,
       @JsonKey(name: 'position_size_type') this.positionSizeType = 'fixed_usd',
+      @JsonKey(name: 'daily_loss_limit_type')
+      this.dailyLossLimitType = 'fixed_usd',
       @JsonKey(name: 'max_daily_loss_usd') this.maxDailyLossUsd = 0.0,
       @JsonKey(name: 'max_daily_loss_percent') this.maxDailyLossPercent,
-      @JsonKey(name: 'max_weekly_loss_usd') this.maxWeeklyLossUsd = 0.0,
       @JsonKey(name: 'max_open_positions') this.maxOpenPositions = 5,
       @JsonKey(name: 'max_trades_per_day') this.maxTradesPerDay = 5,
       @JsonKey(name: 'max_consecutive_losses') this.maxConsecutiveLosses = 3,
@@ -636,14 +637,14 @@ class _Strategy implements Strategy {
   @JsonKey(name: 'position_size_type')
   final String positionSizeType;
   @override
+  @JsonKey(name: 'daily_loss_limit_type')
+  final String dailyLossLimitType;
+  @override
   @JsonKey(name: 'max_daily_loss_usd')
   final double maxDailyLossUsd;
   @override
   @JsonKey(name: 'max_daily_loss_percent')
   final double? maxDailyLossPercent;
-  @override
-  @JsonKey(name: 'max_weekly_loss_usd')
-  final double maxWeeklyLossUsd;
   @override
   @JsonKey(name: 'max_open_positions')
   final int maxOpenPositions;
@@ -708,12 +709,12 @@ class _Strategy implements Strategy {
                 other.maxPositionValueUsd == maxPositionValueUsd) &&
             (identical(other.positionSizeType, positionSizeType) ||
                 other.positionSizeType == positionSizeType) &&
+            (identical(other.dailyLossLimitType, dailyLossLimitType) ||
+                other.dailyLossLimitType == dailyLossLimitType) &&
             (identical(other.maxDailyLossUsd, maxDailyLossUsd) ||
                 other.maxDailyLossUsd == maxDailyLossUsd) &&
             (identical(other.maxDailyLossPercent, maxDailyLossPercent) ||
                 other.maxDailyLossPercent == maxDailyLossPercent) &&
-            (identical(other.maxWeeklyLossUsd, maxWeeklyLossUsd) ||
-                other.maxWeeklyLossUsd == maxWeeklyLossUsd) &&
             (identical(other.maxOpenPositions, maxOpenPositions) ||
                 other.maxOpenPositions == maxOpenPositions) &&
             (identical(other.maxTradesPerDay, maxTradesPerDay) ||
@@ -748,9 +749,9 @@ class _Strategy implements Strategy {
         maxPositionSize,
         maxPositionValueUsd,
         positionSizeType,
+        dailyLossLimitType,
         maxDailyLossUsd,
         maxDailyLossPercent,
-        maxWeeklyLossUsd,
         maxOpenPositions,
         maxTradesPerDay,
         maxConsecutiveLosses,
@@ -765,7 +766,7 @@ class _Strategy implements Strategy {
 
   @override
   String toString() {
-    return 'Strategy(id: $id, userId: $userId, name: $name, isActive: $isActive, isSystem: $isSystem, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxWeeklyLossUsd: $maxWeeklyLossUsd, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit, createdAt: $createdAt)';
+    return 'Strategy(id: $id, userId: $userId, name: $name, isActive: $isActive, isSystem: $isSystem, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, dailyLossLimitType: $dailyLossLimitType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit, createdAt: $createdAt)';
   }
 }
 
@@ -785,9 +786,9 @@ abstract mixin class _$StrategyCopyWith<$Res>
       @JsonKey(name: 'max_position_size') double maxPositionSize,
       @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
       @JsonKey(name: 'position_size_type') String positionSizeType,
+      @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
       @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
       @JsonKey(name: 'max_daily_loss_percent') double? maxDailyLossPercent,
-      @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
       @JsonKey(name: 'max_open_positions') int maxOpenPositions,
       @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
       @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -820,9 +821,9 @@ class __$StrategyCopyWithImpl<$Res> implements _$StrategyCopyWith<$Res> {
     Object? maxPositionSize = null,
     Object? maxPositionValueUsd = null,
     Object? positionSizeType = null,
+    Object? dailyLossLimitType = null,
     Object? maxDailyLossUsd = null,
     Object? maxDailyLossPercent = freezed,
-    Object? maxWeeklyLossUsd = null,
     Object? maxOpenPositions = null,
     Object? maxTradesPerDay = null,
     Object? maxConsecutiveLosses = null,
@@ -867,6 +868,10 @@ class __$StrategyCopyWithImpl<$Res> implements _$StrategyCopyWith<$Res> {
           ? _self.positionSizeType
           : positionSizeType // ignore: cast_nullable_to_non_nullable
               as String,
+      dailyLossLimitType: null == dailyLossLimitType
+          ? _self.dailyLossLimitType
+          : dailyLossLimitType // ignore: cast_nullable_to_non_nullable
+              as String,
       maxDailyLossUsd: null == maxDailyLossUsd
           ? _self.maxDailyLossUsd
           : maxDailyLossUsd // ignore: cast_nullable_to_non_nullable
@@ -875,10 +880,6 @@ class __$StrategyCopyWithImpl<$Res> implements _$StrategyCopyWith<$Res> {
           ? _self.maxDailyLossPercent
           : maxDailyLossPercent // ignore: cast_nullable_to_non_nullable
               as double?,
-      maxWeeklyLossUsd: null == maxWeeklyLossUsd
-          ? _self.maxWeeklyLossUsd
-          : maxWeeklyLossUsd // ignore: cast_nullable_to_non_nullable
-              as double,
       maxOpenPositions: null == maxOpenPositions
           ? _self.maxOpenPositions
           : maxOpenPositions // ignore: cast_nullable_to_non_nullable
@@ -932,12 +933,12 @@ mixin _$CreateStrategyRequest {
   double get maxPositionValueUsd;
   @JsonKey(name: 'position_size_type')
   String get positionSizeType;
+  @JsonKey(name: 'daily_loss_limit_type')
+  String get dailyLossLimitType;
   @JsonKey(name: 'max_daily_loss_usd')
   double get maxDailyLossUsd;
   @JsonKey(name: 'max_daily_loss_percent')
   double? get maxDailyLossPercent;
-  @JsonKey(name: 'max_weekly_loss_usd')
-  double get maxWeeklyLossUsd;
   @JsonKey(name: 'max_open_positions')
   int get maxOpenPositions;
   @JsonKey(name: 'max_trades_per_day')
@@ -980,12 +981,12 @@ mixin _$CreateStrategyRequest {
                 other.maxPositionValueUsd == maxPositionValueUsd) &&
             (identical(other.positionSizeType, positionSizeType) ||
                 other.positionSizeType == positionSizeType) &&
+            (identical(other.dailyLossLimitType, dailyLossLimitType) ||
+                other.dailyLossLimitType == dailyLossLimitType) &&
             (identical(other.maxDailyLossUsd, maxDailyLossUsd) ||
                 other.maxDailyLossUsd == maxDailyLossUsd) &&
             (identical(other.maxDailyLossPercent, maxDailyLossPercent) ||
                 other.maxDailyLossPercent == maxDailyLossPercent) &&
-            (identical(other.maxWeeklyLossUsd, maxWeeklyLossUsd) ||
-                other.maxWeeklyLossUsd == maxWeeklyLossUsd) &&
             (identical(other.maxOpenPositions, maxOpenPositions) ||
                 other.maxOpenPositions == maxOpenPositions) &&
             (identical(other.maxTradesPerDay, maxTradesPerDay) ||
@@ -1014,9 +1015,9 @@ mixin _$CreateStrategyRequest {
       maxPositionSize,
       maxPositionValueUsd,
       positionSizeType,
+      dailyLossLimitType,
       maxDailyLossUsd,
       maxDailyLossPercent,
-      maxWeeklyLossUsd,
       maxOpenPositions,
       maxTradesPerDay,
       maxConsecutiveLosses,
@@ -1029,7 +1030,7 @@ mixin _$CreateStrategyRequest {
 
   @override
   String toString() {
-    return 'CreateStrategyRequest(name: $name, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxWeeklyLossUsd: $maxWeeklyLossUsd, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit)';
+    return 'CreateStrategyRequest(name: $name, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, dailyLossLimitType: $dailyLossLimitType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit)';
   }
 }
 
@@ -1044,9 +1045,9 @@ abstract mixin class $CreateStrategyRequestCopyWith<$Res> {
       @JsonKey(name: 'max_position_size') double maxPositionSize,
       @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
       @JsonKey(name: 'position_size_type') String positionSizeType,
+      @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
       @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
       @JsonKey(name: 'max_daily_loss_percent') double? maxDailyLossPercent,
-      @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
       @JsonKey(name: 'max_open_positions') int maxOpenPositions,
       @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
       @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -1075,9 +1076,9 @@ class _$CreateStrategyRequestCopyWithImpl<$Res>
     Object? maxPositionSize = null,
     Object? maxPositionValueUsd = null,
     Object? positionSizeType = null,
+    Object? dailyLossLimitType = null,
     Object? maxDailyLossUsd = null,
     Object? maxDailyLossPercent = freezed,
-    Object? maxWeeklyLossUsd = null,
     Object? maxOpenPositions = null,
     Object? maxTradesPerDay = null,
     Object? maxConsecutiveLosses = null,
@@ -1105,6 +1106,10 @@ class _$CreateStrategyRequestCopyWithImpl<$Res>
           ? _self.positionSizeType
           : positionSizeType // ignore: cast_nullable_to_non_nullable
               as String,
+      dailyLossLimitType: null == dailyLossLimitType
+          ? _self.dailyLossLimitType
+          : dailyLossLimitType // ignore: cast_nullable_to_non_nullable
+              as String,
       maxDailyLossUsd: null == maxDailyLossUsd
           ? _self.maxDailyLossUsd
           : maxDailyLossUsd // ignore: cast_nullable_to_non_nullable
@@ -1113,10 +1118,6 @@ class _$CreateStrategyRequestCopyWithImpl<$Res>
           ? _self.maxDailyLossPercent
           : maxDailyLossPercent // ignore: cast_nullable_to_non_nullable
               as double?,
-      maxWeeklyLossUsd: null == maxWeeklyLossUsd
-          ? _self.maxWeeklyLossUsd
-          : maxWeeklyLossUsd // ignore: cast_nullable_to_non_nullable
-              as double,
       maxOpenPositions: null == maxOpenPositions
           ? _self.maxOpenPositions
           : maxOpenPositions // ignore: cast_nullable_to_non_nullable
@@ -1255,10 +1256,10 @@ extension CreateStrategyRequestPatterns on CreateStrategyRequest {
             @JsonKey(name: 'max_position_size') double maxPositionSize,
             @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
             @JsonKey(name: 'position_size_type') String positionSizeType,
+            @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
             @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
             @JsonKey(name: 'max_daily_loss_percent')
             double? maxDailyLossPercent,
-            @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
             @JsonKey(name: 'max_open_positions') int maxOpenPositions,
             @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
             @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -1279,9 +1280,9 @@ extension CreateStrategyRequestPatterns on CreateStrategyRequest {
             _that.maxPositionSize,
             _that.maxPositionValueUsd,
             _that.positionSizeType,
+            _that.dailyLossLimitType,
             _that.maxDailyLossUsd,
             _that.maxDailyLossPercent,
-            _that.maxWeeklyLossUsd,
             _that.maxOpenPositions,
             _that.maxTradesPerDay,
             _that.maxConsecutiveLosses,
@@ -1316,10 +1317,10 @@ extension CreateStrategyRequestPatterns on CreateStrategyRequest {
             @JsonKey(name: 'max_position_size') double maxPositionSize,
             @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
             @JsonKey(name: 'position_size_type') String positionSizeType,
+            @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
             @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
             @JsonKey(name: 'max_daily_loss_percent')
             double? maxDailyLossPercent,
-            @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
             @JsonKey(name: 'max_open_positions') int maxOpenPositions,
             @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
             @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -1339,9 +1340,9 @@ extension CreateStrategyRequestPatterns on CreateStrategyRequest {
             _that.maxPositionSize,
             _that.maxPositionValueUsd,
             _that.positionSizeType,
+            _that.dailyLossLimitType,
             _that.maxDailyLossUsd,
             _that.maxDailyLossPercent,
-            _that.maxWeeklyLossUsd,
             _that.maxOpenPositions,
             _that.maxTradesPerDay,
             _that.maxConsecutiveLosses,
@@ -1375,10 +1376,10 @@ extension CreateStrategyRequestPatterns on CreateStrategyRequest {
             @JsonKey(name: 'max_position_size') double maxPositionSize,
             @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
             @JsonKey(name: 'position_size_type') String positionSizeType,
+            @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
             @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
             @JsonKey(name: 'max_daily_loss_percent')
             double? maxDailyLossPercent,
-            @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
             @JsonKey(name: 'max_open_positions') int maxOpenPositions,
             @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
             @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -1398,9 +1399,9 @@ extension CreateStrategyRequestPatterns on CreateStrategyRequest {
             _that.maxPositionSize,
             _that.maxPositionValueUsd,
             _that.positionSizeType,
+            _that.dailyLossLimitType,
             _that.maxDailyLossUsd,
             _that.maxDailyLossPercent,
-            _that.maxWeeklyLossUsd,
             _that.maxOpenPositions,
             _that.maxTradesPerDay,
             _that.maxConsecutiveLosses,
@@ -1425,9 +1426,10 @@ class _CreateStrategyRequest implements CreateStrategyRequest {
       @JsonKey(name: 'max_position_value_usd')
       this.maxPositionValueUsd = 5000.0,
       @JsonKey(name: 'position_size_type') this.positionSizeType = 'fixed_usd',
+      @JsonKey(name: 'daily_loss_limit_type')
+      this.dailyLossLimitType = 'fixed_usd',
       @JsonKey(name: 'max_daily_loss_usd') this.maxDailyLossUsd = 200.0,
       @JsonKey(name: 'max_daily_loss_percent') this.maxDailyLossPercent,
-      @JsonKey(name: 'max_weekly_loss_usd') this.maxWeeklyLossUsd = 1000.0,
       @JsonKey(name: 'max_open_positions') this.maxOpenPositions = 5,
       @JsonKey(name: 'max_trades_per_day') this.maxTradesPerDay = 5,
       @JsonKey(name: 'max_consecutive_losses') this.maxConsecutiveLosses = 3,
@@ -1452,14 +1454,14 @@ class _CreateStrategyRequest implements CreateStrategyRequest {
   @JsonKey(name: 'position_size_type')
   final String positionSizeType;
   @override
+  @JsonKey(name: 'daily_loss_limit_type')
+  final String dailyLossLimitType;
+  @override
   @JsonKey(name: 'max_daily_loss_usd')
   final double maxDailyLossUsd;
   @override
   @JsonKey(name: 'max_daily_loss_percent')
   final double? maxDailyLossPercent;
-  @override
-  @JsonKey(name: 'max_weekly_loss_usd')
-  final double maxWeeklyLossUsd;
   @override
   @JsonKey(name: 'max_open_positions')
   final int maxOpenPositions;
@@ -1516,12 +1518,12 @@ class _CreateStrategyRequest implements CreateStrategyRequest {
                 other.maxPositionValueUsd == maxPositionValueUsd) &&
             (identical(other.positionSizeType, positionSizeType) ||
                 other.positionSizeType == positionSizeType) &&
+            (identical(other.dailyLossLimitType, dailyLossLimitType) ||
+                other.dailyLossLimitType == dailyLossLimitType) &&
             (identical(other.maxDailyLossUsd, maxDailyLossUsd) ||
                 other.maxDailyLossUsd == maxDailyLossUsd) &&
             (identical(other.maxDailyLossPercent, maxDailyLossPercent) ||
                 other.maxDailyLossPercent == maxDailyLossPercent) &&
-            (identical(other.maxWeeklyLossUsd, maxWeeklyLossUsd) ||
-                other.maxWeeklyLossUsd == maxWeeklyLossUsd) &&
             (identical(other.maxOpenPositions, maxOpenPositions) ||
                 other.maxOpenPositions == maxOpenPositions) &&
             (identical(other.maxTradesPerDay, maxTradesPerDay) ||
@@ -1550,9 +1552,9 @@ class _CreateStrategyRequest implements CreateStrategyRequest {
       maxPositionSize,
       maxPositionValueUsd,
       positionSizeType,
+      dailyLossLimitType,
       maxDailyLossUsd,
       maxDailyLossPercent,
-      maxWeeklyLossUsd,
       maxOpenPositions,
       maxTradesPerDay,
       maxConsecutiveLosses,
@@ -1565,7 +1567,7 @@ class _CreateStrategyRequest implements CreateStrategyRequest {
 
   @override
   String toString() {
-    return 'CreateStrategyRequest(name: $name, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxWeeklyLossUsd: $maxWeeklyLossUsd, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit)';
+    return 'CreateStrategyRequest(name: $name, maxPositionSize: $maxPositionSize, maxPositionValueUsd: $maxPositionValueUsd, positionSizeType: $positionSizeType, dailyLossLimitType: $dailyLossLimitType, maxDailyLossUsd: $maxDailyLossUsd, maxDailyLossPercent: $maxDailyLossPercent, maxOpenPositions: $maxOpenPositions, maxTradesPerDay: $maxTradesPerDay, maxConsecutiveLosses: $maxConsecutiveLosses, sessionStartHour: $sessionStartHour, sessionEndHour: $sessionEndHour, minRiskRewardRatio: $minRiskRewardRatio, maxLeverage: $maxLeverage, requireExitReason: $requireExitReason, requireOtpForExit: $requireOtpForExit)';
   }
 }
 
@@ -1582,9 +1584,9 @@ abstract mixin class _$CreateStrategyRequestCopyWith<$Res>
       @JsonKey(name: 'max_position_size') double maxPositionSize,
       @JsonKey(name: 'max_position_value_usd') double maxPositionValueUsd,
       @JsonKey(name: 'position_size_type') String positionSizeType,
+      @JsonKey(name: 'daily_loss_limit_type') String dailyLossLimitType,
       @JsonKey(name: 'max_daily_loss_usd') double maxDailyLossUsd,
       @JsonKey(name: 'max_daily_loss_percent') double? maxDailyLossPercent,
-      @JsonKey(name: 'max_weekly_loss_usd') double maxWeeklyLossUsd,
       @JsonKey(name: 'max_open_positions') int maxOpenPositions,
       @JsonKey(name: 'max_trades_per_day') int maxTradesPerDay,
       @JsonKey(name: 'max_consecutive_losses') int maxConsecutiveLosses,
@@ -1613,9 +1615,9 @@ class __$CreateStrategyRequestCopyWithImpl<$Res>
     Object? maxPositionSize = null,
     Object? maxPositionValueUsd = null,
     Object? positionSizeType = null,
+    Object? dailyLossLimitType = null,
     Object? maxDailyLossUsd = null,
     Object? maxDailyLossPercent = freezed,
-    Object? maxWeeklyLossUsd = null,
     Object? maxOpenPositions = null,
     Object? maxTradesPerDay = null,
     Object? maxConsecutiveLosses = null,
@@ -1643,6 +1645,10 @@ class __$CreateStrategyRequestCopyWithImpl<$Res>
           ? _self.positionSizeType
           : positionSizeType // ignore: cast_nullable_to_non_nullable
               as String,
+      dailyLossLimitType: null == dailyLossLimitType
+          ? _self.dailyLossLimitType
+          : dailyLossLimitType // ignore: cast_nullable_to_non_nullable
+              as String,
       maxDailyLossUsd: null == maxDailyLossUsd
           ? _self.maxDailyLossUsd
           : maxDailyLossUsd // ignore: cast_nullable_to_non_nullable
@@ -1651,10 +1657,6 @@ class __$CreateStrategyRequestCopyWithImpl<$Res>
           ? _self.maxDailyLossPercent
           : maxDailyLossPercent // ignore: cast_nullable_to_non_nullable
               as double?,
-      maxWeeklyLossUsd: null == maxWeeklyLossUsd
-          ? _self.maxWeeklyLossUsd
-          : maxWeeklyLossUsd // ignore: cast_nullable_to_non_nullable
-              as double,
       maxOpenPositions: null == maxOpenPositions
           ? _self.maxOpenPositions
           : maxOpenPositions // ignore: cast_nullable_to_non_nullable

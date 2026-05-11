@@ -39,25 +39,25 @@ class _PNavBar extends StatelessWidget {
   static const _items = [
     (
       icon: Icons.home_outlined,
-      activeIcon: Icons.home,
+      activeIcon: Icons.home_outlined,
       label: 'Home',
       path: Routes.home
     ),
     (
       icon: Icons.auto_awesome_outlined,
-      activeIcon: Icons.auto_awesome,
+      activeIcon: Icons.auto_awesome_outlined,
       label: 'Poise AI',
       path: Routes.ai
     ),
     (
       icon: Icons.show_chart_rounded,
-      activeIcon: Icons.show_chart,
+      activeIcon: Icons.show_chart_rounded,
       label: 'Trades',
       path: Routes.orders
     ),
     (
       icon: Icons.account_circle_outlined,
-      activeIcon: Icons.account_circle,
+      activeIcon: Icons.account_circle_outlined,
       label: 'Profile',
       path: Routes.profile
     ),
@@ -65,22 +65,19 @@ class _PNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bg = theme.colorScheme.surface;
-
     return Container(
-      decoration: BoxDecoration(
-        color: bg,
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.5),
+            color: AppColors.borderLight,
           ),
         ),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: 68,
           child: Row(
             children: List.generate(
               _items.length,
@@ -127,8 +124,8 @@ class _NavItemState extends State<_NavItem>
       duration: const Duration(milliseconds: 200),
       value: widget.isSelected ? 1.0 : 0.0,
     );
-    _scale = Tween<double>(begin: 1.0, end: 1.18).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack),
+    _scale = Tween<double>(begin: 1.0, end: 1.04).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
     );
   }
 
@@ -153,7 +150,7 @@ class _NavItemState extends State<_NavItem>
   @override
   Widget build(BuildContext context) {
     final color =
-        widget.isSelected ? AppColors.accent : AppColors.textSecondary;
+        widget.isSelected ? AppColors.primary : AppColors.textTertiary;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -178,7 +175,7 @@ class _NavItemState extends State<_NavItem>
                         : widget.item.icon,
                     key: ValueKey(widget.isSelected),
                     color: color,
-                    size: 24,
+                    size: 23,
                   ),
                 ),
               ],

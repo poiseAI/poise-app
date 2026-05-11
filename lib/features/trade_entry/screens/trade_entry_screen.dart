@@ -8,6 +8,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
+import '../data/trade_api.dart';
 import '../providers/trade_form_provider.dart';
 import '../providers/symbol_search_provider.dart';
 import 'widgets/leverage_slider.dart';
@@ -41,27 +42,25 @@ class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => context.go(Routes.home),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('Open a new trade'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: RefreshIndicator(
           onRefresh: notifier.loadPreflight,
           color: AppColors.accent,
           child: ListView(
-            padding: AppSpacing.screenPadding,
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
             children: [
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.go(Routes.home),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  const Expanded(
-                    child: Text('Open a new trade', style: AppTypography.h1),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
               _BalanceRow(form: form),
               const SizedBox(height: AppSpacing.md),
               SymbolPicker(
@@ -138,7 +137,7 @@ class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: _SideButton(
-                      label: 'Sell/Short',
+                      label: 'Short/Sell',
                       active: form.side == OrderSide.short,
                       color: AppColors.lossRed,
                       onTap: () => notifier.setSide(OrderSide.short),
@@ -187,15 +186,40 @@ class _BalanceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final exchange =
+        (form.symbol?.exchange ?? form.preflight?.exchange ?? 'bybit')
+            .toUpperCase();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Available balance:',
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
-        const Spacer(),
-        Text(
-          '${form.availableBalance.toStringAsFixed(0)} ${form.balanceCurrency}',
-          style: AppTypography.numericMd.copyWith(color: AppColors.textPrimary),
+        Row(
+          children: [
+            Text(
+              'Available on $exchange',
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${form.availableBalance.toStringAsFixed(0)} ${form.balanceCurrency}',
+              style: AppTypography.numericMd.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
         ),
+        if (form.preflight != null) ...[
+          const SizedBox(height: 3),
+          Text(
+            _baselineCaption(form.preflight!),
+            style: AppTypography.caption.copyWith(
+              color: form.preflight!.balanceSnapshotComplete
+                  ? AppColors.textTertiary
+                  : AppColors.warningAmber,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -225,8 +249,7 @@ class _RiskStatusCard extends StatelessWidget {
             runSpacing: AppSpacing.xs,
             children: [
               _Chip('Exchange: ${(pf?.exchange ?? 'bybit').toUpperCase()}'),
-              _Chip(
-                  'Risk per trade: ${(pf?.riskPerTradePct ?? 2).toStringAsFixed(0)}%'),
+              _Chip(_dailyCapChip(pf)),
               _Chip(
                   'Max leverage: ${(pf?.maxLeverage ?? 10).toStringAsFixed(0)}x'),
               _Chip(
@@ -249,23 +272,31 @@ class _MarginControl extends StatelessWidget {
     final isPct = form.marginMode == MarginMode.percentage;
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _Segment(
-                label: 'Percentage',
-                active: isPct,
-                onTap: () => notifier.setMarginMode(MarginMode.percentage),
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _Segment(
+                  label: 'Percentage',
+                  active: isPct,
+                  onTap: () => notifier.setMarginMode(MarginMode.percentage),
+                ),
               ),
-            ),
-            Expanded(
-              child: _Segment(
-                label: 'Fixed amount',
-                active: !isPct,
-                onTap: () => notifier.setMarginMode(MarginMode.fixed),
+              Expanded(
+                child: _Segment(
+                  label: 'Fixed amount',
+                  active: !isPct,
+                  onTap: () => notifier.setMarginMode(MarginMode.fixed),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         if (isPct) ...[
@@ -310,17 +341,18 @@ class _Segment extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        height: 46,
+        height: 38,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? AppColors.bgCard : AppColors.bgSecondary,
-          borderRadius: AppRadius.chipRadius,
+          color: active ? AppColors.bgPrimary : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
-              color: active ? AppColors.accent : AppColors.borderLight),
+            color: active ? AppColors.borderLight : Colors.transparent,
+          ),
         ),
         child: Text(label,
             style: AppTypography.label.copyWith(
-              color: active ? AppColors.accent : AppColors.textSecondary,
+              color: active ? AppColors.textPrimary : AppColors.textSecondary,
             )),
       ),
     );
@@ -342,17 +374,23 @@ class _SideButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
+    return OutlinedButton.icon(
       onPressed: onTap,
-      icon: Icon(active
-          ? Icons.check_box_rounded
-          : Icons.check_box_outline_blank_rounded),
+      icon: Icon(
+        active ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        size: 16,
+      ),
       label: FittedBox(child: Text(label)),
-      style: FilledButton.styleFrom(
-        backgroundColor: active ? color : color.withValues(alpha: 0.12),
-        foregroundColor: active ? Colors.white : color,
-        minimumSize: const Size.fromHeight(58),
-        shape: const StadiumBorder(),
+      style: OutlinedButton.styleFrom(
+        backgroundColor:
+            active ? color.withValues(alpha: 0.1) : AppColors.bgCard,
+        foregroundColor: color,
+        side: BorderSide(
+          color: active ? color : AppColors.borderLight,
+          width: active ? 1.4 : 1,
+        ),
+        minimumSize: const Size.fromHeight(52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -406,6 +444,42 @@ class _Chip extends StatelessWidget {
     );
   }
 }
+
+String _baselineCaption(TradePreflight pf) {
+  final exchangeCount = pf.balanceSnapshotCapturedConnections > 0
+      ? pf.balanceSnapshotCapturedConnections
+      : pf.balanceSnapshotExpectedConnections;
+  if (exchangeCount <= 0) {
+    return 'Daily risk uses your UTC all-exchange baseline';
+  }
+  final countText =
+      exchangeCount == 1 ? '1 exchange' : '$exchangeCount exchanges';
+  if (!pf.balanceSnapshotComplete) {
+    return 'Daily risk baseline syncing across $countText';
+  }
+  if (pf.dailyBaselineBalanceUsd <= 0) {
+    return 'Daily risk uses your UTC all-exchange baseline';
+  }
+  return 'Daily risk uses ${_money0(pf.dailyBaselineBalanceUsd)} across $countText - synced UTC';
+}
+
+String _dailyCapChip(TradePreflight? pf) {
+  if (pf == null) return 'Daily cap: checking';
+  if (!pf.balanceSnapshotComplete && pf.dailyLossLimitUsd <= 0) {
+    return 'Baseline syncing';
+  }
+  if (pf.dailyLossLimitType == 'percent_balance' &&
+      pf.dailyBaselineBalanceUsd > 0 &&
+      pf.dailyLossLimitUsd > 0) {
+    final pct = pf.dailyBaselineBalanceUsd == 0
+        ? 0
+        : (pf.dailyLossLimitUsd / pf.dailyBaselineBalanceUsd) * 100;
+    return 'Daily cap: ${pct.toStringAsFixed(pct >= 1 ? 0 : 1)}% = ${_money0(pf.dailyLossLimitUsd)}';
+  }
+  return 'Daily cap: ${_money0(pf.dailyLossLimitUsd)}';
+}
+
+String _money0(double value) => '\$${value.abs().toStringAsFixed(0)}';
 
 class _BlockingCard extends StatelessWidget {
   const _BlockingCard({this.message});

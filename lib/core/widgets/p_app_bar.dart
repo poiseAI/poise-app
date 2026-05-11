@@ -25,7 +25,8 @@ class PAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: AppColors.bgSurface,
+      backgroundColor: AppColors.bgPrimary,
+      surfaceTintColor: AppColors.transparent,
       foregroundColor: AppColors.textPrimary,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -33,8 +34,9 @@ class PAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: leading,
       title: subtitle != null
           ? Column(
-              crossAxisAlignment:
-                  centerTitle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+              crossAxisAlignment: centerTitle
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(title, style: AppTypography.h4),

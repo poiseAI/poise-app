@@ -81,12 +81,20 @@ class TradePreflight {
     required this.allowed,
     this.blockingReason,
     this.dailyResetAt,
-    this.weeklyResetAt,
     required this.exchange,
     required this.riskPerTradePct,
     required this.maxLeverage,
     required this.tradesToday,
     required this.maxTradesPerDay,
+    required this.dailyLossLimitType,
+    required this.dailyLossLimitUsd,
+    required this.dailyBaselineBalanceUsd,
+    required this.dailyAvailableBalanceUsd,
+    required this.balanceSnapshotComplete,
+    required this.balanceSnapshotExpectedConnections,
+    required this.balanceSnapshotCapturedConnections,
+    required this.externalOpenPositions,
+    required this.unknownRiskPositions,
   });
 
   factory TradePreflight.fromJson(Map<String, dynamic> json) {
@@ -95,7 +103,6 @@ class TradePreflight {
       allowed: json['allowed'] as bool? ?? true,
       blockingReason: json['blocking_reason'] as String?,
       dailyResetAt: json['daily_reset_at'] as String?,
-      weeklyResetAt: json['weekly_reset_at'] as String?,
       exchange: json['exchange'] as String? ?? 'bybit',
       riskPerTradePct: ((rules['risk_per_trade_pct'] ??
               rules['riskPerTradePct'] ??
@@ -106,18 +113,46 @@ class TradePreflight {
               .toDouble(),
       tradesToday: ((rules['trades_today'] ?? 0) as num).toInt(),
       maxTradesPerDay: ((rules['max_trades_per_day'] ?? 5) as num).toInt(),
+      dailyLossLimitType:
+          rules['daily_loss_limit_type'] as String? ?? 'fixed_usd',
+      dailyLossLimitUsd:
+          ((rules['daily_loss_limit_usd'] ?? 0) as num).toDouble(),
+      dailyBaselineBalanceUsd:
+          ((rules['daily_baseline_balance_usd'] ?? 0) as num).toDouble(),
+      dailyAvailableBalanceUsd:
+          ((rules['daily_available_balance_usd'] ?? 0) as num).toDouble(),
+      balanceSnapshotComplete:
+          rules['balance_snapshot_complete'] as bool? ?? true,
+      balanceSnapshotExpectedConnections:
+          ((rules['balance_snapshot_expected_connections'] ?? 0) as num)
+              .toInt(),
+      balanceSnapshotCapturedConnections:
+          ((rules['balance_snapshot_captured_connections'] ?? 0) as num)
+              .toInt(),
+      externalOpenPositions:
+          ((rules['external_open_positions'] ?? 0) as num).toInt(),
+      unknownRiskPositions:
+          ((rules['unknown_risk_positions'] ?? 0) as num).toInt(),
     );
   }
 
   final bool allowed;
   final String? blockingReason;
   final String? dailyResetAt;
-  final String? weeklyResetAt;
   final String exchange;
   final double riskPerTradePct;
   final double maxLeverage;
   final int tradesToday;
   final int maxTradesPerDay;
+  final String dailyLossLimitType;
+  final double dailyLossLimitUsd;
+  final double dailyBaselineBalanceUsd;
+  final double dailyAvailableBalanceUsd;
+  final bool balanceSnapshotComplete;
+  final int balanceSnapshotExpectedConnections;
+  final int balanceSnapshotCapturedConnections;
+  final int externalOpenPositions;
+  final int unknownRiskPositions;
 }
 
 class ExchangeBalance {
@@ -168,6 +203,23 @@ class TradeValidationResult {
     required this.riskRewardRatio,
     required this.possibleLoss,
     required this.possibleProfit,
+    required this.dailyBaselineBalanceUsd,
+    required this.dailyAvailableBalanceUsd,
+    required this.dailyLossLimitType,
+    required this.dailyLossLimitUsd,
+    required this.realizedDailyLossUsd,
+    required this.openPositionReservedLossUsd,
+    required this.externalUnrealizedLossUsd,
+    required this.currentDailyRiskUsedUsd,
+    required this.projectedDailyLossUsd,
+    required this.remainingDailyLossBudgetUsd,
+    required this.balanceSnapshotComplete,
+    required this.balanceSnapshotExpectedConnections,
+    required this.balanceSnapshotCapturedConnections,
+    required this.externalOpenPositions,
+    required this.unknownRiskPositions,
+    required this.requiresExternalRiskReview,
+    required this.dailyLimitAcknowledgementRequired,
     required this.blockingGuardrails,
     required this.warningGuardrails,
     this.aiSessionId,
@@ -187,6 +239,42 @@ class TradeValidationResult {
           '-',
       possibleLoss: ((summary['possible_loss'] ?? 0) as num).toDouble(),
       possibleProfit: ((summary['possible_profit'] ?? 0) as num).toDouble(),
+      dailyBaselineBalanceUsd:
+          ((summary['daily_baseline_balance_usd'] ?? 0) as num).toDouble(),
+      dailyAvailableBalanceUsd:
+          ((summary['daily_available_balance_usd'] ?? 0) as num).toDouble(),
+      dailyLossLimitType:
+          summary['daily_loss_limit_type'] as String? ?? 'fixed_usd',
+      dailyLossLimitUsd:
+          ((summary['daily_loss_limit_usd'] ?? 0) as num).toDouble(),
+      realizedDailyLossUsd:
+          ((summary['realized_daily_loss_usd'] ?? 0) as num).toDouble(),
+      openPositionReservedLossUsd:
+          ((summary['open_position_reserved_loss_usd'] ?? 0) as num).toDouble(),
+      externalUnrealizedLossUsd:
+          ((summary['external_unrealized_loss_usd'] ?? 0) as num).toDouble(),
+      currentDailyRiskUsedUsd:
+          ((summary['current_daily_risk_used_usd'] ?? 0) as num).toDouble(),
+      projectedDailyLossUsd:
+          ((summary['projected_daily_loss_usd'] ?? 0) as num).toDouble(),
+      remainingDailyLossBudgetUsd:
+          ((summary['remaining_daily_loss_budget_usd'] ?? 0) as num).toDouble(),
+      balanceSnapshotComplete:
+          summary['balance_snapshot_complete'] as bool? ?? true,
+      balanceSnapshotExpectedConnections:
+          ((summary['balance_snapshot_expected_connections'] ?? 0) as num)
+              .toInt(),
+      balanceSnapshotCapturedConnections:
+          ((summary['balance_snapshot_captured_connections'] ?? 0) as num)
+              .toInt(),
+      externalOpenPositions:
+          ((summary['external_open_positions'] ?? 0) as num).toInt(),
+      unknownRiskPositions:
+          ((summary['unknown_risk_positions'] ?? 0) as num).toInt(),
+      requiresExternalRiskReview:
+          summary['requires_external_risk_review'] as bool? ?? false,
+      dailyLimitAcknowledgementRequired:
+          summary['daily_limit_acknowledgement_required'] as bool? ?? false,
       blockingGuardrails: _guardrails(json['blocking_guardrails']),
       warningGuardrails: [
         ..._guardrails(json['warning_guardrails']),
@@ -203,6 +291,23 @@ class TradeValidationResult {
   final String riskRewardRatio;
   final double possibleLoss;
   final double possibleProfit;
+  final double dailyBaselineBalanceUsd;
+  final double dailyAvailableBalanceUsd;
+  final String dailyLossLimitType;
+  final double dailyLossLimitUsd;
+  final double realizedDailyLossUsd;
+  final double openPositionReservedLossUsd;
+  final double externalUnrealizedLossUsd;
+  final double currentDailyRiskUsedUsd;
+  final double projectedDailyLossUsd;
+  final double remainingDailyLossBudgetUsd;
+  final bool balanceSnapshotComplete;
+  final int balanceSnapshotExpectedConnections;
+  final int balanceSnapshotCapturedConnections;
+  final int externalOpenPositions;
+  final int unknownRiskPositions;
+  final bool requiresExternalRiskReview;
+  final bool dailyLimitAcknowledgementRequired;
   final List<GuardrailResult> blockingGuardrails;
   final List<GuardrailResult> warningGuardrails;
   final String? aiSessionId;

@@ -24,7 +24,19 @@ class TradeValidationScreen extends ConsumerWidget {
     if (validation == null) {
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => context.go(Routes.trade),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          title: const Text('Trade Validation'),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1, color: AppColors.borderLight),
+          ),
+        ),
         body: SafeArea(
+          top: false,
           child: Padding(
             padding: AppSpacing.screenPadding,
             child: Column(
@@ -47,28 +59,30 @@ class TradeValidationScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('Trade Validation'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             Expanded(
               child: ListView(
-                padding: AppSpacing.screenPadding,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                ),
                 children: [
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      const Expanded(
-                        child:
-                            Text('Trade validation', style: AppTypography.h1),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
                   const Text('Summary', style: AppTypography.h3),
                   const SizedBox(height: AppSpacing.sm),
                   _SummaryGrid(validation: validation),
@@ -268,6 +282,42 @@ class _SummaryGrid extends StatelessWidget {
           valueColor: AppColors.profitGreen,
           centered: true,
         ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _SummaryTile(
+                label: 'Daily Risk After Entry',
+                value: _money(validation.projectedDailyLossUsd),
+                valueColor: validation.dailyLimitAcknowledgementRequired
+                    ? AppColors.lossRed
+                    : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _SummaryTile(
+                label: 'Daily Loss Limit',
+                value: _money(validation.dailyLossLimitUsd),
+                caption: _dailyLimitCaption(validation),
+              ),
+            ),
+          ],
+        ),
+        if (!validation.balanceSnapshotComplete ||
+            validation.requiresExternalRiskReview) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _SummaryTile(
+            label: validation.requiresExternalRiskReview
+                ? 'External Risk Review'
+                : 'Balance Baseline',
+            value: validation.requiresExternalRiskReview
+                ? '${validation.externalOpenPositions} external open'
+                : 'Snapshot incomplete',
+            valueColor: AppColors.warningAmber,
+            centered: true,
+          ),
+        ],
       ],
     );
   }
@@ -278,18 +328,20 @@ class _SummaryTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.valueColor,
+    this.caption,
     this.centered = false,
   });
 
   final String label;
   final String value;
   final Color? valueColor;
+  final String? caption;
   final bool centered;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 86,
+      height: caption == null ? 86 : 104,
       width: double.infinity,
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
@@ -316,6 +368,17 @@ class _SummaryTile extends StatelessWidget {
                   .copyWith(color: valueColor ?? AppColors.textPrimary),
             ),
           ),
+          if (caption != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              caption!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -455,3 +518,11 @@ class _ErrorCard extends StatelessWidget {
 }
 
 String _money(double value) => '\$${value.abs().toStringAsFixed(2)}';
+
+String _dailyLimitCaption(TradeValidationResult validation) {
+  if (validation.dailyLossLimitType == 'percent_balance' &&
+      validation.dailyBaselineBalanceUsd > 0) {
+    return 'Based on ${_money(validation.dailyBaselineBalanceUsd)} portfolio baseline';
+  }
+  return 'Fixed daily cap';
+}

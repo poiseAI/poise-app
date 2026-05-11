@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
@@ -39,9 +40,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _handledInitialSheet = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        showExchangeConnectionsSheet(context, ref).whenComplete(() {
-          if (mounted) context.go(Routes.profile);
-        });
+        context.go(Routes.exchangeConnections);
       });
     }
   }
@@ -60,26 +59,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(centerTitle: true, title: const Text('Profile')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Profile'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
       body: ListView(
-        padding: AppSpacing.screenPadding,
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
         children: [
-          const SizedBox(height: AppSpacing.md),
           Text(
             name.isNotEmpty ? name : 'Profile',
-            style: AppTypography.h1,
+            style: AppTypography.h3.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 2),
           Text(
             authState.email,
             style: AppTypography.body.copyWith(
-              color: AppColors.textDisabled,
-              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 18),
           SizedBox(
-            height: 48,
+            height: 40,
             child: OutlinedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -92,18 +96,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: const Text('Edit profile'),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 22),
           Text(
             'Settings',
-            style: AppTypography.bodyMedium.copyWith(
+            style: AppTypography.bodySm.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: 10),
           _SettingsTile(
-            icon: Icons.link_rounded,
+            icon: Icons.cable_rounded,
             label: 'Exchange Connections',
-            onTap: () => showExchangeConnectionsSheet(context, ref),
+            onTap: () => context.push(Routes.exchangeConnections),
           ),
           _SettingsTile(
             icon: Icons.percent_rounded,
@@ -130,23 +134,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _SettingsTile(
             icon: Icons.shield_outlined,
             label: 'Data & Privacy',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const _DataPrivacyScreen(),
-              ),
-            ),
+            onTap: () => context.push(Routes.dataPrivacy),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          TextButton(
+          const SizedBox(height: 30),
+          _ProfileActionTile(
+            icon: Icons.logout_rounded,
+            label: 'Log out',
             onPressed: () => _showLogoutSheet(context, ref),
-            child: const Text('Log out'),
           ),
-          TextButton(
+          const SizedBox(height: AppSpacing.sm),
+          _ProfileActionTile(
+            icon: Icons.delete_outline_rounded,
+            label: 'Delete Account',
+            color: AppColors.lossRed,
             onPressed: () => _showDeleteSheet(context, ref),
-            child: Text(
-              'Delete Account',
-              style: AppTypography.button.copyWith(color: AppColors.lossRed),
-            ),
           ),
         ],
       ),
@@ -189,22 +190,24 @@ class _SettingsTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Material(
         color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 12,
+            ),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.borderLight),
             ),
-            constraints: const BoxConstraints(minHeight: 60),
             child: Row(
               children: [
-                Icon(icon, color: AppColors.textSecondary, size: 22),
-                const SizedBox(width: AppSpacing.md),
+                Icon(icon, color: AppColors.textSecondary, size: 18),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -213,8 +216,7 @@ class _SettingsTile extends StatelessWidget {
                       Text(
                         label,
                         style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 15,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       if (subtitle != null && subtitle!.isNotEmpty) ...[
@@ -231,10 +233,56 @@ class _SettingsTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppColors.textDisabled),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileActionTile extends StatelessWidget {
+  const _ProfileActionTile({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.color = AppColors.textPrimary,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.bgPrimary,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: color == AppColors.lossRed
+                  ? AppColors.lossRed.withValues(alpha: 0.28)
+                  : AppColors.borderLight,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: AppTypography.bodyMedium.copyWith(color: color),
+              ),
+            ],
           ),
         ),
       ),
@@ -436,7 +484,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
       appBar: AppBar(
         title: const Text('Edit profile'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -615,19 +663,45 @@ class _PasswordChangedSuccessScreen extends StatelessWidget {
   }
 }
 
-Future<void> showExchangeConnectionsSheet(BuildContext context, WidgetRef ref) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => _SheetFrame(
-      title: 'Exchange Connections',
-      child: _ExchangeConnectionsSection(),
-    ),
-  );
+class ExchangeConnectionsScreen extends StatelessWidget {
+  const ExchangeConnectionsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('Exchange connections'),
+        actions: [
+          IconButton(
+            tooltip: 'About exchange connections',
+            onPressed: () => PToast.info(
+              context,
+              'API keys let Poise read balances and enforce risk guardrails.',
+            ),
+            icon: const Icon(Icons.info_outline_rounded),
+          ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
+      body: const SafeArea(
+        top: false,
+        child: _ExchangeConnectionsSection(),
+      ),
+    );
+  }
 }
 
 class _ExchangeConnectionsSection extends ConsumerStatefulWidget {
+  const _ExchangeConnectionsSection();
+
   @override
   ConsumerState<_ExchangeConnectionsSection> createState() =>
       _ExchangeConnectionsSectionState();
@@ -670,72 +744,99 @@ class _ExchangeConnectionsSectionState
           );
         }
         final connections = result.value as List<Map<String, dynamic>>;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
           children: [
-            if (connections.isEmpty)
-              Text(
-                'No exchange connected',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              )
-            else
-              ...connections.map(
-                (c) => _ConnectionTile(
-                  id: (c['id'] as String?) ?? '',
-                  exchange: (c['exchange'] as String?) ?? 'Exchange',
-                  isActive: (c['is_active'] as bool?) ?? false,
-                  onChanged: _reload,
-                ),
+            Text(
+              'Exchange connections link Poise securely to your Binance or Bybit account via API keys to enable real-time trade execution, balance reading, and the enforcement of your risk guardrails.',
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.45,
               ),
-            const SizedBox(height: AppSpacing.md),
-            const _MagicLinkButton(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Connections',
+              style: AppTypography.bodySm.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final created = await showDialog<bool>(
-                  context: context,
-                  builder: (_) => const _ExchangeConnectionDialog(),
-                );
-                if (created == true && mounted) _reload();
-              },
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Enter API keys manually'),
+            _ExchangeConnectionTile(
+              exchange: 'bybit',
+              connection: _connectionFor(connections, 'bybit'),
+              onChanged: _reload,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _ExchangeConnectionTile(
+              exchange: 'binance',
+              connection: _connectionFor(connections, 'binance'),
+              onChanged: _reload,
             ),
           ],
         );
       },
     );
   }
+
+  Map<String, dynamic>? _connectionFor(
+    List<Map<String, dynamic>> connections,
+    String exchange,
+  ) {
+    for (final connection in connections) {
+      final name = (connection['exchange'] as String? ?? '').toLowerCase();
+      if (name == exchange) return connection;
+    }
+    return null;
+  }
 }
 
-class _ConnectionTile extends ConsumerStatefulWidget {
-  const _ConnectionTile({
-    required this.id,
+class _ExchangeConnectionTile extends ConsumerStatefulWidget {
+  const _ExchangeConnectionTile({
     required this.exchange,
-    required this.isActive,
+    required this.connection,
     required this.onChanged,
   });
 
-  final String id;
   final String exchange;
-  final bool isActive;
+  final Map<String, dynamic>? connection;
   final VoidCallback onChanged;
 
   @override
-  ConsumerState<_ConnectionTile> createState() => _ConnectionTileState();
+  ConsumerState<_ExchangeConnectionTile> createState() =>
+      _ExchangeConnectionTileState();
 }
 
-class _ConnectionTileState extends ConsumerState<_ConnectionTile> {
+class _ExchangeConnectionTileState
+    extends ConsumerState<_ExchangeConnectionTile> {
   bool _loading = false;
 
-  Future<void> _toggle() async {
+  bool get _connected =>
+      widget.connection != null &&
+      ((widget.connection!['is_active'] as bool?) ?? true);
+
+  Future<void> _handleTap() async {
+    if (!_connected) {
+      final created = await showDialog<bool>(
+        context: context,
+        builder: (_) => _ExchangeConnectionDialog(
+          initialExchange: widget.exchange,
+        ),
+      );
+      if (created == true && mounted) widget.onChanged();
+      return;
+    }
+
+    final confirmed = await _showDisconnectSheet(context);
+    if (confirmed == true) await _disconnect();
+  }
+
+  Future<void> _disconnect() async {
+    final id = (widget.connection?['id'] as String?) ?? '';
+    if (id.isEmpty) return;
     setState(() => _loading = true);
-    final api = ref.read(profileApiProvider);
-    final result = widget.isActive
-        ? await api.deactivateExchangeConnection(widget.id)
-        : await api.activateExchangeConnection(widget.id);
+    final result =
+        await ref.read(profileApiProvider).deactivateExchangeConnection(id);
     if (!mounted) return;
     setState(() => _loading = false);
     result.fold(
@@ -746,63 +847,160 @@ class _ConnectionTileState extends ConsumerState<_ConnectionTile> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(widget.exchange.toUpperCase(), style: AppTypography.h4),
-      subtitle: Text(widget.isActive ? 'Active' : 'Inactive'),
-      trailing: _loading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : TextButton(
-              onPressed: _toggle,
-              child: Text(widget.isActive ? 'Deactivate' : 'Activate'),
+    final label = widget.exchange == 'bybit' ? 'Bybit' : 'Binance';
+    return Material(
+      color: AppColors.bgSurface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: _loading ? null : _handleTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 58),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              _ExchangeMark(exchange: widget.exchange),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (_loading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else if (_connected)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.profitGreen.withValues(alpha: 0.12),
+                    borderRadius: AppRadius.pillRadius,
+                    border: Border.all(
+                      color: AppColors.profitGreen.withValues(alpha: 0.28),
+                    ),
+                  ),
+                  child: Text(
+                    'Connected',
+                    style: AppTypography.labelSm.copyWith(
+                      color: AppColors.profitGreen,
+                    ),
+                  ),
+                )
+              else ...[
+                Text(
+                  'Connect exchange',
+                  style: AppTypography.labelSm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textDisabled,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> _showDisconnectSheet(BuildContext context) {
+    final label = widget.exchange == 'bybit' ? 'Bybit' : 'Binance';
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SheetFrame(
+        title: 'Disconnect $label',
+        showClose: false,
+        titleColor: AppColors.textPrimary,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Disconnecting prevents Poise from creating, managing, and monitoring in and through the $label exchange. This does not affect your trades or money.',
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Are you sure you want to disconnect the exchange?',
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.textTertiary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('No'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.lossRed,
+                side: BorderSide(
+                  color: AppColors.lossRed.withValues(alpha: 0.35),
+                ),
+              ),
+              child: const Text('Disconnect'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _MagicLinkButton extends ConsumerStatefulWidget {
-  const _MagicLinkButton();
-
-  @override
-  ConsumerState<_MagicLinkButton> createState() => _MagicLinkButtonState();
-}
-
-class _MagicLinkButtonState extends ConsumerState<_MagicLinkButton> {
-  bool _loading = false;
-
-  Future<void> _requestLink() async {
-    setState(() => _loading = true);
-    final result = await ref.read(profileApiProvider).requestApiKeyMagicLink();
-    if (!mounted) return;
-    setState(() => _loading = false);
-    result.fold(
-      onOk: (_) => PToast.success(context, 'Check your email - link sent'),
-      onErr: (err) => PToast.error(context, err.userMessage),
-    );
-  }
+class _ExchangeMark extends StatelessWidget {
+  const _ExchangeMark({required this.exchange});
+  final String exchange;
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: _loading ? null : _requestLink,
-      icon: _loading
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.open_in_browser_rounded, size: 18),
-      label: Text(_loading ? 'Sending link...' : 'Set up on web'),
+    final isBinance = exchange == 'binance';
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: isBinance ? const Color(0xFFF3BA2F) : AppColors.textPrimary,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        isBinance ? Icons.auto_awesome_rounded : Icons.trending_up_rounded,
+        color: isBinance ? AppColors.textPrimary : Colors.white,
+        size: 16,
+      ),
     );
   }
 }
 
 class _ExchangeConnectionDialog extends ConsumerStatefulWidget {
-  const _ExchangeConnectionDialog();
+  const _ExchangeConnectionDialog({this.initialExchange = 'bybit'});
+  final String initialExchange;
 
   @override
   ConsumerState<_ExchangeConnectionDialog> createState() =>
@@ -813,7 +1011,7 @@ class _ExchangeConnectionDialogState
     extends ConsumerState<_ExchangeConnectionDialog> {
   final _apiKeyCtrl = TextEditingController();
   final _apiSecretCtrl = TextEditingController();
-  String _exchange = 'bybit';
+  late String _exchange = widget.initialExchange;
   bool _isTestnet = true;
   bool _isSaving = false;
 
@@ -1256,33 +1454,32 @@ class _PreferenceSwitch extends StatelessWidget {
   }
 }
 
-class _DataPrivacyScreen extends StatelessWidget {
-  const _DataPrivacyScreen();
+class DataPrivacyScreen extends StatelessWidget {
+  const DataPrivacyScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        title: const Text('Data & privacy'),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: AppSpacing.md),
-            child: Icon(Icons.error_outline_rounded),
-          ),
-        ],
+        centerTitle: true,
+        title: const Text('Data & Privacy'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
       ),
       body: ListView(
-        padding: AppSpacing.screenPadding,
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
         children: [
           Text(
-            'Poise uses your exchange connection to show balances, synchronize supported positions, validate trades, and provide discipline feedback.',
+            'Poise uses your Binance or Bybit exchange connection to show balances, ingest trading activity, validate trades, and provide discipline feedback.',
             style: AppTypography.bodyLg.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 22),
           Text(
             'We use this connection to:',
             style: AppTypography.bodyLg.copyWith(
@@ -1290,30 +1487,34 @@ class _DataPrivacyScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          const _PrivacyBullet(
+          const _PrivacyBulletRow(
             strong: 'Read your futures balance',
             rest: ' and support real-time trade execution.',
           ),
-          const _PrivacyBullet(
-            strong: 'Synchronize supported trading activity',
-            rest: ' as it becomes available from your connected exchange.',
+          const _PrivacyBulletRow(
+            strong: 'Ingest all trading activity',
+            rest: ' from your connected exchange as it becomes available.',
           ),
-          const _PrivacyBullet(
+          const _PrivacyBulletRow(
             strong: 'Analyze trade data',
             rest:
                 ' to enforce your configured risk rules and behavioral guardrails.',
           ),
-          const _PrivacyBullet(
+          const _PrivacyBulletRow(
             strong: 'Generate personalized insights',
             rest: ' and real-time feedback via Poise AI.',
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'API keys are encrypted before storage and are not returned to the app after they are saved.',
+            'API keys and secrets are encrypted before storage and are never returned to the app after they are saved.',
             style: AppTypography.bodyLg.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
             ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _PolicyRow(
+            onTap: () => PToast.info(context, 'Privacy policy coming soon'),
           ),
         ],
       ),
@@ -1321,8 +1522,8 @@ class _DataPrivacyScreen extends StatelessWidget {
   }
 }
 
-class _PrivacyBullet extends StatelessWidget {
-  const _PrivacyBullet({required this.strong, required this.rest});
+class _PrivacyBulletRow extends StatelessWidget {
+  const _PrivacyBulletRow({required this.strong, required this.rest});
 
   final String strong;
   final String rest;
@@ -1334,7 +1535,15 @@ class _PrivacyBullet extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('•  ', style: AppTypography.bodyLg),
+          Container(
+            width: 5,
+            height: 5,
+            margin: const EdgeInsets.only(top: 9, right: 10),
+            decoration: const BoxDecoration(
+              color: AppColors.textSecondary,
+              shape: BoxShape.circle,
+            ),
+          ),
           Expanded(
             child: RichText(
               text: TextSpan(
@@ -1358,20 +1567,75 @@ class _PrivacyBullet extends StatelessWidget {
   }
 }
 
+class _PolicyRow extends StatelessWidget {
+  const _PolicyRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.bgSurface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.policy_outlined,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'View data and privacy policy',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textDisabled,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SheetFrame extends StatelessWidget {
-  const _SheetFrame({required this.title, required this.child});
+  const _SheetFrame({
+    required this.title,
+    required this.child,
+    this.titleColor,
+    this.showClose = true,
+  });
 
   final String title;
   final Widget child;
+  final Color? titleColor;
+  final bool showClose;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: AppSpacing.sm,
-          right: AppSpacing.sm,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + AppSpacing.sm,
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md,
         ),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1386,12 +1650,19 @@ class _SheetFrame extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(title, style: AppTypography.h2),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTypography.h2.copyWith(
+                          color: titleColor ?? AppColors.textPrimary,
+                        ),
+                      ),
                     ),
+                    if (showClose)
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -1471,6 +1742,8 @@ class _ConfirmSheet extends StatelessWidget {
     final color = primaryColor ?? AppColors.primary;
     return _SheetFrame(
       title: title,
+      titleColor: titleColor,
+      showClose: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

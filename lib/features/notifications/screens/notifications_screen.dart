@@ -27,7 +27,31 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(Routes.home),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('Notifications'),
+        actions: [
+          notifications.maybeWhen(
+            data: (items) => items.any((n) => !n.read)
+                ? TextButton(
+                    onPressed: notifier.markAllRead,
+                    child: const Text('Mark all read'),
+                  )
+                : const SizedBox.shrink(),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: notifications.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Center(
@@ -38,50 +62,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           data: (items) {
             return CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: AppSpacing.screenPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: AppSpacing.lg),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () => context.canPop()
-                                  ? context.pop()
-                                  : context.go(Routes.home),
-                              icon: const Icon(Icons.arrow_back_rounded),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            const Expanded(
-                              child: Text('Notifications',
-                                  style: AppTypography.h1),
-                            ),
-                            if (items.any((n) => !n.read))
-                              TextButton(
-                                onPressed: notifier.markAllRead,
-                                child: Text(
-                                  'Mark all read',
-                                  style: AppTypography.caption
-                                      .copyWith(color: AppColors.accent),
-                                ),
-                              ),
-                          ],
+                if (items.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+                      child: Text(
+                        'Today',
+                        style: AppTypography.bodyLg.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Text(
-                          'Today',
-                          style: AppTypography.bodyLg.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
+                      ),
                     ),
                   ),
-                ),
                 if (items.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
