@@ -22,7 +22,7 @@ concurrency:
 jobs:
   testflight:
     name: Build and Upload
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     env:
       IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.poiseai.app' }}
@@ -41,7 +41,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2

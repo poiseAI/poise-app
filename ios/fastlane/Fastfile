@@ -75,8 +75,7 @@ platform :ios do
       "-authenticationKeyPath #{Shellwords.escape(key_path)}",
       "-authenticationKeyID #{Shellwords.escape(key_id)}",
       "-authenticationKeyIssuerID #{Shellwords.escape(issuer_id)}",
-      "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}",
-      "PRODUCT_BUNDLE_IDENTIFIER=#{Shellwords.escape(app_identifier)}"
+      "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}"
     ].join(" ")
 
     ipa_path = build_app(
