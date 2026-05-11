@@ -3,6 +3,7 @@ require "shellwords"
 default_platform(:ios)
 
 REPO_ROOT = File.expand_path("../..", __dir__)
+ENV["PATH"] = "#{Gem.bindir}:#{ENV.fetch("PATH")}"
 
 def required_env(name)
   value = ENV[name]
@@ -66,6 +67,7 @@ platform :ios do
     sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter pub get")
     sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter analyze")
     sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter test")
+    sh("cd #{Shellwords.escape(File.join(REPO_ROOT, "ios"))} && bundle exec pod install")
     sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter build ios --release --no-codesign --build-name=#{Shellwords.escape(build_name)} --build-number=#{Shellwords.escape(build_number)}")
 
     signing_xcargs = [
