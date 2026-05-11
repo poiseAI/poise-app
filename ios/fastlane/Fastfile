@@ -93,8 +93,7 @@ platform :ios do
         teamID: team_id,
         manageAppVersionAndBuildNumber: false
       },
-      xcargs: signing_xcargs,
-      export_xcargs: signing_xcargs
+      xcargs: signing_xcargs
     )
 
     upload_to_testflight(
