@@ -45,6 +45,8 @@ platform :ios do
     key_content = normalized_private_key(required_env("ASC_KEY_P8"))
     build_name = ENV.fetch("FLUTTER_BUILD_NAME", pubspec_version_name)
     build_number = ENV.fetch("FLUTTER_BUILD_NUMBER", Time.now.utc.strftime("%Y%m%d%H%M"))
+    api_base_url = ENV.fetch("POISE_API_BASE_URL", "https://poiseai.brainpad.me/api/v1")
+    ws_url = ENV.fetch("POISE_WS_URL", "wss://poiseai.brainpad.me/api/v1/ws")
     changelog = ENV.fetch("TESTFLIGHT_CHANGELOG", "Poise CI build #{build_number}")
     apple_id = ENV["APP_STORE_APP_ID"]
     key_path = write_app_store_key_file(key_id, key_content)
@@ -68,7 +70,13 @@ platform :ios do
     sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter analyze")
     sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter test")
     sh("cd #{Shellwords.escape(File.join(REPO_ROOT, "ios"))} && bundle exec pod install")
-    sh("cd #{Shellwords.escape(REPO_ROOT)} && flutter build ios --release --no-codesign --build-name=#{Shellwords.escape(build_name)} --build-number=#{Shellwords.escape(build_number)}")
+    sh([
+      "cd #{Shellwords.escape(REPO_ROOT)} && flutter build ios --release --no-codesign",
+      "--build-name=#{Shellwords.escape(build_name)}",
+      "--build-number=#{Shellwords.escape(build_number)}",
+      "--dart-define=POISE_API_BASE_URL=#{Shellwords.escape(api_base_url)}",
+      "--dart-define=POISE_WS_URL=#{Shellwords.escape(ws_url)}"
+    ].join(" "))
 
     signing_xcargs = [
       "-allowProvisioningUpdates",

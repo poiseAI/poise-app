@@ -1,11 +1,11 @@
 abstract final class AppConfig {
   static const String baseUrl = String.fromEnvironment(
     'POISE_API_BASE_URL',
-    defaultValue: 'http://localhost:8080/api/v1',
+    defaultValue: 'https://poiseai.brainpad.me/api/v1',
   );
   static const String wsUrl = String.fromEnvironment(
     'POISE_WS_URL',
-    defaultValue: 'ws://localhost:8080/api/v1/ws',
+    defaultValue: 'wss://poiseai.brainpad.me/api/v1/ws',
   );
 
   static const Duration connectTimeout = Duration(seconds: 10);

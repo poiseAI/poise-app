@@ -27,6 +27,8 @@ jobs:
     env:
       IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.poiseai.app' }}
       APP_STORE_APP_ID: ${{ vars.APP_STORE_APP_ID || '6768316006' }}
+      POISE_API_BASE_URL: ${{ vars.POISE_API_BASE_URL || 'https://poiseai.brainpad.me/api/v1' }}
+      POISE_WS_URL: ${{ vars.POISE_WS_URL || 'wss://poiseai.brainpad.me/api/v1/ws' }}
       FLUTTER_BUILD_NUMBER: ${{ github.run_number }}
       TESTFLIGHT_CHANGELOG: ${{ inputs.changelog || format('Poise build {0}', github.run_number) }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
