@@ -19,18 +19,25 @@ class NotificationRepository {
   Future<Result<List<NotificationItem>, AppError>> getRecent(
       {int limit = 50}) async {
     try {
-      final resp = await _dio.get<List<dynamic>>(
+      final resp = await _dio.get<dynamic>(
         '/notifications',
         queryParameters: {'limit': limit},
       );
-      final list = (resp.data ?? [])
+      final data = resp.data;
+      final raw = data is List
+          ? data
+          : ((data as Map<String, dynamic>?)?['notifications']
+                  as List<dynamic>? ??
+              const []);
+      final list = raw
           .cast<Map<String, dynamic>>()
           .map(NotificationItem.fromJson)
           .toList();
       return Ok(list);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -39,8 +46,9 @@ class NotificationRepository {
       await _dio.post<void>('/notifications/$id/read');
       return const Ok(null);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -49,8 +57,9 @@ class NotificationRepository {
       await _dio.post<void>('/notifications/read-all');
       return const Ok(null);
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
@@ -60,8 +69,9 @@ class NotificationRepository {
       return const Ok(null);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return const Ok(null);
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 }

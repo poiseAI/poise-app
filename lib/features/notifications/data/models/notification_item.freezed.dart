@@ -22,6 +22,7 @@ mixin _$NotificationItem {
   bool get read;
   @JsonKey(name: 'created_at')
   String get createdAt;
+  @JsonKey(fromJson: _metaFromJson)
   Map<String, dynamic>? get meta;
 
   /// Create a copy of NotificationItem
@@ -74,7 +75,7 @@ abstract mixin class $NotificationItemCopyWith<$Res> {
       @JsonKey(name: 'notification_type') String type,
       bool read,
       @JsonKey(name: 'created_at') String createdAt,
-      Map<String, dynamic>? meta});
+      @JsonKey(fromJson: _metaFromJson) Map<String, dynamic>? meta});
 }
 
 /// @nodoc
@@ -231,7 +232,7 @@ extension NotificationItemPatterns on NotificationItem {
             @JsonKey(name: 'notification_type') String type,
             bool read,
             @JsonKey(name: 'created_at') String createdAt,
-            Map<String, dynamic>? meta)?
+            @JsonKey(fromJson: _metaFromJson) Map<String, dynamic>? meta)?
         $default, {
     required TResult orElse(),
   }) {
@@ -267,7 +268,7 @@ extension NotificationItemPatterns on NotificationItem {
             @JsonKey(name: 'notification_type') String type,
             bool read,
             @JsonKey(name: 'created_at') String createdAt,
-            Map<String, dynamic>? meta)
+            @JsonKey(fromJson: _metaFromJson) Map<String, dynamic>? meta)
         $default,
   ) {
     final _that = this;
@@ -301,7 +302,7 @@ extension NotificationItemPatterns on NotificationItem {
             @JsonKey(name: 'notification_type') String type,
             bool read,
             @JsonKey(name: 'created_at') String createdAt,
-            Map<String, dynamic>? meta)?
+            @JsonKey(fromJson: _metaFromJson) Map<String, dynamic>? meta)?
         $default,
   ) {
     final _that = this;
@@ -325,7 +326,7 @@ class _NotificationItem implements NotificationItem {
       @JsonKey(name: 'notification_type') required this.type,
       this.read = false,
       @JsonKey(name: 'created_at') required this.createdAt,
-      final Map<String, dynamic>? meta})
+      @JsonKey(fromJson: _metaFromJson) final Map<String, dynamic>? meta})
       : _meta = meta;
   factory _NotificationItem.fromJson(Map<String, dynamic> json) =>
       _$NotificationItemFromJson(json);
@@ -347,6 +348,7 @@ class _NotificationItem implements NotificationItem {
   final String createdAt;
   final Map<String, dynamic>? _meta;
   @override
+  @JsonKey(fromJson: _metaFromJson)
   Map<String, dynamic>? get meta {
     final value = _meta;
     if (value == null) return null;
@@ -411,7 +413,7 @@ abstract mixin class _$NotificationItemCopyWith<$Res>
       @JsonKey(name: 'notification_type') String type,
       bool read,
       @JsonKey(name: 'created_at') String createdAt,
-      Map<String, dynamic>? meta});
+      @JsonKey(fromJson: _metaFromJson) Map<String, dynamic>? meta});
 }
 
 /// @nodoc

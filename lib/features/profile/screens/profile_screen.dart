@@ -684,21 +684,14 @@ class ExchangeConnectionsScreen extends StatelessWidget {
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
-        title: const Text('Exchange connections'),
+        title: const SizedBox.shrink(),
         actions: [
-          IconButton(
-            tooltip: 'About exchange connections',
-            onPressed: () => PToast.info(
-              context,
-              'API keys let Poise read balances and enforce risk guardrails.',
-            ),
-            icon: const Icon(Icons.info_outline_rounded),
+          TextButton(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go(Routes.profile),
+            child: const Text('Skip'),
           ),
         ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: AppColors.borderLight),
-        ),
       ),
       body: const SafeArea(
         top: false,
@@ -719,6 +712,7 @@ class _ExchangeConnectionsSection extends ConsumerStatefulWidget {
 class _ExchangeConnectionsSectionState
     extends ConsumerState<_ExchangeConnectionsSection> {
   late Future<dynamic> _future;
+  String? _expandedExchange;
 
   @override
   void initState() {
@@ -753,39 +747,66 @@ class _ExchangeConnectionsSectionState
           );
         }
         final connections = result.value as List<Map<String, dynamic>>;
+        _expandedExchange ??= _defaultExpanded(connections);
         return ListView(
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
           children: [
+            const Text('Connect your exchange', style: AppTypography.h2),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              'Exchange connections link Poise securely to your Binance or Bybit account via API keys to enable real-time trade execution, balance reading, and the enforcement of your risk guardrails.',
+              'Link your trading accounts',
               style: AppTypography.body.copyWith(
                 color: AppColors.textSecondary,
-                height: 1.45,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            Text(
-              'Connections',
-              style: AppTypography.bodySm.copyWith(
-                color: AppColors.textSecondary,
-              ),
+            _DesktopSetupCard(
+              onSendLink: _sendDesktopSetupLink,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             _ExchangeConnectionTile(
               exchange: 'bybit',
               connection: _connectionFor(connections, 'bybit'),
+              expanded: _expandedExchange == 'bybit',
+              onToggle: () => _toggleExpanded('bybit'),
               onChanged: _reload,
             ),
             const SizedBox(height: AppSpacing.sm),
             _ExchangeConnectionTile(
               exchange: 'binance',
               connection: _connectionFor(connections, 'binance'),
+              expanded: _expandedExchange == 'binance',
+              onToggle: () => _toggleExpanded('binance'),
               onChanged: _reload,
             ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _sendDesktopSetupLink() async {
+    final result = await ref.read(profileApiProvider).requestApiKeyMagicLink();
+    if (!mounted) return;
+    result.fold(
+      onOk: (_) => PToast.success(
+        context,
+        'Secure desktop setup link sent to your email',
+      ),
+      onErr: (err) => PToast.error(context, err.userMessage),
+    );
+  }
+
+  String _defaultExpanded(List<Map<String, dynamic>> connections) {
+    if (_connectionFor(connections, 'bybit') == null) return 'bybit';
+    if (_connectionFor(connections, 'binance') == null) return 'binance';
+    return 'bybit';
+  }
+
+  void _toggleExpanded(String exchange) {
+    setState(() {
+      _expandedExchange = _expandedExchange == exchange ? null : exchange;
+    });
   }
 
   Map<String, dynamic>? _connectionFor(
@@ -800,15 +821,70 @@ class _ExchangeConnectionsSectionState
   }
 }
 
+class _DesktopSetupCard extends StatelessWidget {
+  const _DesktopSetupCard({required this.onSendLink});
+  final VoidCallback onSendLink;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Prefer using a computer?', style: AppTypography.h4),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Connect exchange securely on desktop',
+            style: AppTypography.body.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onSendLink,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                shape: const StadiumBorder(),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Use desktop instead'),
+                  SizedBox(width: AppSpacing.xs),
+                  Icon(Icons.open_in_new_rounded, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ExchangeConnectionTile extends ConsumerStatefulWidget {
   const _ExchangeConnectionTile({
     required this.exchange,
     required this.connection,
+    required this.expanded,
+    required this.onToggle,
     required this.onChanged,
   });
 
   final String exchange;
   final Map<String, dynamic>? connection;
+  final bool expanded;
+  final VoidCallback onToggle;
   final VoidCallback onChanged;
 
   @override
@@ -818,26 +894,19 @@ class _ExchangeConnectionTile extends ConsumerStatefulWidget {
 
 class _ExchangeConnectionTileState
     extends ConsumerState<_ExchangeConnectionTile> {
+  final _apiKeyCtrl = TextEditingController();
+  final _apiSecretCtrl = TextEditingController();
   bool _loading = false;
 
   bool get _connected =>
       widget.connection != null &&
       ((widget.connection!['is_active'] as bool?) ?? true);
 
-  Future<void> _handleTap() async {
-    if (!_connected) {
-      final created = await showDialog<bool>(
-        context: context,
-        builder: (_) => _ExchangeConnectionDialog(
-          initialExchange: widget.exchange,
-        ),
-      );
-      if (created == true && mounted) widget.onChanged();
-      return;
-    }
-
-    final confirmed = await _showDisconnectSheet(context);
-    if (confirmed == true) await _disconnect();
+  @override
+  void dispose() {
+    _apiKeyCtrl.dispose();
+    _apiSecretCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _disconnect() async {
@@ -849,78 +918,134 @@ class _ExchangeConnectionTileState
     if (!mounted) return;
     setState(() => _loading = false);
     result.fold(
-      onOk: (_) => widget.onChanged(),
+      onOk: (_) {
+        PToast.success(context, '${_label(widget.exchange)} disconnected');
+        widget.onChanged();
+      },
+      onErr: (err) => PToast.error(context, err.userMessage),
+    );
+  }
+
+  Future<void> _connect() async {
+    final apiKey = _apiKeyCtrl.text.trim();
+    final apiSecret = _apiSecretCtrl.text.trim();
+    if (apiKey.isEmpty || apiSecret.isEmpty) {
+      PToast.error(context, 'API key and secret key are required');
+      return;
+    }
+    setState(() => _loading = true);
+    final result = await ref.read(profileApiProvider).createExchangeConnection(
+          exchange: widget.exchange,
+          apiKey: apiKey,
+          apiSecret: apiSecret,
+          isTestnet: false,
+        );
+    if (!mounted) return;
+    setState(() => _loading = false);
+    result.fold(
+      onOk: (_) {
+        _apiKeyCtrl.clear();
+        _apiSecretCtrl.clear();
+        PToast.success(context, '${_label(widget.exchange)} connected');
+        widget.onChanged();
+      },
       onErr: (err) => PToast.error(context, err.userMessage),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final label = widget.exchange == 'bybit' ? 'Bybit' : 'Binance';
+    final label = _label(widget.exchange);
     return Material(
       color: AppColors.bgSurface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: _loading ? null : _handleTap,
+        onTap: _loading ? null : widget.onToggle,
         borderRadius: BorderRadius.circular(8),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 58),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.borderLight),
           ),
-          child: Row(
+          child: Column(
             children: [
-              _ExchangeMark(exchange: widget.exchange),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+              Row(
+                children: [
+                  _ExchangeMark(exchange: widget.exchange),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (!_connected && !widget.expanded)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              'Connect exchange',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
+                  if (_loading)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else if (_connected) ...[
+                    _ConnectedPill(active: _connected),
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(
+                      widget.expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.textTertiary,
+                    ),
+                  ] else
+                    Icon(
+                      widget.expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.textTertiary,
+                    ),
+                ],
               ),
-              if (_loading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else if (_connected)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: 5,
+              if (widget.expanded) ...[
+                const SizedBox(height: AppSpacing.md),
+                if (_connected)
+                  _ConnectedExchangeActions(
+                    exchange: label,
+                    onDisconnect: _loading
+                        ? null
+                        : () async {
+                            final confirmed =
+                                await _showDisconnectSheet(context);
+                            if (confirmed == true) await _disconnect();
+                          },
+                  )
+                else
+                  _InlineExchangeForm(
+                    exchange: widget.exchange,
+                    apiKeyCtrl: _apiKeyCtrl,
+                    apiSecretCtrl: _apiSecretCtrl,
+                    loading: _loading,
+                    onHelp: () => _showApiHelpSheet(context),
+                    onSubmit: _connect,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.profitGreen.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.pillRadius,
-                    border: Border.all(
-                      color: AppColors.profitGreen.withValues(alpha: 0.28),
-                    ),
-                  ),
-                  child: Text(
-                    'Connected',
-                    style: AppTypography.labelSm.copyWith(
-                      color: AppColors.profitGreen,
-                    ),
-                  ),
-                )
-              else ...[
-                Text(
-                  'Connect exchange',
-                  style: AppTypography.labelSm.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.textDisabled,
-                ),
               ],
             ],
           ),
@@ -930,7 +1055,7 @@ class _ExchangeConnectionTileState
   }
 
   Future<bool?> _showDisconnectSheet(BuildContext context) {
-    final label = widget.exchange == 'bybit' ? 'Bybit' : 'Binance';
+    final label = _label(widget.exchange);
     return showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -981,6 +1106,173 @@ class _ExchangeConnectionTileState
       ),
     );
   }
+
+  Future<void> _showApiHelpSheet(BuildContext context) {
+    final label = _label(widget.exchange);
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SheetFrame(
+        title: 'Get API from $label',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final entry in _apiInstructions(label).entries) ...[
+              Text(
+                '${entry.key}. ${entry.value}',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            const SizedBox(height: AppSpacing.sm),
+            PPrimaryButton(
+              label: 'I understand',
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectedPill extends StatelessWidget {
+  const _ConnectedPill({required this.active});
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? AppColors.profitGreen : AppColors.textTertiary;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 5,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        active ? 'Connected' : 'Inactive',
+        style: AppTypography.labelSm.copyWith(color: color),
+      ),
+    );
+  }
+}
+
+class _InlineExchangeForm extends StatelessWidget {
+  const _InlineExchangeForm({
+    required this.exchange,
+    required this.apiKeyCtrl,
+    required this.apiSecretCtrl,
+    required this.loading,
+    required this.onHelp,
+    required this.onSubmit,
+  });
+
+  final String exchange;
+  final TextEditingController apiKeyCtrl;
+  final TextEditingController apiSecretCtrl;
+  final bool loading;
+  final VoidCallback onHelp;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text('Enter Details', style: AppTypography.bodyMedium),
+            ),
+            TextButton(
+              onPressed: loading ? null : onHelp,
+              child: const Text('How to get API'),
+            ),
+          ],
+        ),
+        Text(
+          'Enter your API key and secret key to start trading',
+          style: AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        PTextField(
+          controller: apiKeyCtrl,
+          label: 'API Key',
+          obscureText: true,
+          enabled: !loading,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        PTextField(
+          controller: apiSecretCtrl,
+          label: 'Secret key',
+          obscureText: true,
+          enabled: !loading,
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        PPrimaryButton(
+          label: 'Continue',
+          state: loading ? PButtonState.loading : PButtonState.idle,
+          onPressed: loading ? null : onSubmit,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Only read and trade permissions are required. Never enable withdrawal permissions.',
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textTertiary,
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConnectedExchangeActions extends StatelessWidget {
+  const _ConnectedExchangeActions({
+    required this.exchange,
+    required this.onDisconnect,
+  });
+
+  final String exchange;
+  final VoidCallback? onDisconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '$exchange is connected. Poise can monitor balances, open positions, and risk guardrails for this account.',
+          style: AppTypography.body.copyWith(
+            color: AppColors.textSecondary,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        OutlinedButton(
+          onPressed: onDisconnect,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.lossRed,
+            side: BorderSide(color: AppColors.lossRed.withValues(alpha: 0.35)),
+            shape: const RoundedRectangleBorder(
+              borderRadius: AppRadius.buttonRadius,
+            ),
+          ),
+          child: Text('Disconnect $exchange'),
+        ),
+      ],
+    );
+  }
 }
 
 class _ExchangeMark extends StatelessWidget {
@@ -1007,108 +1299,15 @@ class _ExchangeMark extends StatelessWidget {
   }
 }
 
-class _ExchangeConnectionDialog extends ConsumerStatefulWidget {
-  const _ExchangeConnectionDialog({this.initialExchange = 'bybit'});
-  final String initialExchange;
+String _label(String exchange) => exchange == 'binance' ? 'Binance' : 'Bybit';
 
-  @override
-  ConsumerState<_ExchangeConnectionDialog> createState() =>
-      _ExchangeConnectionDialogState();
-}
-
-class _ExchangeConnectionDialogState
-    extends ConsumerState<_ExchangeConnectionDialog> {
-  final _apiKeyCtrl = TextEditingController();
-  final _apiSecretCtrl = TextEditingController();
-  late String _exchange = widget.initialExchange;
-  bool _isTestnet = true;
-  bool _isSaving = false;
-
-  @override
-  void dispose() {
-    _apiKeyCtrl.dispose();
-    _apiSecretCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Connect ${_exchange.toUpperCase()}'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _exchange,
-              decoration: const InputDecoration(labelText: 'Exchange'),
-              items: const [
-                DropdownMenuItem(value: 'bybit', child: Text('Bybit')),
-                DropdownMenuItem(value: 'binance', child: Text('Binance')),
-              ],
-              onChanged: _isSaving
-                  ? null
-                  : (value) => setState(() => _exchange = value ?? 'bybit'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: _apiKeyCtrl,
-              decoration: const InputDecoration(labelText: 'API key'),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: _apiSecretCtrl,
-              decoration: const InputDecoration(labelText: 'API secret'),
-              obscureText: true,
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _isTestnet,
-              onChanged: _isSaving
-                  ? null
-                  : (value) => setState(() => _isTestnet = value),
-              title: const Text('Use testnet'),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-            onPressed: _isSaving ? null : _save, child: const Text('Connect')),
-      ],
-    );
-  }
-
-  Future<void> _save() async {
-    final apiKey = _apiKeyCtrl.text.trim();
-    final apiSecret = _apiSecretCtrl.text.trim();
-    if (apiKey.isEmpty || apiSecret.isEmpty) {
-      PToast.error(context, 'API key and secret are required');
-      return;
-    }
-    setState(() => _isSaving = true);
-    final result = await ref.read(profileApiProvider).createExchangeConnection(
-          exchange: _exchange,
-          apiKey: apiKey,
-          apiSecret: apiSecret,
-          isTestnet: _isTestnet,
-        );
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-    result.fold(
-      onOk: (_) {
-        PToast.success(context, 'Exchange connected');
-        Navigator.pop(context, true);
-      },
-      onErr: (err) => PToast.error(context, err.userMessage),
-    );
-  }
-}
+Map<int, String> _apiInstructions(String label) => {
+      1: 'Log in to your $label account in a web browser.',
+      2: 'Open API management from account settings or the user menu.',
+      3: 'Create a new API key with a clear label such as Poise trading.',
+      4: 'Enable read and trade permissions only. Do not enable withdrawals.',
+      5: 'Copy the API key and secret key into Poise, then continue.',
+    };
 
 void _showSecuritySheet(
   BuildContext context,

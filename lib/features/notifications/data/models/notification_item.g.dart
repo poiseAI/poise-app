@@ -14,7 +14,7 @@ _NotificationItem _$NotificationItemFromJson(Map<String, dynamic> json) =>
       type: json['notification_type'] as String,
       read: json['read'] as bool? ?? false,
       createdAt: json['created_at'] as String,
-      meta: json['meta'] as Map<String, dynamic>?,
+      meta: _metaFromJson(json['meta']),
     );
 
 Map<String, dynamic> _$NotificationItemToJson(_NotificationItem instance) =>

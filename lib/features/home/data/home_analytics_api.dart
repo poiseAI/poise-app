@@ -51,6 +51,9 @@ class HomeAnalytics {
     required this.guardrails,
     required this.disciplineFlags,
     required this.sourceBreakdown,
+    required this.totalBalance,
+    required this.balanceTentative,
+    required this.connectedExchangeCount,
     this.mostCostlyMistake,
   });
 
@@ -90,6 +93,21 @@ class HomeAnalytics {
       sourceBreakdown: SourceBreakdown.fromJson(
         (json['source_breakdown'] as Map<String, dynamic>?) ?? const {},
       ),
+      totalBalance: _readDouble(json, const [
+        'total_balance',
+        'portfolio_balance',
+        'cumulative_balance',
+        'account_balance',
+        'balance',
+      ]),
+      balanceTentative: json['balance_tentative'] as bool? ??
+          json['is_balance_tentative'] as bool? ??
+          false,
+      connectedExchangeCount: _readInt(json, const [
+        'connected_exchange_count',
+        'exchange_count',
+        'connected_exchanges',
+      ]),
     );
   }
 
@@ -104,6 +122,28 @@ class HomeAnalytics {
   final List<GuardrailMetric> guardrails;
   final List<DisciplineFlag> disciplineFlags;
   final SourceBreakdown sourceBreakdown;
+  final double? totalBalance;
+  final bool balanceTentative;
+  final int? connectedExchangeCount;
+}
+
+double? _readDouble(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+  }
+  return null;
+}
+
+int? _readInt(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    if (value is List) return value.length;
+  }
+  return null;
 }
 
 class SourceBreakdown {
@@ -136,8 +176,7 @@ class DisciplineFlag {
     required this.impact,
   });
 
-  factory DisciplineFlag.fromJson(Map<String, dynamic> json) =>
-      DisciplineFlag(
+  factory DisciplineFlag.fromJson(Map<String, dynamic> json) => DisciplineFlag(
         label: json['label'] as String? ?? 'Discipline flag',
         description: json['description'] as String? ?? '',
         severity: json['severity'] as String? ?? 'moderate',

@@ -33,7 +33,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               context.canPop() ? context.pop() : context.go(Routes.home),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
-        title: const Text('Notifications'),
+        title: const Text('Notifications', style: AppTypography.h1),
         actions: [
           notifications.maybeWhen(
             data: (items) => items.any((n) => !n.read)
@@ -45,10 +45,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             orElse: () => const SizedBox.shrink(),
           ),
         ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: AppColors.borderLight),
-        ),
       ),
       body: SafeArea(
         top: false,
@@ -60,21 +56,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     .copyWith(color: AppColors.textSecondary)),
           ),
           data: (items) {
+            final entries = _notificationEntries(items);
             return CustomScrollView(
               slivers: [
-                if (items.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
-                      child: Text(
-                        'Today',
-                        style: AppTypography.bodyLg.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
                 if (items.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
@@ -82,27 +66,34 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   )
                 else
                   SliverPadding(
-                    padding: AppSpacing.screenPadding.copyWith(top: 0),
+                    padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
                     sliver: SliverList.separated(
-                      itemCount: items.length,
+                      itemCount: entries.length,
                       separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.sm),
+                          const SizedBox(height: AppSpacing.md),
                       itemBuilder: (_, i) {
-                        final item = items[i];
-                        return _NotificationTile(
-                          key: ValueKey(item.id),
-                          item: item,
-                          index: i,
-                          onDismiss: () {
-                            HapticFeedback.mediumImpact();
-                            notifier.dismiss(item.id);
-                          },
-                          onTap: () async {
-                            await notifier.markRead(item.id);
-                            if (context.mounted) {
-                              _openNotification(context, item);
-                            }
-                          },
+                        final entry = entries[i];
+                        if (entry is String) {
+                          return _NotificationSectionHeader(label: entry);
+                        }
+                        final item = entry as NotificationItem;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          child: _NotificationTile(
+                            key: ValueKey(item.id),
+                            item: item,
+                            index: i,
+                            onDismiss: () {
+                              HapticFeedback.mediumImpact();
+                              notifier.dismiss(item.id);
+                            },
+                            onTap: () async {
+                              await notifier.markRead(item.id);
+                              if (context.mounted) {
+                                _openNotification(context, item);
+                              }
+                            },
+                          ),
                         );
                       },
                     ),
@@ -112,6 +103,25 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationSectionHeader extends StatelessWidget {
+  const _NotificationSectionHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Text(
+        label,
+        style: AppTypography.bodyLg.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -154,17 +164,37 @@ class _NotificationTile extends StatelessWidget {
   final VoidCallback onTap;
 
   static Color _typeColor(String type) {
-    if (type.contains('risk')) return AppColors.riskHigh;
-    if (type.contains('cancelled')) return AppColors.lossRed;
-    if (type.contains('filled')) return AppColors.profitGreen;
+    if (type.contains('risk') || type.contains('guardrail')) {
+      return AppColors.warningAmber;
+    }
+    if (type.contains('cancelled') ||
+        type.contains('rejected') ||
+        type.contains('loss')) {
+      return AppColors.lossRed;
+    }
+    if (type.contains('filled') ||
+        type.contains('trade') ||
+        type.contains('profit')) {
+      return AppColors.profitGreen;
+    }
     if (type.contains('position')) return AppColors.accent;
     return AppColors.textSecondary;
   }
 
   static IconData _typeIcon(String type) {
-    if (type.contains('risk')) return Icons.warning_amber_rounded;
-    if (type.contains('cancelled')) return Icons.cancel_outlined;
-    if (type.contains('filled')) return Icons.check_circle_outline_rounded;
+    if (type.contains('risk') || type.contains('guardrail')) {
+      return Icons.warning_amber_rounded;
+    }
+    if (type.contains('cancelled') ||
+        type.contains('rejected') ||
+        type.contains('loss')) {
+      return Icons.local_fire_department_rounded;
+    }
+    if (type.contains('filled') ||
+        type.contains('trade') ||
+        type.contains('profit')) {
+      return Icons.show_chart_rounded;
+    }
     if (type.contains('position')) return Icons.show_chart_rounded;
     return Icons.notifications_outlined;
   }
@@ -192,16 +222,16 @@ class _NotificationTile extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
+            horizontal: AppSpacing.lg,
             vertical: AppSpacing.lg,
           ),
           decoration: BoxDecoration(
-            color: item.read ? AppColors.bgCard : AppColors.bgSecondary,
-            borderRadius: AppRadius.cardRadius,
+            color: AppColors.bgSurface,
+            borderRadius: AppRadius.cardRadiusLg,
             border: Border.all(
               color: item.read
                   ? AppColors.borderLight
-                  : color.withValues(alpha: 0.25),
+                  : AppColors.primary.withValues(alpha: 0.14),
             ),
           ),
           child: Row(
@@ -224,7 +254,7 @@ class _NotificationTile extends StatelessWidget {
                   children: [
                     Text(
                       item.title,
-                      style: AppTypography.label.copyWith(
+                      style: AppTypography.h3.copyWith(
                         color: item.read
                             ? AppColors.textSecondary
                             : AppColors.textPrimary,
@@ -233,12 +263,14 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       item.body,
-                      style: AppTypography.bodySm
-                          .copyWith(color: AppColors.textSecondary),
-                      maxLines: 2,
+                      style: AppTypography.bodyLg.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.42,
+                      ),
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.lg),
                     Text(
                       _relativeTime(item.createdAt),
                       style: AppTypography.bodyMedium.copyWith(
@@ -254,8 +286,8 @@ class _NotificationTile extends StatelessWidget {
                 Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(
-                    color: color,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -269,6 +301,33 @@ class _NotificationTile extends StatelessWidget {
         .fadeIn(duration: 200.ms)
         .slideX(begin: 0.05, end: 0, curve: Curves.easeOut);
   }
+}
+
+List<Object> _notificationEntries(List<NotificationItem> items) {
+  final entries = <Object>[];
+  String? currentSection;
+  for (final item in items) {
+    final section = _sectionLabel(item.createdAt);
+    if (section != currentSection) {
+      entries.add(section);
+      currentSection = section;
+    }
+    entries.add(item);
+  }
+  return entries;
+}
+
+String _sectionLabel(String raw) {
+  final parsed = DateTime.tryParse(raw)?.toLocal();
+  if (parsed == null) return 'Earlier';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(parsed.year, parsed.month, parsed.day);
+  final diff = today.difference(day).inDays;
+  if (diff == 0) return 'Today';
+  if (diff == 1) return 'Yesterday';
+  if (diff < 7) return 'This week';
+  return 'Earlier';
 }
 
 String _relativeTime(String raw) {

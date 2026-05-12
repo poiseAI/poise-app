@@ -11,6 +11,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/feedback/p_loading_shimmer.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
+import '../../notifications/providers/notifications_provider.dart';
 import '../../positions/data/models/position.dart';
 import '../../profile/widgets/exchange_setup_sheet.dart';
 import '../data/home_analytics_api.dart';
@@ -24,7 +25,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeProvider);
-    final showNewTrade = homeState is! HomeLoading && homeState is! HomeError;
+    final showNewTrade = homeState is HomeEmpty || homeState is HomeData;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -107,47 +108,35 @@ class _NoExchangeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: AppSpacing.screenPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: AppSpacing.lg),
-          const _HomeHeader(),
-          const Spacer(),
-          Center(
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: AppSpacing.screenPadding,
+          sliver: SliverToBoxAdapter(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.link_off_rounded,
-                  size: 56,
-                  color: AppColors.textDisabled,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Text('No exchange connected', style: AppTypography.h3),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Connect your exchange to start seeing live trade guardrails.',
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                const SizedBox(height: AppSpacing.lg),
+                const _HomeHeader(),
                 const SizedBox(height: AppSpacing.xl),
-                FilledButton(
-                  onPressed: () => showExchangeSetupSheet(
+                _ConnectExchangeCard(
+                  onConnect: () => showExchangeSetupSheet(
                     context,
                     ref,
                     onManualSetup: () => context.go(Routes.exchangeConnections),
                   ),
-                  child: const Text('Connect exchange'),
                 ),
+                const SizedBox(height: AppSpacing.md),
+                const _PreConnectionBalanceCard(),
+                const SizedBox(height: AppSpacing.md),
+                const _PreConnectionGuardrailCard(),
               ],
             ),
           ),
-          const Spacer(),
-        ],
-      ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 116)),
+      ],
     );
   }
 }
@@ -192,6 +181,12 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
                   _PeriodTabs(
                     selected: _period,
                     onChanged: (period) => setState(() => _period = period),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _BalanceStrip(
+                    summary: widget.summary,
+                    positions: widget.positions,
+                    analytics: analytics,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   _AdherenceHero(
@@ -275,6 +270,7 @@ class _HomeHeader extends ConsumerWidget {
     final email = authState is AuthAuthenticated ? authState.email : '';
     final identity = _maskedIdentity(email);
     final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
+    final unreadCount = ref.watch(notificationUnreadCountProvider);
 
     return Row(
       children: [
@@ -312,14 +308,43 @@ class _HomeHeader extends ConsumerWidget {
             ],
           ),
         ),
-        IconButton(
-          tooltip: 'Notifications',
-          onPressed: () => context.go(Routes.notifications),
-          icon: const Icon(
-            Icons.notifications_none_rounded,
-            color: AppColors.textPrimary,
-            size: 24,
-          ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              tooltip: 'Notifications',
+              onPressed: () => context.go(Routes.notifications),
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: AppColors.textPrimary,
+                size: 24,
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 9,
+                top: 9,
+                child: Container(
+                  width: unreadCount > 9 ? 18 : 10,
+                  height: unreadCount > 9 ? 18 : 10,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: unreadCount > 9
+                      ? Text(
+                          '9+',
+                          style: AppTypography.labelSm.copyWith(
+                            color: Colors.white,
+                            fontSize: 8,
+                            height: 1,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+          ],
         ),
       ],
     );
@@ -385,6 +410,212 @@ class _PeriodTabs extends StatelessWidget {
   }
 }
 
+class _ConnectExchangeCard extends StatelessWidget {
+  const _ConnectExchangeCard({required this.onConnect});
+  final VoidCallback onConnect;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      backgroundColor: const Color(0xFFF8FBFF),
+      borderColor: AppColors.primary.withValues(alpha: 0.16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.add_link_rounded,
+              color: AppColors.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Text('Connect your first exchange', style: AppTypography.h2),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Poise will combine balance, open positions, and guardrail usage across every exchange you connect.',
+            style: AppTypography.body.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onConnect,
+              icon: const Icon(Icons.link_rounded, size: 18),
+              label: const Text('Connect exchange'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreConnectionBalanceCard extends StatelessWidget {
+  const _PreConnectionBalanceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _SectionCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('All-exchange balance', style: AppTypography.h3),
+                SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Waiting for a secure exchange connection',
+                  style: AppTypography.body,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: AppSpacing.md),
+          _StatusPill(label: 'Not synced', color: AppColors.textTertiary),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreConnectionGuardrailCard extends StatelessWidget {
+  const _PreConnectionGuardrailCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Guardrails will activate after sync',
+              style: AppTypography.h3),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Daily loss limit, trade frequency, open-position limits, and behavior checks stay inactive until Poise can read your account state.',
+            style: AppTypography.body.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BalanceStrip extends StatelessWidget {
+  const _BalanceStrip({
+    required this.summary,
+    required this.positions,
+    this.analytics,
+  });
+
+  final PnlSummary summary;
+  final List<Position> positions;
+  final HomeAnalytics? analytics;
+
+  @override
+  Widget build(BuildContext context) {
+    final syncedBalance = analytics?.totalBalance;
+    final estimate = summary.totalMarginUsed > 0
+        ? summary.totalMarginUsed + summary.totalUnrealizedPnl
+        : null;
+    final amount = syncedBalance ?? estimate;
+    final tentative =
+        syncedBalance == null || (analytics?.balanceTentative ?? false);
+    final exchangeCount =
+        analytics?.connectedExchangeCount ?? _exchangeCount(positions);
+    final pnl = analytics?.todayPnl ?? summary.dayPnl;
+
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardRadiusLg,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        tentative
+                            ? 'Tentative all-exchange balance'
+                            : 'All-exchange balance',
+                        style: AppTypography.bodyMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(
+                      tentative ? Icons.sync_rounded : Icons.verified_rounded,
+                      size: 15,
+                      color: tentative
+                          ? AppColors.warningAmber
+                          : AppColors.profitGreen,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  amount == null ? 'Syncing balance' : _money(amount),
+                  style: AppTypography.numericLg,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  tentative
+                      ? 'Refines as exchange balances finish syncing'
+                      : '$exchangeCount ${exchangeCount == 1 ? 'exchange' : 'exchanges'} connected',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Today',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                _money(pnl, signed: true),
+                style: AppTypography.numericMd.copyWith(
+                  color: AppColors.pnlColor(pnl),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AdherenceHero extends StatelessWidget {
   const _AdherenceHero({
     required this.summary,
@@ -403,28 +634,25 @@ class _AdherenceHero extends StatelessWidget {
         analytics?.adherenceScore ?? _adherenceScore(summary, positions.length);
     final pnlColor = AppColors.pnlColor(dayPnl);
 
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: AppSpacing.cardPaddingLg,
-          decoration: BoxDecoration(
-            color: const Color(0xFF004CE6),
-            borderRadius: AppRadius.cardRadiusLg,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0057FF).withValues(alpha: 0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPaddingLg,
+      decoration: BoxDecoration(
+        color: const Color(0xFF004CE6),
+        borderRadius: AppRadius.cardRadiusLg,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0057FF).withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-          child: const _HeroPattern(),
-        ),
-        Container(
-          width: double.infinity,
-          padding: AppSpacing.cardPaddingLg,
-          child: Column(
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          const Positioned.fill(child: _HeroPattern()),
+          Column(
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,8 +702,8 @@ class _AdherenceHero extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.04, end: 0);
   }
 }
@@ -485,58 +713,55 @@ class _HeroPattern extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 176,
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
-        children: [
-          Positioned(
-            right: 24,
-            top: -24,
-            child: Transform.rotate(
-              angle: -0.2,
-              child: Container(
-                width: 112,
-                height: 180,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+    return Stack(
+      clipBehavior: Clip.hardEdge,
+      children: [
+        Positioned(
+          right: 24,
+          top: -40,
+          bottom: -24,
+          child: Transform.rotate(
+            angle: -0.2,
+            child: Container(
+              width: 112,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
-          Positioned(
-            right: 78,
-            bottom: -36,
-            child: Transform.rotate(
-              angle: -0.2,
-              child: Container(
-                width: 96,
-                height: 170,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+        ),
+        Positioned(
+          right: 78,
+          top: 42,
+          bottom: -48,
+          child: Transform.rotate(
+            angle: -0.2,
+            child: Container(
+              width: 96,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
-          Positioned(
-            left: 110,
-            top: 16,
-            child: Transform.rotate(
-              angle: -0.2,
-              child: Container(
-                width: 56,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.035),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+        ),
+        Positioned(
+          left: 110,
+          top: 16,
+          bottom: 18,
+          child: Transform.rotate(
+            angle: -0.2,
+            child: Container(
+              width: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.035),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -855,6 +1080,21 @@ class _AdherenceDetailCard extends StatelessWidget {
                     _guardrail(analytics, 'Daily loss limit')?.status),
               ),
               _AdherenceTile(
+                label: 'Balance sync',
+                value: _balanceCoverageValue(
+                  _guardrail(analytics, 'Balance snapshot'),
+                  analytics: analytics,
+                ),
+                progress: _balanceCoverageProgress(
+                  _guardrail(analytics, 'Balance snapshot'),
+                  analytics: analytics,
+                ),
+                color: _balanceCoverageColor(
+                  _guardrail(analytics, 'Balance snapshot'),
+                  analytics: analytics,
+                ),
+              ),
+              _AdherenceTile(
                 label: 'Trades today',
                 value: '${analytics?.tradesClosedToday ?? 0}',
                 progress: score / 100.0,
@@ -1032,6 +1272,22 @@ class _GuardrailStatusCard extends StatelessWidget {
                 ),
               ),
               _GuardrailTile(
+                title: 'Balance coverage',
+                subtitle: 'All exchanges',
+                value: _balanceCoverageValue(
+                  _guardrail(analytics, 'Balance snapshot'),
+                  analytics: analytics,
+                ),
+                progress: _balanceCoverageProgress(
+                  _guardrail(analytics, 'Balance snapshot'),
+                  analytics: analytics,
+                ),
+                color: _balanceCoverageColor(
+                  _guardrail(analytics, 'Balance snapshot'),
+                  analytics: analytics,
+                ),
+              ),
+              _GuardrailTile(
                 title: 'Consecutive losses',
                 subtitle: 'Today\'s streak',
                 value: _guardrailValue(
@@ -1060,10 +1316,6 @@ class _GuardrailStatusCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _SnapshotStatusRow(
-            metric: _guardrail(analytics, 'Balance snapshot'),
           ),
           const SizedBox(height: AppSpacing.sm),
           _WideGuardrailTile(
@@ -1558,6 +1810,35 @@ String _guardrailValue(GuardrailMetric? metric, {String? fallback}) {
   return '${metric.value.toStringAsFixed(0)} / ${metric.limit.toStringAsFixed(0)}';
 }
 
+String _balanceCoverageValue(
+  GuardrailMetric? metric, {
+  HomeAnalytics? analytics,
+}) {
+  if (metric != null) return _guardrailValue(metric, fallback: 'Syncing');
+  final count = analytics?.connectedExchangeCount;
+  if (count != null && count > 0) return '$count synced';
+  return 'Syncing';
+}
+
+double _balanceCoverageProgress(
+  GuardrailMetric? metric, {
+  HomeAnalytics? analytics,
+}) {
+  if (metric != null) return metric.progress.clamp(0.0, 1.0);
+  if (analytics?.totalBalance != null) return 1;
+  return 0.35;
+}
+
+Color _balanceCoverageColor(
+  GuardrailMetric? metric, {
+  HomeAnalytics? analytics,
+}) {
+  if (metric != null) return _guardrailColor(metric.status);
+  return analytics?.totalBalance == null
+      ? AppColors.warningAmber
+      : AppColors.profitGreen;
+}
+
 String _guardrailProgress(HomeAnalytics? analytics, String label) {
   final g = _guardrail(analytics, label);
   if (g == null) return '—';
@@ -1571,4 +1852,12 @@ Color _guardrailColor(String? status) {
     'moderate' => AppColors.warningAmber,
     _ => AppColors.profitGreen,
   };
+}
+
+int _exchangeCount(List<Position> positions) {
+  final exchanges = positions
+      .map((position) => position.exchange.trim().toLowerCase())
+      .where((exchange) => exchange.isNotEmpty)
+      .toSet();
+  return exchanges.isEmpty ? 1 : exchanges.length;
 }
