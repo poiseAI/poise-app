@@ -152,10 +152,29 @@ class TradeValidationScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: AppSpacing.md),
-              const Text('Are you sure?', style: AppTypography.h2),
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.warningAmber.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.warningAmber,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Expanded(
+                    child: Text('Guardrail warning', style: AppTypography.h2),
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Submitting this trade will continue after one or more guardrail warnings. Do you want to proceed?',
+                'This trade can still be submitted, but it would continue after one or more Poise guardrail warnings. Review the warning before proceeding.',
                 style: AppTypography.bodyLg
                     .copyWith(color: AppColors.textSecondary),
               ),
@@ -419,7 +438,7 @@ class _GuardrailPanel extends StatelessWidget {
                 const Text('No guardrails triggered', style: AppTypography.h3),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'You’re all set and ready to roll!',
+                  "You're all set and ready to roll!",
                   style: AppTypography.body
                       .copyWith(color: AppColors.textSecondary),
                 ),
@@ -437,16 +456,159 @@ class _GuardrailPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          validation.isBlocked
-              ? 'Risk guardrails check'
-              : 'Behavioural Analysis',
+          validation.isBlocked ? 'Risk guardrails check' : 'Guardrail warnings',
           style: AppTypography.h3,
         ),
         const SizedBox(height: AppSpacing.sm),
+        if (validation.dailyLimitAcknowledgementRequired) ...[
+          _DailyLimitWarningCard(validation: validation),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         for (final item in items) ...[
           _GuardrailTile(item: item),
           const SizedBox(height: AppSpacing.sm),
         ],
+      ],
+    );
+  }
+}
+
+class _DailyLimitWarningCard extends StatelessWidget {
+  const _DailyLimitWarningCard({required this.validation});
+
+  final TradeValidationResult validation;
+
+  @override
+  Widget build(BuildContext context) {
+    final limit = validation.dailyLossLimitUsd;
+    final projected = validation.projectedDailyLossUsd;
+    final remaining = validation.remainingDailyLossBudgetUsd;
+    final progress = limit <= 0 ? 1.0 : (projected / limit).clamp(0.0, 1.0);
+    final overLimit = projected > limit && limit > 0;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.lossRed.withValues(alpha: 0.06),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.lossRed.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.lossRed.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.shield_outlined,
+                  color: AppColors.lossRed,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      overLimit
+                          ? 'Daily loss limit would be exceeded'
+                          : 'Daily loss limit needs acknowledgement',
+                      style: AppTypography.h4,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Poise is counting realized loss, reserved stop-loss risk, and external exchange exposure before this order is sent.',
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ClipRRect(
+            borderRadius: AppRadius.pillRadius,
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              color: AppColors.lossRed,
+              backgroundColor: AppColors.lossRed.withValues(alpha: 0.13),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _LimitMetric(
+                  label: 'After trade',
+                  value: _money(projected),
+                  color: AppColors.lossRed,
+                ),
+              ),
+              Expanded(
+                child: _LimitMetric(
+                  label: 'Daily limit',
+                  value: _money(limit),
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Expanded(
+                child: _LimitMetric(
+                  label: remaining < 0 ? 'Over by' : 'Remaining',
+                  value: _money(remaining),
+                  color:
+                      remaining < 0 ? AppColors.lossRed : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LimitMetric extends StatelessWidget {
+  const _LimitMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+        ),
+        const SizedBox(height: 3),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: AppTypography.numericSm.copyWith(color: color),
+          ),
+        ),
       ],
     );
   }

@@ -12,6 +12,7 @@ import '../../../core/widgets/feedback/p_loading_shimmer.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
 import '../../positions/data/models/position.dart';
+import '../../profile/widgets/exchange_setup_sheet.dart';
 import '../data/home_analytics_api.dart';
 import '../providers/home_provider.dart';
 import '../providers/home_state.dart';
@@ -34,7 +35,7 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         child: switch (homeState) {
           HomeLoading() => const _LoadingBody(),
-          HomeNoExchange() => const _NoExchangeBody(),
+          HomeNoExchange() => _NoExchangeBody(ref: ref),
           HomeEmpty(:final summary) => _DashboardBody(
               positions: const [],
               summary: summary,
@@ -100,7 +101,9 @@ class _LoadingBody extends StatelessWidget {
 }
 
 class _NoExchangeBody extends StatelessWidget {
-  const _NoExchangeBody();
+  const _NoExchangeBody({required this.ref});
+
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -132,8 +135,11 @@ class _NoExchangeBody extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 FilledButton(
-                  onPressed: () =>
-                      context.go('${Routes.profile}?sheet=exchange'),
+                  onPressed: () => showExchangeSetupSheet(
+                    context,
+                    ref,
+                    onManualSetup: () => context.go(Routes.exchangeConnections),
+                  ),
                   child: const Text('Connect exchange'),
                 ),
               ],

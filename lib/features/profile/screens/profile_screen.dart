@@ -20,6 +20,7 @@ import '../../onboarding/screens/set_risk_appetite_screen.dart';
 import '../../strategies/providers/strategies_provider.dart';
 import '../data/profile_api.dart';
 import '../providers/notification_preferences_provider.dart';
+import '../widgets/exchange_setup_sheet.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -40,7 +41,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _handledInitialSheet = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        context.go(Routes.exchangeConnections);
+        showExchangeSetupSheet(
+          context,
+          ref,
+          onManualSetup: () => context.go(Routes.exchangeConnections),
+        );
       });
     }
   }
@@ -107,7 +112,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _SettingsTile(
             icon: Icons.cable_rounded,
             label: 'Exchange Connections',
-            onTap: () => context.push(Routes.exchangeConnections),
+            onTap: () => showExchangeSetupSheet(
+              context,
+              ref,
+              onManualSetup: () => context.push(Routes.exchangeConnections),
+            ),
           ),
           _SettingsTile(
             icon: Icons.percent_rounded,
