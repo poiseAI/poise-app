@@ -75,10 +75,7 @@ abstract final class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.buttonRadius,
           ),
@@ -104,10 +101,7 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.primary),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.buttonRadius,
           ),

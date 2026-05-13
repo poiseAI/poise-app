@@ -101,9 +101,8 @@ class _PSecondaryButtonState extends State<PSecondaryButton>
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.transparent,
-            borderRadius: collapsed
-                ? BorderRadius.circular(26)
-                : AppRadius.buttonRadius,
+            borderRadius:
+                collapsed ? BorderRadius.circular(26) : AppRadius.buttonRadius,
             border: Border.all(
               color: isError
                   ? AppColors.lossRed
@@ -133,21 +132,28 @@ class _PSecondaryButtonState extends State<PSecondaryButton>
                           color: AppColors.accent,
                           size: 22,
                         )
-                      : Row(
+                      : Padding(
                           key: const ValueKey('label'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.icon != null) ...[
-                              widget.icon!,
-                              const SizedBox(width: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.icon != null) ...[
+                                widget.icon!,
+                                const SizedBox(width: 8),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  widget.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.buttonLg
+                                      .copyWith(color: AppColors.accent),
+                                ),
+                              ),
                             ],
-                            Text(
-                              widget.label,
-                              style: AppTypography.buttonLg
-                                  .copyWith(color: AppColors.accent),
-                            ),
-                          ],
+                          ),
                         ),
             ),
           ),

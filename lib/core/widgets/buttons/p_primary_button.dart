@@ -55,8 +55,7 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
         old.state != PButtonState.loading) {
       HapticFeedback.mediumImpact();
     }
-    if (widget.state == PButtonState.error &&
-        old.state != PButtonState.error) {
+    if (widget.state == PButtonState.error && old.state != PButtonState.error) {
       _shakeCtrl.forward(from: 0).then((_) => _shakeCtrl.reset());
       HapticFeedback.mediumImpact();
     }
@@ -159,16 +158,23 @@ class _LabelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (icon != null) ...[icon!, const SizedBox(width: 8)],
-        Text(
-          label,
-          style: AppTypography.buttonLg.copyWith(color: Colors.white),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[icon!, const SizedBox(width: 8)],
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.buttonLg.copyWith(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

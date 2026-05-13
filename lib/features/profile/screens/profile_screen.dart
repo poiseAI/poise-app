@@ -88,7 +88,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 18),
           SizedBox(
-            height: 40,
+            height: 44,
             child: OutlinedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -1971,7 +1971,11 @@ class _ConfirmSheet extends StatelessWidget {
             icon: primaryIcon == null
                 ? const SizedBox.shrink()
                 : Icon(primaryIcon),
-            label: Text(primaryLabel),
+            label: Text(
+              primaryLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             style: OutlinedButton.styleFrom(foregroundColor: color),
           ),
         ],

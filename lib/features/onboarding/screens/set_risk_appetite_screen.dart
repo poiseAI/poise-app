@@ -273,7 +273,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
               const Spacer(),
               SizedBox(
                 width: double.infinity,
-                height: 44,
+                height: 48,
                 child: OutlinedButton(
                   onPressed: () => setState(() => _editingSettings = true),
                   child: const Text('Change risk appetite'),
@@ -501,7 +501,7 @@ class _RiskSummaryCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           SizedBox(
             width: double.infinity,
-            height: 38,
+            height: 44,
             child: OutlinedButton(
               onPressed: onEdit,
               child: const Text('Edit risk settings'),

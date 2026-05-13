@@ -100,9 +100,8 @@ class _PDestructiveButtonState extends State<PDestructiveButton>
             color: _isEnabled || isLoading || isSuccess
                 ? AppColors.lossRed
                 : AppColors.lossRed.withValues(alpha: 0.5),
-            borderRadius: collapsed
-                ? BorderRadius.circular(26)
-                : AppRadius.buttonRadius,
+            borderRadius:
+                collapsed ? BorderRadius.circular(26) : AppRadius.buttonRadius,
           ),
           child: Center(
             child: AnimatedSwitcher(
@@ -124,29 +123,34 @@ class _PDestructiveButtonState extends State<PDestructiveButton>
                           color: Colors.white,
                           size: 22,
                         )
-                      : Row(
+                      : Padding(
                           key: const ValueKey('label'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.icon != null) ...[
-                              widget.icon!,
-                              const SizedBox(width: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.icon != null) ...[
+                                widget.icon!,
+                                const SizedBox(width: 8),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  widget.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.buttonLg
+                                      .copyWith(color: Colors.white),
+                                ),
+                              ),
                             ],
-                            Text(
-                              widget.label,
-                              style: AppTypography.buttonLg
-                                  .copyWith(color: Colors.white),
-                            ),
-                          ],
+                          ),
                         ),
             ),
           ),
         ),
       ),
-    )
-        .animate(onPlay: (ctrl) => ctrl.repeat(reverse: true))
-        .shimmer(
+    ).animate(onPlay: (ctrl) => ctrl.repeat(reverse: true)).shimmer(
           duration: 1200.ms,
           color: AppColors.lossRed.withValues(alpha: 0.3),
         );
