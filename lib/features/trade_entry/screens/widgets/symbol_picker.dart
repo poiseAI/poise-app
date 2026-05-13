@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -10,7 +9,7 @@ import '../../data/models/symbol.dart';
 import '../../providers/symbol_search_provider.dart';
 import '../../providers/trade_form_provider.dart';
 
-class SymbolPicker extends ConsumerStatefulWidget {
+class SymbolPicker extends ConsumerWidget {
   const SymbolPicker({
     super.key,
     required this.selected,
@@ -21,23 +20,96 @@ class SymbolPicker extends ConsumerStatefulWidget {
   final String exchange;
 
   @override
-  ConsumerState<SymbolPicker> createState() => _SymbolPickerState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final normalizedExchange = _normalizeExchange(exchange);
+    final selected = this.selected;
+
+    return Material(
+      color: AppColors.bgCard,
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        borderRadius: AppRadius.cardRadius,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          ref
+              .read(symbolSearchProvider.notifier)
+              .loadPopular(exchange: normalizedExchange);
+          showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => _SymbolChooserSheet(
+              exchange: normalizedExchange,
+              selected: selected,
+            ),
+          );
+        },
+        child: Container(
+          padding: AppSpacing.cardPadding,
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.currency_bitcoin_rounded,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: selected == null
+                    ? _SymbolPrompt(exchange: normalizedExchange)
+                    : _SelectedSymbol(symbol: selected),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Icon(
+                Icons.keyboard_arrow_right_rounded,
+                size: 22,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _SymbolPickerState extends ConsumerState<SymbolPicker> {
-  bool _expanded = false;
-  final _ctrl = TextEditingController();
+class _SymbolChooserSheet extends ConsumerStatefulWidget {
+  const _SymbolChooserSheet({
+    required this.exchange,
+    this.selected,
+  });
 
-  String get _exchange => _normalizeExchange(widget.exchange);
+  final String exchange;
+  final TradingSymbol? selected;
 
   @override
-  void didUpdateWidget(covariant SymbolPicker oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!_expanded) return;
-    if (_normalizeExchange(oldWidget.exchange) != _exchange) {
-      _ctrl.clear();
-      ref.read(symbolSearchProvider.notifier).loadPopular(exchange: _exchange);
-    }
+  ConsumerState<_SymbolChooserSheet> createState() =>
+      _SymbolChooserSheetState();
+}
+
+class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => ref
+          .read(symbolSearchProvider.notifier)
+          .loadPopular(exchange: widget.exchange),
+    );
   }
 
   @override
@@ -46,107 +118,191 @@ class _SymbolPickerState extends ConsumerState<SymbolPicker> {
     super.dispose();
   }
 
-  void _open() {
-    setState(() => _expanded = true);
-    ref.read(symbolSearchProvider.notifier).loadPopular(exchange: _exchange);
+  void _select(TradingSymbol symbol) {
+    if (symbol.lastPrice <= 0) {
+      ref.read(symbolSearchProvider.notifier).search(
+            symbol.baseAsset,
+            exchange: widget.exchange,
+          );
+      return;
+    }
+    ref.read(tradeFormProvider.notifier).setSymbol(symbol);
+    ref.read(symbolSearchProvider.notifier).remember(symbol);
+    Navigator.pop(context);
   }
 
-  void _close() {
-    FocusScope.of(context).unfocus();
-    setState(() => _expanded = false);
-  }
-
-  void _select(TradingSymbol sym) {
-    ref.read(tradeFormProvider.notifier).setSymbol(sym);
-    ref.read(symbolSearchProvider.notifier).remember(sym);
-    _ctrl.clear();
-    _close();
+  void _search(String value) {
+    setState(() {});
+    ref.read(symbolSearchProvider.notifier).search(
+          value,
+          exchange: widget.exchange,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    final sym = widget.selected;
+    final searchState = ref.watch(symbolSearchProvider);
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    final searching = _ctrl.text.trim().isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: _expanded ? _close : _open,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: AppRadius.chipRadius,
-              border: Border.all(
-                color: _expanded ? AppColors.accent : AppColors.borderLight,
-                width: _expanded ? 1.5 : 1,
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          bottom: viewInsets.bottom + AppSpacing.md,
+        ),
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+          ),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            borderRadius: BorderRadius.all(Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Choose market',
+                      style: AppTypography.h2.copyWith(letterSpacing: 0),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
               ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: sym == null
-                      ? _SymbolPlaceholder(exchange: _exchange)
-                      : _SelectedSymbol(symbol: sym),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                AnimatedRotation(
-                  turns: _expanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 20,
+              const SizedBox(height: AppSpacing.xs),
+              TextField(
+                controller: _ctrl,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                  TextInputFormatter.withFunction(
+                    (oldValue, newValue) => newValue.copyWith(
+                      text: newValue.text.toUpperCase(),
+                      selection: newValue.selection,
+                    ),
+                  ),
+                ],
+                style: AppTypography.body,
+                decoration: InputDecoration(
+                  hintText: 'Search coin or pair',
+                  hintStyle: AppTypography.body.copyWith(
+                    color: AppColors.textDisabled,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    size: 18,
                     color: AppColors.textSecondary,
                   ),
+                  suffixIcon: _ctrl.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          onPressed: () {
+                            _ctrl.clear();
+                            _search('');
+                          },
+                        ),
+                  filled: true,
+                  fillColor: AppColors.bgCard,
+                  border: const OutlineInputBorder(
+                    borderRadius: AppRadius.chipRadius,
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
                 ),
-              ],
-            ),
+                onChanged: _search,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                searching ? 'Best matches' : 'Recent & popular',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Flexible(
+                child: searchState.when(
+                  loading: () => const _SymbolLoadingList(),
+                  error: (_, __) => _SymbolPanelMessage(
+                    title: 'Failed to load markets',
+                    actionLabel: 'Retry',
+                    onAction: () => ref
+                        .read(symbolSearchProvider.notifier)
+                        .loadPopular(exchange: widget.exchange),
+                  ),
+                  data: (symbols) {
+                    if (symbols.isEmpty) {
+                      return const _SymbolPanelMessage(
+                        title: 'No matching market found',
+                      );
+                    }
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: symbols.length,
+                      separatorBuilder: (_, __) => const Divider(
+                        height: 1,
+                        color: AppColors.borderLight,
+                      ),
+                      itemBuilder: (context, index) {
+                        final symbol = symbols[index];
+                        return _SymbolResultTile(
+                          symbol: symbol,
+                          selected: symbol.symbol == widget.selected?.symbol,
+                          enabled: symbol.lastPrice > 0,
+                          onTap: () => _select(symbol),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          alignment: Alignment.topCenter,
-          child: _expanded
-              ? _SearchPanel(
-                  onSelect: _select,
-                  ctrl: _ctrl,
-                  exchange: _exchange,
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _SymbolPlaceholder extends StatelessWidget {
-  const _SymbolPlaceholder({required this.exchange});
+class _SymbolPrompt extends StatelessWidget {
+  const _SymbolPrompt({required this.exchange});
 
   final String exchange;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(
-          Icons.search_rounded,
-          size: 18,
-          color: AppColors.textSecondary,
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            'Search ${exchange.toUpperCase()} symbol',
-            style: AppTypography.body.copyWith(
-              color: AppColors.textDisabled,
-            ),
-            overflow: TextOverflow.ellipsis,
+        const Text('Market', style: AppTypography.bodyMedium),
+        const SizedBox(height: 2),
+        Text(
+          'Tap to pick BTC, ETH, SOL or a recent ${exchange.toUpperCase()} pair',
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textSecondary,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -160,177 +316,46 @@ class _SelectedSymbol extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: 2,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.accent.withValues(alpha: 0.12),
-            borderRadius: AppRadius.chipRadius,
-          ),
-          child: Text(
-            symbol.symbol,
-            style: AppTypography.label.copyWith(color: AppColors.accent),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Flexible(
-          child: Text(
-            _symbolMeta(symbol),
-            style: AppTypography.numericSm.copyWith(
-              color: AppColors.textSecondary,
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                symbol.symbol,
+                style: AppTypography.h4,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            overflow: TextOverflow.ellipsis,
+            const SizedBox(width: AppSpacing.xs),
+            _ExchangePill(symbol.exchange),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          _symbolMeta(symbol),
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textSecondary,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 }
 
-class _SearchPanel extends ConsumerWidget {
-  const _SearchPanel({
-    required this.onSelect,
-    required this.ctrl,
-    required this.exchange,
+class _SymbolResultTile extends StatelessWidget {
+  const _SymbolResultTile({
+    required this.symbol,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
   });
 
-  final ValueChanged<TradingSymbol> onSelect;
-  final TextEditingController ctrl;
-  final String exchange;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final searchState = ref.watch(symbolSearchProvider);
-
-    return Container(
-      margin: const EdgeInsets.only(top: AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: TextField(
-              controller: ctrl,
-              autofocus: true,
-              textCapitalization: TextCapitalization.characters,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-                TextInputFormatter.withFunction(
-                  (oldValue, newValue) => newValue.copyWith(
-                    text: newValue.text.toUpperCase(),
-                    selection: newValue.selection,
-                  ),
-                ),
-              ],
-              style: AppTypography.body,
-              decoration: InputDecoration(
-                hintText: 'Search ${exchange.toUpperCase()} symbols',
-                hintStyle: AppTypography.body.copyWith(
-                  color: AppColors.textDisabled,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
-                suffixIcon: ctrl.text.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 18),
-                        onPressed: () {
-                          ctrl.clear();
-                          ref
-                              .read(symbolSearchProvider.notifier)
-                              .loadPopular(exchange: exchange);
-                        },
-                      ),
-                filled: true,
-                fillColor: AppColors.bgPrimary,
-                border: const OutlineInputBorder(
-                  borderRadius: AppRadius.chipRadius,
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-              ),
-              onChanged: (value) => ref
-                  .read(symbolSearchProvider.notifier)
-                  .search(value, exchange: exchange),
-            ),
-          ),
-          searchState.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            error: (_, __) => _SymbolPanelMessage(
-              title: 'Failed to load symbols',
-              actionLabel: 'Retry',
-              onAction: () => ref
-                  .read(symbolSearchProvider.notifier)
-                  .loadPopular(exchange: exchange),
-            ),
-            data: (symbols) {
-              if (symbols.isEmpty) {
-                return const _SymbolPanelMessage(title: 'No symbols found');
-              }
-              return ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 320),
-                child: Scrollbar(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                    itemCount: symbols.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 1,
-                      color: AppColors.borderLight,
-                    ),
-                    itemBuilder: (ctx, i) {
-                      return _SymbolResultTile(
-                        symbol: symbols[i],
-                        onTap: () => onSelect(symbols[i]),
-                      )
-                          .animate(delay: (i * 25).ms)
-                          .fadeIn(duration: 150.ms)
-                          .slideY(
-                            begin: 0.1,
-                            end: 0,
-                            curve: Curves.easeOut,
-                          );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SymbolResultTile extends StatelessWidget {
-  const _SymbolResultTile({required this.symbol, required this.onTap});
-
   final TradingSymbol symbol;
+  final bool selected;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
@@ -339,55 +364,64 @@ class _SymbolResultTile extends StatelessWidget {
     final hasPct = pct != 0;
     final pctColor = pct >= 0 ? AppColors.profitGreen : AppColors.lossRed;
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          symbol.symbol,
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      _ExchangePill(symbol.exchange),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _symbolMeta(symbol),
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+    return Material(
+      color: selected ? AppColors.accent.withValues(alpha: 0.08) : null,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _SelectedSymbol(symbol: symbol),
               ),
-            ),
-            if (hasPct) ...[
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
-                style: AppTypography.numericSm.copyWith(color: pctColor),
+              if (!enabled)
+                Text(
+                  'Loading price',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                )
+              else if (hasPct)
+                Text(
+                  '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
+                  style: AppTypography.numericSm.copyWith(color: pctColor),
+                )
+              else
+                Text(
+                  'Popular',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              const SizedBox(width: AppSpacing.sm),
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.add_circle_outline_rounded,
+                color: selected ? AppColors.accent : AppColors.textTertiary,
+                size: 20,
               ),
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _SymbolLoadingList extends StatelessWidget {
+  const _SymbolLoadingList();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(AppSpacing.lg),
+      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
     );
   }
 }
@@ -427,7 +461,7 @@ class _SymbolPanelMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

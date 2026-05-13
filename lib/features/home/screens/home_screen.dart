@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -8,6 +10,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/websocket/ws_message.dart';
+import '../../../core/websocket/ws_service.dart';
 import '../../../core/widgets/feedback/p_loading_shimmer.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
@@ -158,6 +162,44 @@ class _DashboardBody extends ConsumerStatefulWidget {
 
 class _DashboardBodyState extends ConsumerState<_DashboardBody> {
   String _period = 'today';
+  StreamSubscription<WsMessage>? _wsSub;
+  Timer? _analyticsRefreshDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _wsSub = ref.read(wsServiceProvider).stream.listen((msg) {
+      if (msg is WsPositionUpdate || msg is WsOrderUpdate) {
+        _scheduleAnalyticsRefresh();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _wsSub?.cancel();
+    _analyticsRefreshDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleAnalyticsRefresh() {
+    _analyticsRefreshDebounce?.cancel();
+    _analyticsRefreshDebounce = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      ref.invalidate(homeAnalyticsProvider(_period));
+    });
+  }
+
+  Future<void> _refreshAll() async {
+    ref.invalidate(homeAnalyticsProvider(_period));
+    await Future.wait<dynamic>([
+      widget.onRefresh(),
+      ref.read(homeAnalyticsProvider(_period).future).then<void>(
+            (_) {},
+            onError: (_, __) {},
+          ),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +207,7 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
 
     return RefreshIndicator(
       color: AppColors.accent,
-      onRefresh: widget.onRefresh,
+      onRefresh: _refreshAll,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [

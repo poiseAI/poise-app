@@ -17,7 +17,9 @@ mixin _$Position {
   String get id;
   String get symbol;
   String get side; // 'long' | 'short'
+  @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
   double get entryPrice;
+  @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
   double get currentPrice;
   @JsonKey(readValue: _readQuantity)
   double get quantity;
@@ -25,7 +27,9 @@ mixin _$Position {
   @JsonKey(name: 'exchange_order_id')
   String? get exchangeOrderId;
   double get leverage;
+  @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
   double get unrealizedPnl;
+  @JsonKey(name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
   double get unrealizedPnlPct;
   @JsonKey(name: 'realized_pnl')
   double get realizedPnl;
@@ -42,6 +46,7 @@ mixin _$Position {
   @JsonKey(name: 'closed_at')
   String? get closedAt;
   String get status; // 'open' | 'locked' | 'closing'
+  @JsonKey(name: 'is_locked', readValue: _readIsLocked)
   bool get isLocked;
   @JsonKey(name: 'tp_levels')
   List<double> get tpLevels;
@@ -155,13 +160,17 @@ abstract mixin class $PositionCopyWith<$Res> {
       {String id,
       String symbol,
       String side,
+      @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
       double entryPrice,
+      @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
       double currentPrice,
       @JsonKey(readValue: _readQuantity) double quantity,
       String source,
       @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
       double leverage,
+      @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
       double unrealizedPnl,
+      @JsonKey(name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
       double unrealizedPnlPct,
       @JsonKey(name: 'realized_pnl') double realizedPnl,
       @JsonKey(name: 'liquidation_price') double? liquidationPrice,
@@ -171,7 +180,7 @@ abstract mixin class $PositionCopyWith<$Res> {
       @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
       @JsonKey(name: 'closed_at') String? closedAt,
       String status,
-      bool isLocked,
+      @JsonKey(name: 'is_locked', readValue: _readIsLocked) bool isLocked,
       @JsonKey(name: 'tp_levels') List<double> tpLevels,
       @JsonKey(name: 'sl_price') double? slPrice,
       @JsonKey(name: 'exchange') String exchange,
@@ -413,13 +422,18 @@ extension PositionPatterns on Position {
             String id,
             String symbol,
             String side,
+            @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
             double entryPrice,
+            @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
             double currentPrice,
             @JsonKey(readValue: _readQuantity) double quantity,
             String source,
             @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
             double leverage,
+            @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
             double unrealizedPnl,
+            @JsonKey(
+                name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
             double unrealizedPnlPct,
             @JsonKey(name: 'realized_pnl') double realizedPnl,
             @JsonKey(name: 'liquidation_price') double? liquidationPrice,
@@ -429,7 +443,7 @@ extension PositionPatterns on Position {
             @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
             @JsonKey(name: 'closed_at') String? closedAt,
             String status,
-            bool isLocked,
+            @JsonKey(name: 'is_locked', readValue: _readIsLocked) bool isLocked,
             @JsonKey(name: 'tp_levels') List<double> tpLevels,
             @JsonKey(name: 'sl_price') double? slPrice,
             @JsonKey(name: 'exchange') String exchange,
@@ -489,13 +503,18 @@ extension PositionPatterns on Position {
             String id,
             String symbol,
             String side,
+            @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
             double entryPrice,
+            @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
             double currentPrice,
             @JsonKey(readValue: _readQuantity) double quantity,
             String source,
             @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
             double leverage,
+            @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
             double unrealizedPnl,
+            @JsonKey(
+                name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
             double unrealizedPnlPct,
             @JsonKey(name: 'realized_pnl') double realizedPnl,
             @JsonKey(name: 'liquidation_price') double? liquidationPrice,
@@ -505,7 +524,7 @@ extension PositionPatterns on Position {
             @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
             @JsonKey(name: 'closed_at') String? closedAt,
             String status,
-            bool isLocked,
+            @JsonKey(name: 'is_locked', readValue: _readIsLocked) bool isLocked,
             @JsonKey(name: 'tp_levels') List<double> tpLevels,
             @JsonKey(name: 'sl_price') double? slPrice,
             @JsonKey(name: 'exchange') String exchange,
@@ -563,13 +582,18 @@ extension PositionPatterns on Position {
             String id,
             String symbol,
             String side,
+            @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
             double entryPrice,
+            @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
             double currentPrice,
             @JsonKey(readValue: _readQuantity) double quantity,
             String source,
             @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
             double leverage,
+            @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
             double unrealizedPnl,
+            @JsonKey(
+                name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
             double unrealizedPnlPct,
             @JsonKey(name: 'realized_pnl') double realizedPnl,
             @JsonKey(name: 'liquidation_price') double? liquidationPrice,
@@ -579,7 +603,7 @@ extension PositionPatterns on Position {
             @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
             @JsonKey(name: 'closed_at') String? closedAt,
             String status,
-            bool isLocked,
+            @JsonKey(name: 'is_locked', readValue: _readIsLocked) bool isLocked,
             @JsonKey(name: 'tp_levels') List<double> tpLevels,
             @JsonKey(name: 'sl_price') double? slPrice,
             @JsonKey(name: 'exchange') String exchange,
@@ -627,13 +651,17 @@ class _Position implements Position {
       {required this.id,
       required this.symbol,
       required this.side,
+      @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
       required this.entryPrice,
+      @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
       required this.currentPrice,
       @JsonKey(readValue: _readQuantity) required this.quantity,
       this.source = 'external',
       @JsonKey(name: 'exchange_order_id') this.exchangeOrderId,
       this.leverage = 1.0,
+      @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
       required this.unrealizedPnl,
+      @JsonKey(name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
       this.unrealizedPnlPct = 0.0,
       @JsonKey(name: 'realized_pnl') this.realizedPnl = 0.0,
       @JsonKey(name: 'liquidation_price') this.liquidationPrice,
@@ -643,6 +671,7 @@ class _Position implements Position {
       @JsonKey(name: 'last_synced_at') this.lastSyncedAt,
       @JsonKey(name: 'closed_at') this.closedAt,
       required this.status,
+      @JsonKey(name: 'is_locked', readValue: _readIsLocked)
       this.isLocked = false,
       @JsonKey(name: 'tp_levels') final List<double> tpLevels = const [],
       @JsonKey(name: 'sl_price') this.slPrice,
@@ -660,8 +689,10 @@ class _Position implements Position {
   final String side;
 // 'long' | 'short'
   @override
+  @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
   final double entryPrice;
   @override
+  @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
   final double currentPrice;
   @override
   @JsonKey(readValue: _readQuantity)
@@ -676,9 +707,10 @@ class _Position implements Position {
   @JsonKey()
   final double leverage;
   @override
+  @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
   final double unrealizedPnl;
   @override
-  @JsonKey()
+  @JsonKey(name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
   final double unrealizedPnlPct;
   @override
   @JsonKey(name: 'realized_pnl')
@@ -705,7 +737,7 @@ class _Position implements Position {
   final String status;
 // 'open' | 'locked' | 'closing'
   @override
-  @JsonKey()
+  @JsonKey(name: 'is_locked', readValue: _readIsLocked)
   final bool isLocked;
   final List<double> _tpLevels;
   @override
@@ -836,13 +868,17 @@ abstract mixin class _$PositionCopyWith<$Res>
       {String id,
       String symbol,
       String side,
+      @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
       double entryPrice,
+      @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
       double currentPrice,
       @JsonKey(readValue: _readQuantity) double quantity,
       String source,
       @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
       double leverage,
+      @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
       double unrealizedPnl,
+      @JsonKey(name: 'unrealized_pnl_pct', readValue: _readUnrealizedPnlPct)
       double unrealizedPnlPct,
       @JsonKey(name: 'realized_pnl') double realizedPnl,
       @JsonKey(name: 'liquidation_price') double? liquidationPrice,
@@ -852,7 +888,7 @@ abstract mixin class _$PositionCopyWith<$Res>
       @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
       @JsonKey(name: 'closed_at') String? closedAt,
       String status,
-      bool isLocked,
+      @JsonKey(name: 'is_locked', readValue: _readIsLocked) bool isLocked,
       @JsonKey(name: 'tp_levels') List<double> tpLevels,
       @JsonKey(name: 'sl_price') double? slPrice,
       @JsonKey(name: 'exchange') String exchange,

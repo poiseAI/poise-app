@@ -16,14 +16,14 @@ class SymbolSearch extends _$SymbolSearch {
   @override
   AsyncValue<List<TradingSymbol>> build() {
     ref.onDispose(() => _debounce?.cancel());
-    return const AsyncValue.loading();
+    return AsyncValue.data(_fallbackPopular(_activeExchange));
   }
 
   Future<void> loadPopular({String exchange = 'bybit'}) async {
     final requestId = ++_requestId;
     _activeExchange = _normalizeExchange(exchange);
     _debounce?.cancel();
-    state = const AsyncValue.loading();
+    state = AsyncValue.data(_fallbackPopular(_activeExchange));
     final result = await ref
         .read(symbolsApiProvider)
         .getPopular(exchange: _activeExchange, quote: _quote);
@@ -58,8 +58,13 @@ class SymbolSearch extends _$SymbolSearch {
       loadPopular(exchange: _activeExchange);
       return;
     }
+    state = AsyncValue.data(
+      _rank(_fallbackPopular(_activeExchange), normalized, const [])
+          .where((symbol) => _matchesQuery(symbol, normalized))
+          .take(8)
+          .toList(),
+    );
     _debounce = Timer(const Duration(milliseconds: 300), () async {
-      state = const AsyncValue.loading();
       final result = await ref.read(symbolsApiProvider).search(
             normalized,
             limit: 8,
@@ -129,26 +134,60 @@ class SymbolSearch extends _$SymbolSearch {
   }
 }
 
+List<TradingSymbol> _fallbackPopular(String exchange) {
+  return _popularBases.map((base) {
+    return TradingSymbol(
+      symbol: '${base}USDT',
+      baseAsset: base,
+      quoteAsset: 'USDT',
+      exchange: exchange,
+      status: 'Trading',
+    );
+  }).toList();
+}
+
 String _normalizeExchange(String value) {
   final normalized = value.trim().toLowerCase();
   return normalized.isEmpty ? 'bybit' : normalized;
 }
 
 int _popularRank(String symbol) {
-  const popular = [
-    'BTCUSDT',
-    'ETHUSDT',
-    'SOLUSDT',
-    'BNBUSDT',
-    'XRPUSDT',
-    'ADAUSDT',
-    'DOGEUSDT',
-    'AVAXUSDT',
-    'LINKUSDT',
-    'DOTUSDT',
-    'AAVEUSDT',
-    'UNIUSDT',
-  ];
-  final idx = popular.indexOf(symbol);
+  final idx = _popularSymbols.indexOf(symbol);
   return idx == -1 ? 999 : idx;
 }
+
+bool _matchesQuery(TradingSymbol symbol, String query) {
+  return symbol.symbol.contains(query) ||
+      symbol.baseAsset.contains(query) ||
+      symbol.quoteAsset.contains(query);
+}
+
+const _popularBases = [
+  'BTC',
+  'ETH',
+  'SOL',
+  'BNB',
+  'XRP',
+  'ADA',
+  'DOGE',
+  'AVAX',
+  'LINK',
+  'DOT',
+  'AAVE',
+  'UNI',
+];
+
+const _popularSymbols = [
+  'BTCUSDT',
+  'ETHUSDT',
+  'SOLUSDT',
+  'BNBUSDT',
+  'XRPUSDT',
+  'ADAUSDT',
+  'DOGEUSDT',
+  'AVAXUSDT',
+  'LINKUSDT',
+  'DOTUSDT',
+  'AAVEUSDT',
+  'UNIUSDT',
+];

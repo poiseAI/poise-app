@@ -301,7 +301,10 @@ class TradeForm extends _$TradeForm {
     if (!isValid || state.isSubmitting) return;
     final validation = state.validation;
     if (validation == null || validation.isBlocked) return;
-    if (validation.hasWarnings && !bypassWarnings) return;
+    final requiresAcknowledgement = validation.hasWarnings ||
+        validation.dailyLimitAcknowledgementRequired ||
+        validation.requiresExternalRiskReview;
+    if (requiresAcknowledgement && !bypassWarnings) return;
     state = state.copyWith(isSubmitting: true, submitError: null);
 
     final clientOrderId =

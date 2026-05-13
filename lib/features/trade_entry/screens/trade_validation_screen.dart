@@ -20,6 +20,10 @@ class TradeValidationScreen extends ConsumerWidget {
     final form = ref.watch(tradeFormProvider);
     final notifier = ref.read(tradeFormProvider.notifier);
     final validation = form.validation;
+    final needsAcknowledgement = validation != null &&
+        (validation.hasWarnings ||
+            validation.dailyLimitAcknowledgementRequired ||
+            validation.requiresExternalRiskReview);
 
     if (validation == null) {
       return Scaffold(
@@ -106,7 +110,9 @@ class TradeValidationScreen extends ConsumerWidget {
                     ? 'Trade blocked'
                     : form.isSubmitting
                         ? 'Submitting...'
-                        : 'Submit trade',
+                        : needsAcknowledgement
+                            ? 'Acknowledge & submit'
+                            : 'Submit trade',
                 state: form.isSubmitting
                     ? PButtonState.loading
                     : PButtonState.idle,
@@ -114,11 +120,13 @@ class TradeValidationScreen extends ConsumerWidget {
                     ? null
                     : () async {
                         HapticFeedback.mediumImpact();
-                        if (validation.hasWarnings) {
+                        if (needsAcknowledgement) {
                           final confirmed = await _confirmWarning(context);
                           if (confirmed != true) return;
                         }
-                        await notifier.submit(bypassWarnings: true);
+                        await notifier.submit(
+                          bypassWarnings: needsAcknowledgement,
+                        );
                         final latest = ref.read(tradeFormProvider);
                         if (context.mounted && latest.lastOrder != null) {
                           Navigator.of(context).pushReplacement(
@@ -410,7 +418,10 @@ class _GuardrailPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!validation.isBlocked && !validation.hasWarnings) {
+    if (!validation.isBlocked &&
+        !validation.hasWarnings &&
+        !validation.dailyLimitAcknowledgementRequired &&
+        !validation.requiresExternalRiskReview) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

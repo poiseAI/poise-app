@@ -98,23 +98,36 @@ class Home extends _$Home {
 
   void _applyPositionUpdate(WsPositionUpdate msg) {
     final current = state;
-    if (current is! HomeData) return;
+    if (current is! HomeData && current is! HomeEmpty) return;
 
-    try {
-      final updated = Position.fromJson(msg.data);
-      final idx = current.positions.indexWhere((p) => p.id == updated.id);
-      if (idx == -1) {
-        state = current.copyWith(
-          positions: [updated, ...current.positions],
-        );
-      } else {
-        final list = [...current.positions];
-        list[idx] = updated;
-        state = current.copyWith(positions: list);
-      }
-    } catch (_) {
-      // Malformed WS payload — skip
+    final positions =
+        current is HomeData ? current.positions : const <Position>[];
+    final summary = switch (current) {
+      HomeData(:final summary) => summary,
+      HomeEmpty(:final summary) => summary,
+      _ => const PnlSummary(),
+    };
+    final positionId = _positionId(msg);
+    final idx = positions.indexWhere((p) => p.id == positionId);
+    final updated = idx == -1
+        ? _positionFromWs(msg)
+        : _mergePositionUpdate(positions[idx], msg.data);
+    if (updated == null) return;
+
+    final next = [...positions];
+    if (idx == -1) {
+      if (updated.status != 'open') return;
+      next.insert(0, updated);
+    } else if (updated.status == 'closed') {
+      next.removeAt(idx);
+    } else {
+      next[idx] = updated;
     }
+
+    _persistPositions(next);
+    state = next.isEmpty
+        ? HomeState.empty(summary: summary)
+        : HomeState.data(positions: next, summary: summary);
   }
 
   Future<void> refresh() async {
@@ -143,9 +156,114 @@ class Home extends _$Home {
         : await api.unlockPosition(positionId);
 
     if (result.isErr) {
-      final rollback = [...(state as HomeData).positions];
+      final latest = state;
+      if (latest is! HomeData) return;
+      final rollback = [...latest.positions];
+      if (idx >= rollback.length || rollback[idx].id != position.id) return;
       rollback[idx] = position;
-      state = (state as HomeData).copyWith(positions: rollback);
+      state = latest.copyWith(positions: rollback);
     }
   }
+
+  void _persistPositions(List<Position> positions) {
+    ref.read(localCacheProvider).putList<Position>(
+          CacheBoxNames.positions,
+          _posKey,
+          positions,
+          (p) => p.toJson(),
+        );
+  }
+}
+
+Position _mergePositionUpdate(Position current, Map<String, dynamic> data) {
+  return current.copyWith(
+    currentPrice: _num(
+      data['current_price'] ?? data['currentPrice'] ?? data['mark_price'],
+      fallback: current.currentPrice,
+    ),
+    unrealizedPnl: _num(
+      data['unrealized_pnl'] ?? data['unrealizedPnl'] ?? data['unrealisedPnl'],
+      fallback: current.unrealizedPnl,
+    ),
+    unrealizedPnlPct: _num(
+      data['unrealized_pnl_pct'] ?? data['unrealizedPnlPct'],
+      fallback: current.unrealizedPnlPct,
+    ),
+    status: data['status'] as String? ?? current.status,
+    isLocked: data['is_locked'] as bool? ??
+        data['isLocked'] as bool? ??
+        current.isLocked,
+    syncStatus: data['sync_status'] as String? ?? current.syncStatus,
+    lastSyncedAt: data['last_synced_at'] as String? ?? current.lastSyncedAt,
+    source: data['source'] as String? ?? current.source,
+    slPrice:
+        _nullableNum(data['sl_price'] ?? data['stop_loss']) ?? current.slPrice,
+  );
+}
+
+Position? _positionFromWs(WsPositionUpdate msg) {
+  final data = msg.data;
+  final id = _positionId(msg);
+  final symbol = data['symbol'] as String?;
+  if (id == null || id.isEmpty || symbol == null || symbol.isEmpty) {
+    return null;
+  }
+
+  final entry =
+      _num(data['entry_price'] ?? data['entryPrice'] ?? data['avg_price']);
+  final current =
+      _num(data['current_price'] ?? data['currentPrice'] ?? data['mark_price']);
+  return Position(
+    id: id,
+    symbol: symbol,
+    side: (data['side'] as String? ?? 'long').toLowerCase(),
+    entryPrice: entry,
+    currentPrice: current > 0 ? current : entry,
+    quantity: _num(data['quantity'] ?? data['size']),
+    source: data['source'] as String? ?? 'external',
+    exchangeOrderId: data['exchange_order_id'] as String?,
+    leverage: _num(data['leverage'], fallback: 1),
+    unrealizedPnl: _num(
+      data['unrealized_pnl'] ?? data['unrealizedPnl'] ?? data['unrealisedPnl'],
+    ),
+    unrealizedPnlPct:
+        _num(data['unrealized_pnl_pct'] ?? data['unrealizedPnlPct']),
+    realizedPnl: _num(data['realized_pnl']),
+    liquidationPrice: _nullableNum(data['liquidation_price']),
+    marginUsed: _nullableNum(data['margin_used']),
+    remainingQuantity: _nullableNum(data['remaining_quantity']),
+    syncStatus: data['sync_status'] as String? ?? 'synced',
+    lastSyncedAt: data['last_synced_at'] as String?,
+    closedAt: data['closed_at'] as String?,
+    status: data['status'] as String? ?? 'open',
+    isLocked: data['is_locked'] as bool? ?? data['isLocked'] as bool? ?? false,
+    tpLevels: _tpLevels(data['tp_levels']),
+    slPrice: _nullableNum(data['sl_price'] ?? data['stop_loss']),
+    exchange: data['exchange'] as String? ?? 'bybit',
+    createdAt:
+        data['created_at'] as String? ?? DateTime.now().toIso8601String(),
+  );
+}
+
+String? _positionId(WsPositionUpdate msg) {
+  if (msg.positionId.isNotEmpty) return msg.positionId;
+  return msg.data['id'] as String? ?? msg.data['position_id'] as String?;
+}
+
+double _num(Object? value, {double fallback = 0}) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+double? _nullableNum(Object? value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+List<double> _tpLevels(Object? raw) {
+  if (raw is! List) return const [];
+  return raw.map(_nullableNum).whereType<double>().toList();
 }

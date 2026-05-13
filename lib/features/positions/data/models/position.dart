@@ -9,14 +9,22 @@ abstract class Position with _$Position {
     required String id,
     required String symbol,
     required String side, // 'long' | 'short'
+    @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
     required double entryPrice,
+    @JsonKey(name: 'current_price', readValue: _readCurrentPrice)
     required double currentPrice,
     @JsonKey(readValue: _readQuantity) required double quantity,
     @Default('external') String source,
     @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
     @Default(1.0) double leverage,
+    @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
     required double unrealizedPnl,
-    @Default(0.0) double unrealizedPnlPct,
+    @JsonKey(
+      name: 'unrealized_pnl_pct',
+      readValue: _readUnrealizedPnlPct,
+    )
+    @Default(0.0)
+    double unrealizedPnlPct,
     @JsonKey(name: 'realized_pnl') @Default(0.0) double realizedPnl,
     @JsonKey(name: 'liquidation_price') double? liquidationPrice,
     @JsonKey(name: 'margin_used') double? marginUsed,
@@ -25,7 +33,9 @@ abstract class Position with _$Position {
     @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
     @JsonKey(name: 'closed_at') String? closedAt,
     required String status, // 'open' | 'locked' | 'closing'
-    @Default(false) bool isLocked,
+    @JsonKey(name: 'is_locked', readValue: _readIsLocked)
+    @Default(false)
+    bool isLocked,
     @JsonKey(name: 'tp_levels') @Default([]) List<double> tpLevels,
     @JsonKey(name: 'sl_price') double? slPrice,
     @JsonKey(name: 'exchange') @Default('bybit') String exchange,
@@ -37,7 +47,32 @@ abstract class Position with _$Position {
 }
 
 Object? _readQuantity(Map<dynamic, dynamic> json, String key) =>
-    json[key] ?? json['size'];
+    _num(json[key] ?? json['size']);
+
+Object? _readEntryPrice(Map<dynamic, dynamic> json, String key) =>
+    _num(json[key] ?? json['entryPrice']);
+
+Object? _readCurrentPrice(Map<dynamic, dynamic> json, String key) => _num(
+      json[key] ??
+          json['currentPrice'] ??
+          json['mark_price'] ??
+          json['markPrice'],
+    );
+
+Object? _readUnrealizedPnl(Map<dynamic, dynamic> json, String key) =>
+    _num(json[key] ?? json['unrealizedPnl'] ?? json['unrealisedPnl']);
+
+Object? _readUnrealizedPnlPct(Map<dynamic, dynamic> json, String key) =>
+    _num(json[key] ?? json['unrealizedPnlPct']);
+
+Object? _readIsLocked(Map<dynamic, dynamic> json, String key) =>
+    json[key] ?? json['isLocked'];
+
+Object? _num(Object? value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return value;
+}
 
 @freezed
 abstract class PnlSummary with _$PnlSummary {
