@@ -7,6 +7,7 @@ part 'secure_storage.g.dart';
 abstract final class _Keys {
   static const token = 'auth_token';
   static const tokenExpiresAt = 'auth_token_expires_at';
+  static const sessionId = 'auth_session_id';
   static const userId = 'user_id';
 }
 
@@ -33,6 +34,11 @@ class SecureStorageService {
 
   Future<String?> getToken() => _storage.read(key: _Keys.token);
 
+  Future<void> saveSessionId(String sessionId) =>
+      _storage.write(key: _Keys.sessionId, value: sessionId);
+
+  Future<String?> getSessionId() => _storage.read(key: _Keys.sessionId);
+
   Future<DateTime?> getTokenExpiry() async {
     final raw = await _storage.read(key: _Keys.tokenExpiresAt);
     if (raw == null) return null;
@@ -50,6 +56,7 @@ class SecureStorageService {
     await Future.wait([
       _storage.delete(key: _Keys.token),
       _storage.delete(key: _Keys.tokenExpiresAt),
+      _storage.delete(key: _Keys.sessionId),
       _storage.delete(key: _Keys.userId),
     ]);
   }

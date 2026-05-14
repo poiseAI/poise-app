@@ -22,6 +22,11 @@ class AuthInterceptor extends QueuedInterceptor {
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+    final sessionId = await _ref.read(secureStorageProvider).getSessionId();
+    if (sessionId != null) {
+      options.headers['X-Poise-Session-Id'] = sessionId;
+      options.headers['X-Poise-Session-Policy'] = 'single-device';
+    }
     handler.next(options);
   }
 

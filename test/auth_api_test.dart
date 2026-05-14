@@ -7,6 +7,47 @@ import 'package:poise_ai/features/auth/data/auth_api.dart';
 class _MockDio extends Mock implements Dio {}
 
 void main() {
+  test('login sends session policy headers when session id is provided',
+      () async {
+    final dio = _MockDio();
+    Options? capturedOptions;
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        any(),
+        data: any<dynamic>(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer((invocation) async {
+      capturedOptions = invocation.namedArguments[#options] as Options?;
+      return Response<Map<String, dynamic>>(
+        requestOptions: RequestOptions(path: '/auth/login'),
+        statusCode: 200,
+        data: {
+          'token': 'jwt',
+          'user': {
+            'id': 'user-1',
+            'email': 'user@example.com',
+            'full_name': 'Test User',
+            'email_verified': true,
+          },
+        },
+      );
+    });
+
+    final result = await AuthApi(dio).login(
+      email: 'user@example.com',
+      password: 'password',
+      sessionId: 'session-1',
+    );
+
+    expect(result.isOk, isTrue);
+    expect(capturedOptions?.headers?['X-Poise-Session-Id'], 'session-1');
+    expect(
+      capturedOptions?.headers?['X-Poise-Session-Policy'],
+      'single-device',
+    );
+  });
+
   test('login maps 401 responses to invalid credentials', () async {
     final dio = _MockDio();
     when(

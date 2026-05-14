@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/network/interceptors/auth_interceptor.dart';
@@ -85,16 +86,18 @@ class Auth extends _$Auth {
     if (lockedMessage != null) return Err(lockedMessage);
 
     state = const AsyncLoading();
+    final sessionId = _newSessionId();
     final result = await ref.read(authApiProvider).login(
           email: normalizedEmail,
           password: password,
           totpToken: totpToken,
+          sessionId: sessionId,
         );
 
     return result.fold(
       onOk: (resp) async {
         _loginAttempts.remove(normalizedEmail);
-        await _persistAndActivate(resp);
+        await _persistAndActivate(resp, sessionId: sessionId);
         return const Ok(null);
       },
       onErr: (err) {
@@ -114,6 +117,7 @@ class Auth extends _$Auth {
     String password,
   ) async {
     state = const AsyncLoading();
+    final sessionId = _newSessionId();
     final result = await ref.read(authApiProvider).register(
           fullName: fullName,
           email: email,
@@ -122,7 +126,11 @@ class Auth extends _$Auth {
 
     return result.fold(
       onOk: (resp) async {
-        await _persistAndActivate(resp, checkExistingStrategy: false);
+        await _persistAndActivate(
+          resp,
+          checkExistingStrategy: false,
+          sessionId: sessionId,
+        );
         return const Ok(null);
       },
       onErr: (err) {
@@ -218,8 +226,12 @@ class Auth extends _$Auth {
   Future<void> _persistAndActivate(
     AuthResponse resp, {
     bool checkExistingStrategy = true,
+    String? sessionId,
   }) async {
     await ref.read(secureStorageProvider).saveToken(resp.token);
+    if (sessionId != null) {
+      await ref.read(secureStorageProvider).saveSessionId(sessionId);
+    }
     await ref.read(secureStorageProvider).saveUserId(resp.user.id);
     _connectWs(resp.token);
     _scheduleProactiveRefresh(resp.token);
@@ -314,6 +326,12 @@ class Auth extends _$Auth {
     final minutes =
         remaining.inMinutes + (remaining.inSeconds % 60 == 0 ? 0 : 1);
     return 'Account temporarily locked. Try again in $minutes minutes.';
+  }
+
+  String _newSessionId() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 }
 
