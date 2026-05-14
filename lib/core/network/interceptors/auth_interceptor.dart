@@ -32,10 +32,16 @@ class AuthInterceptor extends QueuedInterceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401) {
+    if (err.response?.statusCode == 401 &&
+        !_isExchangeCredentialRequest(err.requestOptions.path)) {
       await _ref.read(secureStorageProvider).deleteToken();
       _ref.read(authInvalidatedProvider.notifier).update((n) => n + 1);
     }
     handler.next(err);
+  }
+
+  bool _isExchangeCredentialRequest(String path) {
+    return path == '/exchange-connections' ||
+        path == '/exchange-connections/test';
   }
 }

@@ -167,6 +167,9 @@ class ProfileApi {
       );
       return Ok(resp.data!);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        return Err(_exchangeAuthError(exchange));
+      }
       return Err(e.error is AppError
           ? e.error as AppError
           : UnknownError(e.message ?? ''));
@@ -204,6 +207,9 @@ class ProfileApi {
       );
       return Ok(resp.data!);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        return Err(_exchangeAuthError(exchange));
+      }
       return Err(e.error is AppError
           ? e.error as AppError
           : UnknownError(e.message ?? ''));
@@ -238,4 +244,12 @@ class ProfileApi {
           : UnknownError(e.message ?? ''));
     }
   }
+}
+
+ServerError _exchangeAuthError(String exchange) {
+  final label = exchange.toLowerCase() == 'binance' ? 'Binance' : 'Bybit';
+  return ServerError(
+    401,
+    'Unable to authenticate with $label. Check your API key, secret key, IP restrictions, and trading permissions.',
+  );
 }
