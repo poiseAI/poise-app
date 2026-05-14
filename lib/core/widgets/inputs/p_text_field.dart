@@ -80,17 +80,15 @@ class _PTextFieldState extends State<PTextField>
     final iconColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
     if (widget.obscureText) {
-      return GestureDetector(
-        onTap: () => setState(() => _obscured = !_obscured),
-        child: Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: Icon(
-            _obscured
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-            size: 20,
-            color: iconColor,
-          ),
+      return IconButton(
+        tooltip: _obscured ? 'Show value' : 'Hide value',
+        onPressed: widget.enabled
+            ? () => setState(() => _obscured = !_obscured)
+            : null,
+        icon: Icon(
+          _obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+          size: 20,
+          color: widget.enabled ? iconColor : AppColors.textDisabled,
         ),
       );
     }
