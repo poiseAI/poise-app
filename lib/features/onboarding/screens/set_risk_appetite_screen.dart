@@ -31,6 +31,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   bool _editingSettings = false;
   PButtonState _buttonState = PButtonState.idle;
   bool _initializedFromActive = false;
+  CreateStrategyRequest _customRequest = _options.last.request;
 
   static const _options = [
     _RiskPreset(
@@ -181,18 +182,18 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     final state = ref.read(strategiesNotifierProvider);
     if (state is StrategiesLoaded) {
       final active = state.active;
-      if (active != null) _selected = _indexForStrategy(active);
+      if (active != null) _applyActiveStrategy(active);
     } else {
       _initializedFromActive = false;
     }
   }
 
   Future<void> _confirm() async {
-    final preset = _options[_selected];
+    final request = _requestForSelected();
     setState(() => _buttonState = PButtonState.loading);
     final result = await ref
         .read(strategiesNotifierProvider.notifier)
-        .replaceActiveWith(preset.request);
+        .replaceActiveWith(request);
     if (!mounted) return;
 
     if (result.isErr) {
@@ -225,7 +226,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         strategies is StrategiesLoaded &&
         !_initializedFromActive) {
       final active = strategies.active;
-      if (active != null) _selected = _indexForStrategy(active);
+      if (active != null) _applyActiveStrategy(active);
       _initializedFromActive = true;
     }
     if (_confirming) return _buildConfirm(context);
@@ -236,7 +237,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   }
 
   Widget _buildSettingsSummary(BuildContext context) {
-    final preset = _options[_selected];
+    final preset = _presetForSelected();
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
@@ -361,7 +362,8 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   }
 
   Widget _buildConfirm(BuildContext context) {
-    final preset = _options[_selected];
+    final preset = _presetForSelected();
+    final canCustomize = preset.label == 'Customizable';
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
@@ -399,8 +401,24 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _RiskConfirmCard(preset: preset),
-              const Spacer(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      if (canCustomize) ...[
+                        _CustomRiskSettingsForm(
+                          request: _customRequest,
+                          onChanged: (request) {
+                            setState(() => _customRequest = request);
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      _RiskConfirmCard(preset: preset),
+                    ],
+                  ),
+                ),
+              ),
               PPrimaryButton(
                 label: widget.mode == RiskAppetiteMode.settings
                     ? 'Confirm and save'
@@ -415,6 +433,24 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ),
       ),
     );
+  }
+
+  _RiskPreset _presetForSelected() {
+    final preset = _options[_selected];
+    if (preset.label != 'Customizable') return preset;
+    return preset.copyWith(
+      request: _customRequest,
+      rows: _rowsForRequest(_customRequest),
+    );
+  }
+
+  CreateStrategyRequest _requestForSelected() => _presetForSelected().request;
+
+  void _applyActiveStrategy(Strategy strategy) {
+    _selected = _indexForStrategy(strategy);
+    if (_selected == _options.length - 1) {
+      _customRequest = _requestFromStrategy(strategy, name: 'Customizable');
+    }
   }
 }
 
@@ -444,6 +480,55 @@ String _summaryLabel(String label) {
   };
 }
 
+CreateStrategyRequest _requestFromStrategy(
+  Strategy strategy, {
+  required String name,
+}) {
+  return CreateStrategyRequest(
+    name: name,
+    maxPositionSize: strategy.maxPositionSize,
+    maxPositionValueUsd: strategy.maxPositionValueUsd,
+    positionSizeType: strategy.positionSizeType,
+    dailyLossLimitType: strategy.dailyLossLimitType,
+    maxDailyLossUsd: strategy.maxDailyLossUsd,
+    maxDailyLossPercent: strategy.maxDailyLossPercent,
+    maxOpenPositions: strategy.maxOpenPositions,
+    maxTradesPerDay: strategy.maxTradesPerDay,
+    maxConsecutiveLosses: strategy.maxConsecutiveLosses,
+    sessionStartHour: strategy.sessionStartHour,
+    sessionEndHour: strategy.sessionEndHour,
+    minRiskRewardRatio: strategy.minRiskRewardRatio,
+    maxLeverage: strategy.maxLeverage,
+    requireExitReason: strategy.requireExitReason,
+    requireOtpForExit: strategy.requireOtpForExit,
+  );
+}
+
+List<(String, String)> _rowsForRequest(CreateStrategyRequest request) {
+  final usesPercent = request.dailyLossLimitType == 'percent_balance';
+  return [
+    ('Daily loss mode', usesPercent ? '% of balance' : 'Fixed USD'),
+    ('Max leverage per asset', _formatNumber(request.maxLeverage)),
+    (
+      'Daily maximum loss',
+      usesPercent
+          ? '${_formatNumber(request.maxDailyLossPercent ?? 0)}% of UTC balance'
+          : '\$${_formatNumber(request.maxDailyLossUsd)}',
+    ),
+    ('Max trades per day', request.maxTradesPerDay.toString()),
+    ('Max consecutive losses', request.maxConsecutiveLosses.toString()),
+    ('Minimum risk/reward', '1:${_formatNumber(request.minRiskRewardRatio)}'),
+    ('Max concurrent open positions', request.maxOpenPositions.toString()),
+    ('Exit reason required', request.requireExitReason ? 'Yes' : 'No'),
+    ('OTP required for exit', request.requireOtpForExit ? 'Yes' : 'No'),
+  ];
+}
+
+String _formatNumber(num value) {
+  if (value % 1 == 0) return value.toInt().toString();
+  return value.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+}
+
 class _RiskPreset {
   const _RiskPreset({
     required this.label,
@@ -458,6 +543,19 @@ class _RiskPreset {
   final String reviewDesc;
   final CreateStrategyRequest request;
   final List<(String, String)> rows;
+
+  _RiskPreset copyWith({
+    CreateStrategyRequest? request,
+    List<(String, String)>? rows,
+  }) {
+    return _RiskPreset(
+      label: label,
+      shortDesc: shortDesc,
+      reviewDesc: reviewDesc,
+      request: request ?? this.request,
+      rows: rows ?? this.rows,
+    );
+  }
 }
 
 class _RiskSummaryCard extends StatelessWidget {
@@ -607,6 +705,237 @@ class _RiskSelectCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CustomRiskSettingsForm extends StatefulWidget {
+  const _CustomRiskSettingsForm({
+    required this.request,
+    required this.onChanged,
+  });
+
+  final CreateStrategyRequest request;
+  final ValueChanged<CreateStrategyRequest> onChanged;
+
+  @override
+  State<_CustomRiskSettingsForm> createState() =>
+      _CustomRiskSettingsFormState();
+}
+
+class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
+  late final TextEditingController _dailyLossCtrl;
+  late final TextEditingController _leverageCtrl;
+  late final TextEditingController _tradesCtrl;
+  late final TextEditingController _lossesCtrl;
+  late final TextEditingController _positionsCtrl;
+  late final TextEditingController _riskRewardCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final request = widget.request;
+    _dailyLossCtrl = TextEditingController(
+      text: _formatNumber(request.dailyLossLimitType == 'percent_balance'
+          ? request.maxDailyLossPercent ?? 0
+          : request.maxDailyLossUsd),
+    );
+    _leverageCtrl =
+        TextEditingController(text: _formatNumber(request.maxLeverage));
+    _tradesCtrl =
+        TextEditingController(text: request.maxTradesPerDay.toString());
+    _lossesCtrl =
+        TextEditingController(text: request.maxConsecutiveLosses.toString());
+    _positionsCtrl =
+        TextEditingController(text: request.maxOpenPositions.toString());
+    _riskRewardCtrl =
+        TextEditingController(text: _formatNumber(request.minRiskRewardRatio));
+  }
+
+  @override
+  void dispose() {
+    _dailyLossCtrl.dispose();
+    _leverageCtrl.dispose();
+    _tradesCtrl.dispose();
+    _lossesCtrl.dispose();
+    _positionsCtrl.dispose();
+    _riskRewardCtrl.dispose();
+    super.dispose();
+  }
+
+  void _emit(CreateStrategyRequest request) => widget.onChanged(request);
+
+  double _doubleValue(String value, double fallback) {
+    final parsed = double.tryParse(value);
+    return parsed == null || parsed < 0 ? fallback : parsed;
+  }
+
+  int _intValue(String value, int fallback) {
+    final parsed = int.tryParse(value);
+    return parsed == null || parsed < 0 ? fallback : parsed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final request = widget.request;
+    final usesPercent = request.dailyLossLimitType == 'percent_balance';
+
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Custom risk settings', style: AppTypography.h4),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Adjust the values below before saving your custom appetite.',
+            style: AppTypography.bodySm.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          DropdownButtonFormField<String>(
+            initialValue: request.dailyLossLimitType,
+            decoration: const InputDecoration(labelText: 'Daily loss mode'),
+            items: const [
+              DropdownMenuItem(
+                value: 'percent_balance',
+                child: Text('% of balance'),
+              ),
+              DropdownMenuItem(
+                value: 'fixed_usd',
+                child: Text('Fixed USD'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              final amount = _doubleValue(_dailyLossCtrl.text, 0);
+              _emit(request.copyWith(
+                dailyLossLimitType: value,
+                maxDailyLossPercent: value == 'percent_balance' ? amount : null,
+                maxDailyLossUsd: value == 'fixed_usd' ? amount : 0,
+              ));
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _dailyLossCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: usesPercent
+                  ? 'Daily maximum loss (%)'
+                  : 'Daily maximum loss (USD)',
+            ),
+            onChanged: (value) {
+              final amount = _doubleValue(value, 0);
+              _emit(request.copyWith(
+                maxDailyLossPercent: usesPercent ? amount : null,
+                maxDailyLossUsd: usesPercent ? 0 : amount,
+              ));
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _leverageCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Max leverage'),
+                  onChanged: (value) => _emit(
+                    request.copyWith(
+                      maxLeverage: _doubleValue(value, request.maxLeverage),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  controller: _tradesCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'Trades per day'),
+                  onChanged: (value) => _emit(
+                    request.copyWith(
+                      maxTradesPerDay:
+                          _intValue(value, request.maxTradesPerDay),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _lossesCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'Consecutive losses'),
+                  onChanged: (value) => _emit(
+                    request.copyWith(
+                      maxConsecutiveLosses:
+                          _intValue(value, request.maxConsecutiveLosses),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  controller: _positionsCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'Open positions'),
+                  onChanged: (value) => _emit(
+                    request.copyWith(
+                      maxOpenPositions:
+                          _intValue(value, request.maxOpenPositions),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _riskRewardCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Minimum risk/reward'),
+            onChanged: (value) => _emit(
+              request.copyWith(
+                minRiskRewardRatio:
+                    _doubleValue(value, request.minRiskRewardRatio),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Require exit reason'),
+            value: request.requireExitReason,
+            onChanged: (value) =>
+                _emit(request.copyWith(requireExitReason: value)),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Require OTP for exit'),
+            value: request.requireOtpForExit,
+            onChanged: (value) =>
+                _emit(request.copyWith(requireOtpForExit: value)),
+          ),
+        ],
       ),
     );
   }
