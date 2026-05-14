@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/network/interceptors/auth_interceptor.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/websocket/ws_service.dart';
@@ -15,7 +16,10 @@ part 'auth_provider.g.dart';
 class Auth extends _$Auth {
   Timer? _refreshTimer;
   Timer? _inactivityTimer;
+  final Map<String, _LoginAttemptState> _loginAttempts = {};
   static const inactivityTimeout = Duration(minutes: 15);
+  static const maxFailedLoginAttempts = 5;
+  static const loginLockoutDuration = Duration(minutes: 5);
 
   @override
   Future<AuthState> build() async {
@@ -76,20 +80,29 @@ class Auth extends _$Auth {
     String password, {
     String? totpToken,
   }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final lockedMessage = _lockoutMessageFor(normalizedEmail);
+    if (lockedMessage != null) return Err(lockedMessage);
+
     state = const AsyncLoading();
     final result = await ref.read(authApiProvider).login(
-          email: email,
+          email: normalizedEmail,
           password: password,
           totpToken: totpToken,
         );
 
     return result.fold(
       onOk: (resp) async {
+        _loginAttempts.remove(normalizedEmail);
         await _persistAndActivate(resp);
         return const Ok(null);
       },
       onErr: (err) {
         state = const AsyncData(AuthState.unauthenticated());
+        if (err is InvalidCredentialsError) {
+          final message = _recordFailedLogin(normalizedEmail);
+          if (message != null) return Err(message);
+        }
         return Err(err.userMessage);
       },
     );
@@ -265,4 +278,48 @@ class Auth extends _$Auth {
     _inactivityTimer?.cancel();
     _inactivityTimer = null;
   }
+
+  String? _lockoutMessageFor(String email) {
+    final attempts = _loginAttempts[email];
+    final lockedUntil = attempts?.lockedUntil;
+    if (lockedUntil == null) return null;
+
+    final now = DateTime.now();
+    if (now.isAfter(lockedUntil)) {
+      _loginAttempts.remove(email);
+      return null;
+    }
+
+    return _lockoutMessage(lockedUntil);
+  }
+
+  String? _recordFailedLogin(String email) {
+    final previous = _loginAttempts[email];
+    final failedAttempts = (previous?.failedAttempts ?? 0) + 1;
+    if (failedAttempts < maxFailedLoginAttempts) {
+      _loginAttempts[email] = _LoginAttemptState(failedAttempts);
+      return null;
+    }
+
+    final lockedUntil = DateTime.now().add(loginLockoutDuration);
+    _loginAttempts[email] = _LoginAttemptState(
+      failedAttempts,
+      lockedUntil: lockedUntil,
+    );
+    return _lockoutMessage(lockedUntil);
+  }
+
+  String _lockoutMessage(DateTime lockedUntil) {
+    final remaining = lockedUntil.difference(DateTime.now());
+    final minutes =
+        remaining.inMinutes + (remaining.inSeconds % 60 == 0 ? 0 : 1);
+    return 'Account temporarily locked. Try again in $minutes minutes.';
+  }
+}
+
+final class _LoginAttemptState {
+  const _LoginAttemptState(this.failedAttempts, {this.lockedUntil});
+
+  final int failedAttempts;
+  final DateTime? lockedUntil;
 }
