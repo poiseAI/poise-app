@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +25,7 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
+  static const _otpResendDelay = Duration(seconds: 60);
   final _otpCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -34,13 +37,40 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   String? _passError;
   String? _confirmError;
   bool _otpComplete = false;
+  bool _resending = false;
+  Timer? _otpTimer;
+  int _secondsRemaining = _otpResendDelay.inSeconds;
+
+  @override
+  void initState() {
+    super.initState();
+    _startOtpTimer();
+  }
 
   @override
   void dispose() {
+    _otpTimer?.cancel();
     _otpCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
+  }
+
+  void _startOtpTimer() {
+    _otpTimer?.cancel();
+    setState(() => _secondsRemaining = _otpResendDelay.inSeconds);
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining <= 1) {
+        timer.cancel();
+        setState(() => _secondsRemaining = 0);
+        return;
+      }
+      setState(() => _secondsRemaining -= 1);
+    });
   }
 
   bool _validatePassword() {
@@ -106,6 +136,28 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           }
         });
       },
+    );
+  }
+
+  Future<void> _resend() async {
+    if (_resending || _secondsRemaining > 0) return;
+    setState(() => _resending = true);
+
+    final result = await ref.read(authApiProvider).forgotPassword(widget.email);
+
+    if (!mounted) return;
+    setState(() => _resending = false);
+    result.fold(
+      onOk: (_) {
+        _otpCtrl.clear();
+        setState(() {
+          _otpComplete = false;
+          _otpState = POtpState.idle;
+        });
+        _startOtpTimer();
+        PToast.success(context, 'Reset code sent');
+      },
+      onErr: (e) => PToast.error(context, e.userMessage),
     );
   }
 
@@ -179,6 +231,20 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     }
                     setState(() => _otpComplete = false);
                   },
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: TextButton(
+                  onPressed:
+                      _resending || _secondsRemaining > 0 ? null : _resend,
+                  child: Text(
+                    _resending
+                        ? 'Sending...'
+                        : _secondsRemaining > 0
+                            ? 'Request a new OTP in ${_formatOtpTime(_secondsRemaining)}'
+                            : 'Request a new OTP',
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -275,4 +341,10 @@ class _PasswordUpdatedSuccessScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatOtpTime(int seconds) {
+  final minutes = seconds ~/ 60;
+  final secs = (seconds % 60).toString().padLeft(2, '0');
+  return '$minutes:$secs';
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ class VerifyEmailScreen extends ConsumerStatefulWidget {
 }
 
 class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
+  static const _otpResendDelay = Duration(seconds: 60);
   final _otpCtrl = TextEditingController();
   final _focusNode = FocusNode();
 
@@ -27,10 +30,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   POtpState _otpState = POtpState.idle;
   bool _otpComplete = false;
   bool _resending = false;
+  Timer? _otpTimer;
+  int _secondsRemaining = _otpResendDelay.inSeconds;
 
   @override
   void initState() {
     super.initState();
+    _startOtpTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
@@ -38,9 +44,27 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   @override
   void dispose() {
+    _otpTimer?.cancel();
     _otpCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _startOtpTimer() {
+    _otpTimer?.cancel();
+    setState(() => _secondsRemaining = _otpResendDelay.inSeconds);
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining <= 1) {
+        timer.cancel();
+        setState(() => _secondsRemaining = 0);
+        return;
+      }
+      setState(() => _secondsRemaining -= 1);
+    });
   }
 
   Future<void> _verify() async {
@@ -88,14 +112,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   }
 
   Future<void> _resend() async {
-    if (_resending) return;
+    if (_resending || _secondsRemaining > 0) return;
     setState(() => _resending = true);
     final result =
         await ref.read(authProvider.notifier).resendEmailVerification();
     if (!mounted) return;
     setState(() => _resending = false);
     result.fold(
-      onOk: (_) => PToast.success(context, 'Verification code sent'),
+      onOk: (_) {
+        _startOtpTimer();
+        PToast.success(context, 'Verification code sent');
+      },
       onErr: (message) => PToast.error(context, message),
     );
   }
@@ -158,8 +185,15 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               const Spacer(),
               Center(
                 child: TextButton(
-                  onPressed: _resending ? null : _resend,
-                  child: Text(_resending ? 'Sending...' : 'Request a new OTP'),
+                  onPressed:
+                      _resending || _secondsRemaining > 0 ? null : _resend,
+                  child: Text(
+                    _resending
+                        ? 'Sending...'
+                        : _secondsRemaining > 0
+                            ? 'Request a new OTP in ${_formatOtpTime(_secondsRemaining)}'
+                            : 'Request a new OTP',
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -234,4 +268,10 @@ class _EmailVerifiedSuccessScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _formatOtpTime(int seconds) {
+  final minutes = seconds ~/ 60;
+  final secs = (seconds % 60).toString().padLeft(2, '0');
+  return '$minutes:$secs';
 }
