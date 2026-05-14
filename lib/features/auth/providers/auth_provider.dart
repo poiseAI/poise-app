@@ -14,6 +14,8 @@ part 'auth_provider.g.dart';
 @Riverpod(keepAlive: true)
 class Auth extends _$Auth {
   Timer? _refreshTimer;
+  Timer? _inactivityTimer;
+  static const inactivityTimeout = Duration(minutes: 15);
 
   @override
   Future<AuthState> build() async {
@@ -21,7 +23,10 @@ class Auth extends _$Auth {
     ref.watch(authInvalidatedProvider);
 
     final token = await ref.read(secureStorageProvider).getToken();
-    if (token == null) return const AuthState.unauthenticated();
+    if (token == null) {
+      _cancelSessionTimers();
+      return const AuthState.unauthenticated();
+    }
 
     final result = await ref.read(authApiProvider).getMe();
     return await result.fold(
@@ -40,6 +45,7 @@ class Auth extends _$Auth {
             await ref.read(strategiesApiProvider).getActiveStrategies();
         final hasActiveStrategy =
             strategiesResult.valueOrNull?.isNotEmpty ?? false;
+        _scheduleInactivityTimeout();
 
         return AuthState.authenticated(
           userId: userId,
@@ -53,9 +59,16 @@ class Auth extends _$Auth {
         );
       },
       onErr: (_) async {
+        _cancelSessionTimers();
         return const AuthState.unauthenticated();
       },
     );
+  }
+
+  void recordActivity() {
+    if (state.valueOrNull is AuthAuthenticated) {
+      _scheduleInactivityTimeout();
+    }
   }
 
   Future<Result<void, String>> login(
@@ -107,7 +120,7 @@ class Auth extends _$Auth {
   }
 
   Future<void> logout() async {
-    _refreshTimer?.cancel();
+    _cancelSessionTimers();
     ref.read(wsServiceProvider).disconnect();
     await ref.read(secureStorageProvider).clearAll();
     state = const AsyncData(AuthState.unauthenticated());
@@ -152,6 +165,7 @@ class Auth extends _$Auth {
             await ref.read(strategiesApiProvider).getActiveStrategies();
         final hasActiveStrategy =
             strategiesResult.valueOrNull?.isNotEmpty ?? false;
+        _scheduleInactivityTimeout();
         state = AsyncData(AuthState.authenticated(
           userId: userId,
           email: email,
@@ -196,6 +210,7 @@ class Auth extends _$Auth {
     await ref.read(secureStorageProvider).saveUserId(resp.user.id);
     _connectWs(resp.token);
     _scheduleProactiveRefresh(resp.token);
+    _scheduleInactivityTimeout();
 
     // Compute strategy status BEFORE emitting state so the router only
     // fires once with the correct value — avoids a flash of the onboarding
@@ -235,5 +250,19 @@ class Auth extends _$Auth {
         if (result.isErr) await logout();
       },
     );
+  }
+
+  void _scheduleInactivityTimeout() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(inactivityTimeout, () async {
+      await logout();
+    });
+  }
+
+  void _cancelSessionTimers() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    _inactivityTimer?.cancel();
+    _inactivityTimer = null;
   }
 }
