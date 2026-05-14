@@ -224,10 +224,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Center(
                     child: TextButton(
                       onPressed: () => context.go(Routes.register),
-                      child: Text(
-                        "Don't have an account? Sign up",
-                        style: AppTypography.body
-                            .copyWith(color: AppColors.textSecondary),
+                      child: Text.rich(
+                        TextSpan(
+                          text: "Don't have an account? ",
+                          style: AppTypography.body
+                              .copyWith(color: AppColors.textSecondary),
+                          children: [
+                            TextSpan(
+                              text: 'Sign up',
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
