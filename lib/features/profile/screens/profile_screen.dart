@@ -747,23 +747,31 @@ class _ExchangeConnectionsSectionState
           );
         }
         final connections = result.value as List<Map<String, dynamic>>;
+        final activeConnections = connections.where(_isActiveConnection).length;
+        final hasMissingExchange =
+            _connectionFor(connections, 'bybit') == null ||
+                _connectionFor(connections, 'binance') == null;
         _expandedExchange ??= _defaultExpanded(connections);
         return ListView(
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
           children: [
-            const Text('Connect your exchange', style: AppTypography.h2),
+            const Text('Exchange connections', style: AppTypography.h2),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Link your trading accounts',
+              activeConnections == 0
+                  ? 'Link your trading accounts'
+                  : '$activeConnections exchange${activeConnections == 1 ? '' : 's'} connected',
               style: AppTypography.body.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            _DesktopSetupCard(
-              onSendLink: _sendDesktopSetupLink,
-            ),
-            const SizedBox(height: AppSpacing.md),
+            if (hasMissingExchange) ...[
+              _DesktopSetupCard(
+                onSendLink: _sendDesktopSetupLink,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
             _ExchangeConnectionTile(
               exchange: 'bybit',
               connection: _connectionFor(connections, 'bybit'),
@@ -798,10 +806,16 @@ class _ExchangeConnectionsSectionState
   }
 
   String _defaultExpanded(List<Map<String, dynamic>> connections) {
+    final active = connections.where(_isActiveConnection).toList();
+    if (_connectionFor(active, 'bybit') != null) return 'bybit';
+    if (_connectionFor(active, 'binance') != null) return 'binance';
     if (_connectionFor(connections, 'bybit') == null) return 'bybit';
     if (_connectionFor(connections, 'binance') == null) return 'binance';
     return 'bybit';
   }
+
+  bool _isActiveConnection(Map<String, dynamic> connection) =>
+      (connection['is_active'] as bool?) ?? true;
 
   void _toggleExpanded(String exchange) {
     setState(() {
