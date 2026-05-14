@@ -255,7 +255,7 @@ class _EmailVerifiedSuccessScreen extends ConsumerWidget {
                 onPressed: () {
                   final auth = ref.read(authProvider).valueOrNull;
                   if (auth is AuthAuthenticated && auth.hasActiveStrategy) {
-                    context.go(Routes.home);
+                    context.go(Routes.profile);
                   } else {
                     context.go(Routes.riskAppetite);
                   }
