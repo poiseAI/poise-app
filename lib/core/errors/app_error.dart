@@ -4,6 +4,7 @@ sealed class AppError {
   String get userMessage => switch (this) {
         NetworkError(:final message) =>
           message.isNotEmpty ? message : 'No internet connection',
+        InvalidCredentialsError() => 'Invalid credentials',
         UnauthorizedError() => 'Session expired. Please log in again.',
         ValidationError(:final fieldErrors) =>
           fieldErrors.values.expand((e) => e).firstOrNull ??
@@ -19,6 +20,10 @@ sealed class AppError {
 class NetworkError extends AppError {
   const NetworkError([this.message = '']);
   final String message;
+}
+
+class InvalidCredentialsError extends AppError {
+  const InvalidCredentialsError();
 }
 
 class UnauthorizedError extends AppError {

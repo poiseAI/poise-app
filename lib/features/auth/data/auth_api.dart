@@ -31,6 +31,9 @@ class AuthApi {
       );
       return Ok(AuthResponse.fromJson(resp.data!));
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        return const Err(InvalidCredentialsError());
+      }
       return Err(e.error is AppError
           ? e.error as AppError
           : UnknownError(e.message ?? ''));
