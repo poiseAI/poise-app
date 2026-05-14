@@ -32,6 +32,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   PButtonState _buttonState = PButtonState.idle;
   bool _initializedFromActive = false;
   CreateStrategyRequest _customRequest = _options.last.request;
+  CreateStrategyRequest? _activeRequest;
 
   static const _options = [
     _RiskPreset(
@@ -42,8 +43,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
           'This appetite is best for experienced traders who understand high market volatility.',
       request: CreateStrategyRequest(
         name: 'Conservative',
-        maxPositionSize: 500,
+        maxPositionSize: 0.5,
         maxPositionValueUsd: 2000,
+        positionSizeType: 'percent_balance',
         dailyLossLimitType: 'percent_balance',
         maxDailyLossUsd: 0,
         maxDailyLossPercent: 1,
@@ -58,15 +60,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('Daily loss mode', '% of balance'),
-        ('Max leverage per asset', '4'),
+        ('% Risk per trade', '0.5% of balance'),
+        ('Maximum leverage per asset', '4x'),
+        ('Maximum trades per day', '5'),
         ('Daily maximum loss', '1% of UTC balance'),
-        ('Max trades per day', '5'),
-        ('Max consecutive losses', '3'),
-        ('Minimum risk/reward', '1:1.5'),
-        ('Max concurrent open positions', '5'),
-        ('Exit reason required', 'Yes'),
-        ('OTP required for exit', 'Yes'),
+        ('Maximum concurrent open positions', '5'),
+        ('Maximum allowed consecutive losses in a day', '3'),
       ],
     ),
     _RiskPreset(
@@ -76,8 +75,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
           'Balanced rules keep trade sizing controlled while allowing measured opportunities.',
       request: CreateStrategyRequest(
         name: 'Balanced',
-        maxPositionSize: 1000,
+        maxPositionSize: 1,
         maxPositionValueUsd: 5000,
+        positionSizeType: 'percent_balance',
         dailyLossLimitType: 'percent_balance',
         maxDailyLossUsd: 0,
         maxDailyLossPercent: 2,
@@ -92,15 +92,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('Daily loss mode', '% of balance'),
-        ('Max leverage per asset', '10'),
+        ('% Risk per trade', '1% of balance'),
+        ('Maximum leverage per asset', '10x'),
+        ('Maximum trades per day', '8'),
         ('Daily maximum loss', '2% of UTC balance'),
-        ('Max trades per day', '8'),
-        ('Max consecutive losses', '3'),
-        ('Minimum risk/reward', '1:1.5'),
-        ('Max concurrent open positions', '5'),
-        ('Exit reason required', 'Yes'),
-        ('OTP required for exit', 'Yes'),
+        ('Maximum concurrent open positions', '5'),
+        ('Maximum allowed consecutive losses in a day', '3'),
       ],
     ),
     _RiskPreset(
@@ -110,8 +107,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
           'Aggressive rules allow more exposure and require active risk monitoring.',
       request: CreateStrategyRequest(
         name: 'Aggressive',
-        maxPositionSize: 2500,
+        maxPositionSize: 2,
         maxPositionValueUsd: 10000,
+        positionSizeType: 'percent_balance',
         dailyLossLimitType: 'percent_balance',
         maxDailyLossUsd: 0,
         maxDailyLossPercent: 5,
@@ -126,15 +124,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: false,
       ),
       rows: [
-        ('Daily loss mode', '% of balance'),
-        ('Max leverage per asset', '20'),
+        ('% Risk per trade', '2% of balance'),
+        ('Maximum leverage per asset', '20x'),
+        ('Maximum trades per day', '12'),
         ('Daily maximum loss', '5% of UTC balance'),
-        ('Max trades per day', '12'),
-        ('Max consecutive losses', '5'),
-        ('Minimum risk/reward', '1:1.2'),
-        ('Max concurrent open positions', '10'),
-        ('Exit reason required', 'No'),
-        ('OTP required for exit', 'No'),
+        ('Maximum concurrent open positions', '10'),
+        ('Maximum allowed consecutive losses in a day', '5'),
       ],
     ),
     _RiskPreset(
@@ -145,10 +140,11 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
           'Custom rules use balanced defaults for now and can be refined later.',
       request: CreateStrategyRequest(
         name: 'Customizable',
-        maxPositionSize: 1000,
+        maxPositionSize: 1,
         maxPositionValueUsd: 5000,
-        dailyLossLimitType: 'fixed_usd',
-        maxDailyLossUsd: 5000,
+        positionSizeType: 'percent_balance',
+        dailyLossLimitType: 'percent_balance',
+        maxDailyLossUsd: 0,
         maxDailyLossPercent: 2,
         maxOpenPositions: 5,
         maxTradesPerDay: 8,
@@ -161,15 +157,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('Daily loss mode', 'Fixed USD'),
-        ('Max leverage per asset', '10'),
-        ('Daily maximum loss', '\$5,000'),
-        ('Max trades per day', '8'),
-        ('Max consecutive losses', '3'),
-        ('Minimum risk/reward', '1:1.5'),
-        ('Max concurrent open positions', '5'),
-        ('Exit reason required', 'Yes'),
-        ('OTP required for exit', 'Yes'),
+        ('% Risk per trade', '1% of balance'),
+        ('Maximum leverage per asset', '10x'),
+        ('Maximum trades per day', '8'),
+        ('Daily maximum loss', '2% of UTC balance'),
+        ('Maximum concurrent open positions', '5'),
+        ('Maximum allowed consecutive losses in a day', '3'),
       ],
     ),
   ];
@@ -437,6 +430,14 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
 
   _RiskPreset _presetForSelected() {
     final preset = _options[_selected];
+    if (widget.mode == RiskAppetiteMode.settings &&
+        !_editingSettings &&
+        _activeRequest != null) {
+      return preset.copyWith(
+        request: _activeRequest,
+        rows: _rowsForRequest(_activeRequest!),
+      );
+    }
     if (preset.label != 'Customizable') return preset;
     return preset.copyWith(
       request: _customRequest,
@@ -448,6 +449,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
 
   void _applyActiveStrategy(Strategy strategy) {
     _selected = _indexForStrategy(strategy);
+    _activeRequest = _requestFromStrategy(strategy, name: strategy.name);
     if (_selected == _options.length - 1) {
       _customRequest = _requestFromStrategy(strategy, name: 'Customizable');
     }
@@ -474,10 +476,7 @@ String _riskLabel(_RiskPreset preset) =>
     preset.label == 'Customizable' ? 'Custom' : preset.label;
 
 String _summaryLabel(String label) {
-  return switch (label) {
-    'Max consecutive losses' => 'Max consecutive losses in a day',
-    _ => label,
-  };
+  return label;
 }
 
 CreateStrategyRequest _requestFromStrategy(
@@ -507,21 +506,28 @@ CreateStrategyRequest _requestFromStrategy(
 List<(String, String)> _rowsForRequest(CreateStrategyRequest request) {
   final usesPercent = request.dailyLossLimitType == 'percent_balance';
   return [
-    ('Daily loss mode', usesPercent ? '% of balance' : 'Fixed USD'),
-    ('Max leverage per asset', _formatNumber(request.maxLeverage)),
+    ('% Risk per trade', _riskPerTradeValue(request)),
+    ('Maximum leverage per asset', '${_formatNumber(request.maxLeverage)}x'),
+    ('Maximum trades per day', request.maxTradesPerDay.toString()),
     (
       'Daily maximum loss',
       usesPercent
           ? '${_formatNumber(request.maxDailyLossPercent ?? 0)}% of UTC balance'
           : '\$${_formatNumber(request.maxDailyLossUsd)}',
     ),
-    ('Max trades per day', request.maxTradesPerDay.toString()),
-    ('Max consecutive losses', request.maxConsecutiveLosses.toString()),
-    ('Minimum risk/reward', '1:${_formatNumber(request.minRiskRewardRatio)}'),
-    ('Max concurrent open positions', request.maxOpenPositions.toString()),
-    ('Exit reason required', request.requireExitReason ? 'Yes' : 'No'),
-    ('OTP required for exit', request.requireOtpForExit ? 'Yes' : 'No'),
+    ('Maximum concurrent open positions', request.maxOpenPositions.toString()),
+    (
+      'Maximum allowed consecutive losses in a day',
+      request.maxConsecutiveLosses.toString(),
+    ),
   ];
+}
+
+String _riskPerTradeValue(CreateStrategyRequest request) {
+  if (request.positionSizeType == 'percent_balance') {
+    return '${_formatNumber(request.maxPositionSize)}% of balance';
+  }
+  return '\$${_formatNumber(request.maxPositionSize)}';
 }
 
 String _formatNumber(num value) {
@@ -641,12 +647,12 @@ class _RiskSummaryCard extends StatelessWidget {
   }
 
   static const _summaryLabels = {
-    'Daily loss mode',
-    'Max leverage per asset',
-    'Max trades per day',
+    '% Risk per trade',
+    'Maximum leverage per asset',
+    'Maximum trades per day',
     'Daily maximum loss',
-    'Max concurrent open positions',
-    'Max consecutive losses',
+    'Maximum concurrent open positions',
+    'Maximum allowed consecutive losses in a day',
   };
 }
 
@@ -726,41 +732,40 @@ class _CustomRiskSettingsForm extends StatefulWidget {
 
 class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
   late final TextEditingController _dailyLossCtrl;
+  late final TextEditingController _riskPerTradeCtrl;
   late final TextEditingController _leverageCtrl;
   late final TextEditingController _tradesCtrl;
   late final TextEditingController _lossesCtrl;
   late final TextEditingController _positionsCtrl;
-  late final TextEditingController _riskRewardCtrl;
 
   @override
   void initState() {
     super.initState();
     final request = widget.request;
     _dailyLossCtrl = TextEditingController(
-      text: _formatNumber(request.dailyLossLimitType == 'percent_balance'
-          ? request.maxDailyLossPercent ?? 0
-          : request.maxDailyLossUsd),
+      text: _formatNumber(request.maxDailyLossPercent ?? 0),
     );
-    _leverageCtrl =
-        TextEditingController(text: _formatNumber(request.maxLeverage));
+    _riskPerTradeCtrl =
+        TextEditingController(text: _formatNumber(request.maxPositionSize));
+    _leverageCtrl = TextEditingController(
+      text: _formatNumber(request.maxLeverage),
+    );
     _tradesCtrl =
         TextEditingController(text: request.maxTradesPerDay.toString());
     _lossesCtrl =
         TextEditingController(text: request.maxConsecutiveLosses.toString());
     _positionsCtrl =
         TextEditingController(text: request.maxOpenPositions.toString());
-    _riskRewardCtrl =
-        TextEditingController(text: _formatNumber(request.minRiskRewardRatio));
   }
 
   @override
   void dispose() {
     _dailyLossCtrl.dispose();
+    _riskPerTradeCtrl.dispose();
     _leverageCtrl.dispose();
     _tradesCtrl.dispose();
     _lossesCtrl.dispose();
     _positionsCtrl.dispose();
-    _riskRewardCtrl.dispose();
     super.dispose();
   }
 
@@ -779,7 +784,6 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
   @override
   Widget build(BuildContext context) {
     final request = widget.request;
-    final usesPercent = request.dailyLossLimitType == 'percent_balance';
 
     return Container(
       width: double.infinity,
@@ -795,55 +799,31 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
           const Text('Custom risk settings', style: AppTypography.h4),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Adjust the values below before saving your custom appetite.',
+            'Adjust the PRD risk parameters below before saving your custom appetite.',
             style: AppTypography.bodySm.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          DropdownButtonFormField<String>(
-            initialValue: request.dailyLossLimitType,
-            decoration: const InputDecoration(labelText: 'Daily loss mode'),
-            items: const [
-              DropdownMenuItem(
-                value: 'percent_balance',
-                child: Text('% of balance'),
-              ),
-              DropdownMenuItem(
-                value: 'fixed_usd',
-                child: Text('Fixed USD'),
-              ),
-            ],
-            onChanged: (value) {
-              if (value == null) return;
-              final amount = _doubleValue(_dailyLossCtrl.text, 0);
-              _emit(request.copyWith(
-                dailyLossLimitType: value,
-                maxDailyLossPercent: value == 'percent_balance' ? amount : null,
-                maxDailyLossUsd: value == 'fixed_usd' ? amount : 0,
-              ));
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          TextField(
-            controller: _dailyLossCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: usesPercent
-                  ? 'Daily maximum loss (%)'
-                  : 'Daily maximum loss (USD)',
-            ),
-            onChanged: (value) {
-              final amount = _doubleValue(value, 0);
-              _emit(request.copyWith(
-                maxDailyLossPercent: usesPercent ? amount : null,
-                maxDailyLossUsd: usesPercent ? 0 : amount,
-              ));
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
+              Expanded(
+                child: TextField(
+                  controller: _riskPerTradeCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration:
+                      const InputDecoration(labelText: '% Risk per trade'),
+                  onChanged: (value) => _emit(
+                    request.copyWith(
+                      positionSizeType: 'percent_balance',
+                      maxPositionSize:
+                          _doubleValue(value, request.maxPositionSize),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: TextField(
                   controller: _leverageCtrl,
@@ -857,21 +837,6 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: TextField(
-                  controller: _tradesCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Trades per day'),
-                  onChanged: (value) => _emit(
-                    request.copyWith(
-                      maxTradesPerDay:
-                          _intValue(value, request.maxTradesPerDay),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -879,14 +844,13 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
             children: [
               Expanded(
                 child: TextField(
-                  controller: _lossesCtrl,
+                  controller: _tradesCtrl,
                   keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Consecutive losses'),
+                  decoration: const InputDecoration(labelText: 'Trades/day'),
                   onChanged: (value) => _emit(
                     request.copyWith(
-                      maxConsecutiveLosses:
-                          _intValue(value, request.maxConsecutiveLosses),
+                      maxTradesPerDay:
+                          _intValue(value, request.maxTradesPerDay),
                     ),
                   ),
                 ),
@@ -909,31 +873,40 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          TextField(
-            controller: _riskRewardCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Minimum risk/reward'),
-            onChanged: (value) => _emit(
-              request.copyWith(
-                minRiskRewardRatio:
-                    _doubleValue(value, request.minRiskRewardRatio),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _dailyLossCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration:
+                      const InputDecoration(labelText: 'Daily max loss %'),
+                  onChanged: (value) {
+                    final amount = _doubleValue(value, 0);
+                    _emit(request.copyWith(
+                      dailyLossLimitType: 'percent_balance',
+                      maxDailyLossPercent: amount,
+                      maxDailyLossUsd: 0,
+                    ));
+                  },
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Require exit reason'),
-            value: request.requireExitReason,
-            onChanged: (value) =>
-                _emit(request.copyWith(requireExitReason: value)),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Require OTP for exit'),
-            value: request.requireOtpForExit,
-            onChanged: (value) =>
-                _emit(request.copyWith(requireOtpForExit: value)),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  controller: _lossesCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Losses/day'),
+                  onChanged: (value) => _emit(
+                    request.copyWith(
+                      maxConsecutiveLosses:
+                          _intValue(value, request.maxConsecutiveLosses),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
