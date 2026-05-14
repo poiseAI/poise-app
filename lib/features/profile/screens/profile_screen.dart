@@ -681,7 +681,8 @@ class ExchangeConnectionsScreen extends StatelessWidget {
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(Routes.profile),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: const SizedBox.shrink(),
