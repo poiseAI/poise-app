@@ -179,6 +179,11 @@ String? _redirect(Ref ref, GoRouterState state) {
       Routes.login,
 
     // Logged in but onboarding incomplete → must be on onboarding route
+    AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
+        when !emailVerified &&
+            hasActiveStrategy &&
+            loc.startsWith('/app/profile') =>
+      null,
     AuthAuthenticated(:final emailVerified)
         when !emailVerified && loc != Routes.verifyEmail =>
       Routes.verifyEmail,

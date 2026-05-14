@@ -132,6 +132,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       context.pop();
       return;
     }
+    final auth = ref.read(authProvider).valueOrNull;
+    if (auth is AuthAuthenticated && auth.hasActiveStrategy) {
+      context.go(Routes.profile);
+      return;
+    }
     await ref.read(authProvider.notifier).logout();
     if (!mounted) return;
     context.go(Routes.login);
