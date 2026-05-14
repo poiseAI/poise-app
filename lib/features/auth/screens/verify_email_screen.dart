@@ -100,6 +100,16 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     );
   }
 
+  Future<void> _goBack() async {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    await ref.read(authProvider.notifier).logout();
+    if (!mounted) return;
+    context.go(Routes.login);
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider).valueOrNull;
@@ -110,7 +120,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         title: const Text('Verify new email address'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => ref.read(authProvider.notifier).logout(),
+          onPressed: _goBack,
         ),
       ),
       body: SafeArea(

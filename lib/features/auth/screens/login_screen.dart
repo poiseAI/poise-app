@@ -106,13 +106,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(Routes.welcome);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: _goBack,
         ),
       ),
       body: SafeArea(
