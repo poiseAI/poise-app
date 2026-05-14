@@ -46,6 +46,14 @@ class SecureStorageService {
     await _storage.delete(key: _Keys.tokenExpiresAt);
   }
 
+  Future<void> clearSession() async {
+    await Future.wait([
+      _storage.delete(key: _Keys.token),
+      _storage.delete(key: _Keys.tokenExpiresAt),
+      _storage.delete(key: _Keys.userId),
+    ]);
+  }
+
   Future<void> saveUserId(String userId) =>
       _storage.write(key: _Keys.userId, value: userId);
 

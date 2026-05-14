@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../core/storage/local_cache.dart';
+import '../core/storage/secure_storage.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,8 @@ Future<void> bootstrap() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
+
+  await SecureStorageService().clearSession();
 
   await Hive.initFlutter();
 
