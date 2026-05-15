@@ -428,12 +428,25 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
         );
     if (!mounted) return;
     result.fold(
-      onOk: (_) async {
+      onOk: (data) async {
         setState(() => _profileButtonState = PButtonState.success);
         ref.invalidate(_profileProvider);
         await ref.read(authProvider.notifier).refreshSession();
         if (!mounted) return;
-        PToast.success(context, 'Profile updated');
+        final verificationRequired =
+            data['verification_required'] as bool? ?? false;
+        PToast.success(
+          context,
+          verificationRequired
+              ? 'Verification code sent to your new email'
+              : 'Profile updated',
+        );
+        if (verificationRequired) {
+          Future<void>.delayed(const Duration(milliseconds: 450), () {
+            if (mounted) context.go(Routes.verifyEmail);
+          });
+          return;
+        }
         Future<void>.delayed(const Duration(milliseconds: 500), () {
           if (mounted) setState(() => _profileButtonState = PButtonState.idle);
         });

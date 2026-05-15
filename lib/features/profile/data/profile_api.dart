@@ -25,16 +25,16 @@ class ProfileApi {
     }
   }
 
-  Future<Result<void, AppError>> updateProfile({
+  Future<Result<Map<String, dynamic>, AppError>> updateProfile({
     String? fullName,
     required String email,
   }) async {
     try {
-      await _dio.put<void>('/profile', data: {
+      final resp = await _dio.put<Map<String, dynamic>>('/profile', data: {
         if (fullName != null) 'full_name': fullName,
         'email': email,
       });
-      return const Ok(null);
+      return Ok(resp.data ?? const {});
     } on DioException catch (e) {
       return Err(e.error is AppError
           ? e.error as AppError
