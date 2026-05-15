@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
@@ -8,7 +9,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/feedback/p_empty_state.dart';
 import '../../../core/widgets/feedback/p_error_state.dart';
+import '../../../core/utils/result.dart';
 import '../data/models/order.dart';
+import '../data/orders_api.dart';
 import '../providers/orders_provider.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
@@ -102,8 +105,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) => _OrderCard(
                           order: visible[index],
-                          onTap: () =>
-                              _showOrderDetails(context, visible[index]),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  _OrderDetailsScreen(order: visible[index]),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -268,59 +275,471 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-void _showOrderDetails(BuildContext context, Order order) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: AppColors.bgCard,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) => SafeArea(
-      child: Padding(
-        padding: AppSpacing.screenPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+class _OrderDetailsScreen extends ConsumerStatefulWidget {
+  const _OrderDetailsScreen({required this.order});
+
+  final Order order;
+
+  @override
+  ConsumerState<_OrderDetailsScreen> createState() =>
+      _OrderDetailsScreenState();
+}
+
+class _OrderDetailsScreenState extends ConsumerState<_OrderDetailsScreen> {
+  var _tab = _OrderDetailTab.info;
+  late final Future<Result<OrderInsights, AppError>> _insightsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _insightsFuture =
+        ref.read(ordersApiProvider).getOrderInsights(widget.order.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final order = widget.order;
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('Trade details'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: AppSpacing.screenPadding,
           children: [
-            Text(order.symbol, style: AppTypography.h3),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '${order.exchange.toUpperCase()} • ${order.source.toUpperCase()} • ${order.status.toUpperCase()}',
-              style:
-                  AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
+            const SizedBox(height: AppSpacing.md),
+            SegmentedButton<_OrderDetailTab>(
+              segments: const [
+                ButtonSegment(
+                  value: _OrderDetailTab.info,
+                  label: Text('Trade Info'),
+                ),
+                ButtonSegment(
+                  value: _OrderDetailTab.insights,
+                  label: Text('Insights'),
+                ),
+              ],
+              selected: {_tab},
+              onSelectionChanged: (selection) =>
+                  setState(() => _tab = selection.first),
             ),
             const SizedBox(height: AppSpacing.lg),
-            _DetailRow(label: 'Side', value: order.side.toUpperCase()),
-            _DetailRow(label: 'Type', value: order.orderType.toUpperCase()),
-            _DetailRow(
-                label: 'Quantity', value: order.quantity.toStringAsFixed(4)),
-            _DetailRow(
-              label: 'Price',
-              value: order.price == null
-                  ? 'Market'
-                  : '\$${order.price!.toStringAsFixed(2)}',
-            ),
-            _DetailRow(
-                label: 'Stop loss',
-                value: order.slPrice?.toStringAsFixed(2) ?? '-'),
-            _DetailRow(
-              label: 'Take profits',
-              value: order.tpLevels.isEmpty
-                  ? '-'
-                  : order.tpLevels
-                      .map((tp) => tp.toStringAsFixed(2))
-                      .join(', '),
-            ),
-            _DetailRow(
-                label: 'Exchange order ID',
-                value: order.exchangeOrderId ?? 'Pending sync'),
-            _DetailRow(label: 'Created', value: order.createdAt),
+            if (_tab == _OrderDetailTab.info)
+              _TradeInfoTab(order: order)
+            else
+              _TradeInsightsTab(future: _insightsFuture, order: order),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+enum _OrderDetailTab { info, insights }
+
+class _TradeInfoTab extends StatelessWidget {
+  const _TradeInfoTab({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    final pnl = order.realizedPnl ?? order.unrealizedPnl;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: AppSpacing.cardPadding,
+          decoration: BoxDecoration(
+            color: AppColors.profitGreen.withValues(alpha: 0.08),
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(
+              color: AppColors.profitGreen.withValues(alpha: 0.18),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Pill(
+                      label: order.side.toUpperCase(),
+                      color: order.side.toLowerCase() == 'buy'
+                          ? AppColors.profitGreen
+                          : AppColors.lossRed,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(order.symbol, style: AppTypography.h3),
+                    const SizedBox(height: AppSpacing.xs),
+                    _Pill(
+                      label: order.status.toUpperCase(),
+                      color: _statusColor(order.status),
+                    ),
+                  ],
+                ),
+              ),
+              if (pnl != null)
+                Text(
+                  _money(pnl, signed: true),
+                  style: AppTypography.numericMd.copyWith(
+                    color: AppColors.pnlColor(pnl),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _SectionCard(
+          children: [
+            _DetailRow(
+              label: 'Data Source',
+              value: order.source == 'external' ? 'Exchange' : 'Poise',
+            ),
+            _DetailRow(label: 'Exchange', value: order.exchange.toUpperCase()),
+            _DetailRow(
+              label: 'Execution Mode',
+              value: order.orderType.toUpperCase(),
+            ),
+            _DetailRow(
+              label: 'Quantity',
+              value: order.quantity.toStringAsFixed(4),
+            ),
+            _DetailRow(
+              label: 'Leverage',
+              value:
+                  '${order.leverage.toStringAsFixed(order.leverage % 1 == 0 ? 0 : 1)}x',
+            ),
+            _DetailRow(
+              label: 'Entry Price',
+              value: _price(order.entryPrice ?? order.price),
+            ),
+            _DetailRow(label: 'Stop Loss Price', value: _price(order.slPrice)),
+            _DetailRow(
+              label: 'Take Profit Price',
+              value: order.tpLevels.isEmpty
+                  ? '-'
+                  : order.tpLevels.map(_price).join(', '),
+            ),
+            _DetailRow(label: 'Open Time', value: order.createdAt),
+            _DetailRow(label: 'Close Time', value: order.closedAt ?? '-'),
+          ],
+        ),
+        if (order.exchangeOrderId != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _SectionCard(
+            children: [
+              _DetailRow(
+                label: 'Exchange order ID',
+                value: order.exchangeOrderId!,
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TradeInsightsTab extends StatelessWidget {
+  const _TradeInsightsTab({required this.future, required this.order});
+
+  final Future<Result<OrderInsights, AppError>> future;
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Result<OrderInsights, AppError>>(
+      future: future,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.xl),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+        final result = snap.data;
+        if (result == null || result.isErr) {
+          return const PErrorState(message: 'Could not load trade insights');
+        }
+        return _InsightsContent(order: order, insights: result.value);
+      },
+    );
+  }
+}
+
+class _InsightsContent extends StatelessWidget {
+  const _InsightsContent({required this.order, required this.insights});
+
+  final Order order;
+  final OrderInsights insights;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = insights.adherenceScore.clamp(0, 100);
+    final color = score >= 80
+        ? AppColors.profitGreen
+        : score >= 60
+            ? AppColors.warningAmber
+            : AppColors.lossRed;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Adherence\nScore',
+                style: AppTypography.h2.copyWith(height: 1.15),
+              ),
+            ),
+            const Expanded(child: Divider(color: AppColors.borderLight)),
+            const SizedBox(width: AppSpacing.md),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$score',
+                  style: AppTypography.display1.copyWith(color: color),
+                ),
+                const Text('of 100', style: AppTypography.h3),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _AiSummaryCard(insights: insights),
+        const SizedBox(height: AppSpacing.xl),
+        if (insights.opportunityCost != null) ...[
+          Text(
+            'Opportunity cost',
+            style: AppTypography.bodyLg.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _OpportunityCard(cost: insights.opportunityCost!),
+          const SizedBox(height: AppSpacing.xl),
+        ],
+        const Text('Today\'s adherence', style: AppTypography.bodyLg),
+        const SizedBox(height: AppSpacing.md),
+        Center(
+          child: SizedBox(
+            width: 154,
+            height: 154,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: score / 100,
+                  strokeWidth: 14,
+                  strokeCap: StrokeCap.round,
+                  backgroundColor: AppColors.bgSecondary,
+                  color: color,
+                ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        insights.adherenceLabel,
+                        style: AppTypography.bodySm.copyWith(color: color),
+                      ),
+                      Text('$score%', style: AppTypography.numericMd),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        GridView.count(
+          crossAxisCount: 2,
+          childAspectRatio: 2.2,
+          crossAxisSpacing: AppSpacing.sm,
+          mainAxisSpacing: AppSpacing.sm,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            for (final metric in insights.metrics)
+              _InsightMetricTile(metric: metric),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AiSummaryCard extends StatelessWidget {
+  const _AiSummaryCard({required this.insights});
+
+  final OrderInsights insights;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: const BoxDecoration(
+        color: Color(0xFFEFF6FF),
+        borderRadius: AppRadius.cardRadiusLg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded, color: Color(0xFF0057FF)),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'AI Summary',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            insights.aiSummary,
+            style: AppTypography.body.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpportunityCard extends StatelessWidget {
+  const _OpportunityCard({required this.cost});
+
+  final OrderOpportunityCost cost;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(cost.label, style: AppTypography.h3)),
+              Text(
+                _money(cost.value, signed: true),
+                style: AppTypography.numericMd.copyWith(
+                  color: AppColors.lossRed,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            width: double.infinity,
+            padding: AppSpacing.cardPadding,
+            decoration: BoxDecoration(
+              color: AppColors.warningAmber.withValues(alpha: 0.08),
+              borderRadius: AppRadius.cardRadius,
+            ),
+            child: Text(
+              cost.description,
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightMetricTile extends StatelessWidget {
+  const _InsightMetricTile({required this.metric});
+
+  final OrderInsightMetric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = metric.score >= 80
+        ? AppColors.profitGreen
+        : metric.score >= 60
+            ? AppColors.warningAmber
+            : AppColors.lossRed;
+    return Container(
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            metric.label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${metric.score}%',
+            style: AppTypography.bodyMedium.copyWith(color: color),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
 }
 
 class _DetailRow extends StatelessWidget {
@@ -470,6 +889,14 @@ class _NewTradeButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String _price(double? value) =>
+    value == null ? '-' : '\$${value.toStringAsFixed(2)}';
+
+String _money(double value, {bool signed = false}) {
+  final prefix = signed && value > 0 ? '+' : '';
+  return '$prefix\$${value.toStringAsFixed(2)}';
 }
 
 Color _statusColor(String status) {
