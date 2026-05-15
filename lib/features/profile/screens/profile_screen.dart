@@ -110,12 +110,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 10),
           _SettingsTile(
-            icon: Icons.cable_rounded,
+            icon: Icons.cable_outlined,
             label: 'Exchange Connections',
             onTap: () => context.push(Routes.exchangeConnections),
           ),
           _SettingsTile(
-            icon: Icons.percent_rounded,
+            icon: Icons.settings_input_component_outlined,
             label: 'Risk Appetite',
             subtitle: _riskAppetiteSubtitle(ref),
             onTap: () => Navigator.of(context).push(
@@ -326,27 +326,14 @@ class _EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _emailCtrl;
-  final _currentPasswordCtrl = TextEditingController();
-  final _newPasswordCtrl = TextEditingController();
-  final _confirmPasswordCtrl = TextEditingController();
   final _nameFocus = FocusNode();
   final _emailFocus = FocusNode();
-  final _currentPasswordFocus = FocusNode();
-  final _newPasswordFocus = FocusNode();
-  final _confirmPasswordFocus = FocusNode();
 
   PButtonState _profileButtonState = PButtonState.idle;
-  PButtonState _passwordButtonState = PButtonState.idle;
   PFieldState _nameState = PFieldState.idle;
   PFieldState _emailState = PFieldState.idle;
-  PFieldState _currentPasswordState = PFieldState.idle;
-  PFieldState _newPasswordState = PFieldState.idle;
-  PFieldState _confirmPasswordState = PFieldState.idle;
   String? _nameError;
   String? _emailError;
-  String? _currentPasswordError;
-  String? _newPasswordError;
-  String? _confirmPasswordError;
 
   @override
   void initState() {
@@ -359,14 +346,8 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
-    _currentPasswordCtrl.dispose();
-    _newPasswordCtrl.dispose();
-    _confirmPasswordCtrl.dispose();
     _nameFocus.dispose();
     _emailFocus.dispose();
-    _currentPasswordFocus.dispose();
-    _newPasswordFocus.dispose();
-    _confirmPasswordFocus.dispose();
     super.dispose();
   }
 
@@ -385,33 +366,6 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     setState(() {
       _emailState = ok ? PFieldState.valid : PFieldState.error;
       _emailError = ok ? null : 'Enter a valid email address';
-    });
-    return ok;
-  }
-
-  bool _validateCurrentPassword() {
-    final ok = _currentPasswordCtrl.text.isNotEmpty;
-    setState(() {
-      _currentPasswordState = ok ? PFieldState.valid : PFieldState.error;
-      _currentPasswordError = ok ? null : 'Enter your current password';
-    });
-    return ok;
-  }
-
-  bool _validateNewPassword() {
-    final ok = PasswordRequirements.isValid(_newPasswordCtrl.text);
-    setState(() {
-      _newPasswordState = ok ? PFieldState.valid : PFieldState.error;
-      _newPasswordError = ok ? null : 'Password does not meet all requirements';
-    });
-    return ok;
-  }
-
-  bool _validateConfirmPassword() {
-    final ok = _confirmPasswordCtrl.text == _newPasswordCtrl.text;
-    setState(() {
-      _confirmPasswordState = ok ? PFieldState.valid : PFieldState.error;
-      _confirmPasswordError = ok ? null : 'Passwords do not match';
     });
     return ok;
   }
@@ -461,6 +415,134 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        title: const Text('Edit profile'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: AppSpacing.screenPadding,
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            const Text('Enter Details', style: AppTypography.h2),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Update your personal details.',
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PTextField(
+              controller: _nameCtrl,
+              focusNode: _nameFocus,
+              label: 'Your name',
+              textInputAction: TextInputAction.next,
+              fieldState: _nameState,
+              errorText: _nameError,
+              onChanged: (_) {
+                if (_nameState != PFieldState.idle) _validateName();
+              },
+              onEditingComplete: () => _emailFocus.requestFocus(),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            PTextField(
+              controller: _emailCtrl,
+              focusNode: _emailFocus,
+              label: 'Email address',
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              fieldState: _emailState,
+              errorText: _emailError,
+              onChanged: (_) {
+                if (_emailState != PFieldState.idle) _validateEmail();
+              },
+              onEditingComplete: _saveProfile,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            PPrimaryButton(
+              label: 'Save changes',
+              state: _profileButtonState,
+              onPressed: _profileButtonState == PButtonState.loading
+                  ? null
+                  : _saveProfile,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChangePasswordScreen extends ConsumerStatefulWidget {
+  const _ChangePasswordScreen();
+
+  @override
+  ConsumerState<_ChangePasswordScreen> createState() =>
+      _ChangePasswordScreenState();
+}
+
+class _ChangePasswordScreenState extends ConsumerState<_ChangePasswordScreen> {
+  final _currentPasswordCtrl = TextEditingController();
+  final _newPasswordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  final _currentPasswordFocus = FocusNode();
+  final _newPasswordFocus = FocusNode();
+  final _confirmPasswordFocus = FocusNode();
+
+  PButtonState _passwordButtonState = PButtonState.idle;
+  PFieldState _currentPasswordState = PFieldState.idle;
+  PFieldState _newPasswordState = PFieldState.idle;
+  PFieldState _confirmPasswordState = PFieldState.idle;
+  String? _currentPasswordError;
+  String? _newPasswordError;
+  String? _confirmPasswordError;
+
+  @override
+  void dispose() {
+    _currentPasswordCtrl.dispose();
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
+    _currentPasswordFocus.dispose();
+    _newPasswordFocus.dispose();
+    _confirmPasswordFocus.dispose();
+    super.dispose();
+  }
+
+  bool _validateCurrentPassword() {
+    final ok = _currentPasswordCtrl.text.isNotEmpty;
+    setState(() {
+      _currentPasswordState = ok ? PFieldState.valid : PFieldState.error;
+      _currentPasswordError = ok ? null : 'Enter your current password';
+    });
+    return ok;
+  }
+
+  bool _validateNewPassword() {
+    final ok = PasswordRequirements.isValid(_newPasswordCtrl.text);
+    setState(() {
+      _newPasswordState = ok ? PFieldState.valid : PFieldState.error;
+      _newPasswordError = ok ? null : 'Password does not meet all requirements';
+    });
+    return ok;
+  }
+
+  bool _validateConfirmPassword() {
+    final ok = _confirmPasswordCtrl.text == _newPasswordCtrl.text;
+    setState(() {
+      _confirmPasswordState = ok ? PFieldState.valid : PFieldState.error;
+      _confirmPasswordError = ok ? null : 'Passwords do not match';
+    });
+    return ok;
+  }
+
   Future<void> _changePassword() async {
     final currentOk = _validateCurrentPassword();
     final newOk = _validateNewPassword();
@@ -500,7 +582,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        title: const Text('Edit profile'),
+        title: const Text('Change password'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
@@ -511,49 +593,6 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
           padding: AppSpacing.screenPadding,
           children: [
             const SizedBox(height: AppSpacing.md),
-            const Text('Enter Details', style: AppTypography.h2),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Update your personal details and account password.',
-              style:
-                  AppTypography.body.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PTextField(
-              controller: _nameCtrl,
-              focusNode: _nameFocus,
-              label: 'Your name',
-              textInputAction: TextInputAction.next,
-              fieldState: _nameState,
-              errorText: _nameError,
-              onChanged: (_) {
-                if (_nameState != PFieldState.idle) _validateName();
-              },
-              onEditingComplete: () => _emailFocus.requestFocus(),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            PTextField(
-              controller: _emailCtrl,
-              focusNode: _emailFocus,
-              label: 'Email address',
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.done,
-              fieldState: _emailState,
-              errorText: _emailError,
-              onChanged: (_) {
-                if (_emailState != PFieldState.idle) _validateEmail();
-              },
-              onEditingComplete: _saveProfile,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PPrimaryButton(
-              label: 'Save changes',
-              state: _profileButtonState,
-              onPressed: _profileButtonState == PButtonState.loading
-                  ? null
-                  : _saveProfile,
-            ),
-            const SizedBox(height: AppSpacing.xxl),
             const Text('Change password', style: AppTypography.h2),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -1354,11 +1393,50 @@ void _showSecuritySheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _SheetFrame(
+    builder: (sheetContext) => _SheetFrame(
       title: 'Security',
-      child: _TotpTile(),
+      child: _SecuritySection(
+        onChangePassword: () {
+          Navigator.pop(sheetContext);
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const _ChangePasswordScreen(),
+            ),
+          );
+        },
+      ),
     ),
   );
+}
+
+class _SecuritySection extends StatelessWidget {
+  const _SecuritySection({required this.onChangePassword});
+
+  final VoidCallback onChangePassword;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(
+            Icons.lock_reset_rounded,
+            color: AppColors.textSecondary,
+          ),
+          title: const Text('Change password'),
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textDisabled,
+          ),
+          onTap: onChangePassword,
+        ),
+        const Divider(height: 1, color: AppColors.borderLight),
+        const _TotpTile(),
+      ],
+    );
+  }
 }
 
 class _TotpTile extends ConsumerStatefulWidget {
