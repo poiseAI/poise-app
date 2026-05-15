@@ -74,11 +74,11 @@ def app_store_connect_request(method, path, token)
   response.body.to_s.empty? ? {} : JSON.parse(response.body)
 end
 
-def ios_development_certificates(token)
+def certificates_for_type(token, certificate_type)
   require "uri"
 
   query = URI.encode_www_form(
-    "filter[certificateType]" => "IOS_DEVELOPMENT",
+    "filter[certificateType]" => certificate_type,
     "fields[certificates]" => "name,certificateType,displayName,serialNumber,platform,expirationDate",
     "limit" => "200"
   )
@@ -95,11 +95,17 @@ def ios_development_certificates(token)
   certificates
 end
 
+def development_certificates(token)
+  ["DEVELOPMENT", "IOS_DEVELOPMENT"]
+    .flat_map { |certificate_type| certificates_for_type(token, certificate_type) }
+    .uniq { |certificate| certificate.fetch("id") }
+end
+
 def prune_stale_api_created_development_certificate(key_id, issuer_id, key_content)
   require "time"
 
   token = app_store_connect_token(key_id, issuer_id, key_content)
-  certificates = ios_development_certificates(token)
+  certificates = development_certificates(token)
   candidates = certificates.select do |certificate|
     attributes = certificate.fetch("attributes", {})
     [attributes["displayName"], attributes["name"]].compact.any? do |label|
@@ -107,8 +113,11 @@ def prune_stale_api_created_development_certificate(key_id, issuer_id, key_conte
     end
   end
 
+  counts_by_type = certificates.each_with_object(Hash.new(0)) do |certificate, counts|
+    counts[certificate.dig("attributes", "certificateType") || "unknown"] += 1
+  end
   UI.message(
-    "Found #{certificates.length} iOS development certificates; " \
+    "Found #{certificates.length} development certificates #{counts_by_type}; " \
     "#{candidates.length} are API-created cleanup candidates"
   )
   return if candidates.empty? || certificates.length < 2
