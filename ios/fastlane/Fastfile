@@ -35,31 +35,98 @@ def write_app_store_key_file(key_id, key_content)
   path
 end
 
-def prune_stale_api_created_development_certificate
-  require "spaceship"
+def app_store_connect_token(key_id, issuer_id, key_content)
+  require "jwt"
+  require "openssl"
 
-  certificates = Spaceship::ConnectAPI::Certificate.all(
-    filter: { certificateType: "IOS_DEVELOPMENT" }
+  JWT.encode(
+    {
+      iss: issuer_id,
+      exp: Time.now.to_i + 600,
+      aud: "appstoreconnect-v1"
+    },
+    OpenSSL::PKey::EC.new(key_content),
+    "ES256",
+    {
+      kid: key_id,
+      typ: "JWT"
+    }
   )
+end
+
+def app_store_connect_request(method, path, token)
+  require "json"
+  require "net/http"
+  require "uri"
+
+  uri = path.start_with?("http") ? URI(path) : URI("https://api.appstoreconnect.apple.com#{path}")
+  request = method == :delete ? Net::HTTP::Delete.new(uri) : Net::HTTP::Get.new(uri)
+  request["Authorization"] = "Bearer #{token}"
+
+  response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+    http.request(request)
+  end
+
+  unless response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPNoContent)
+    UI.user_error!("App Store Connect #{method.to_s.upcase} #{uri.path} failed: HTTP #{response.code}")
+  end
+
+  response.body.to_s.empty? ? {} : JSON.parse(response.body)
+end
+
+def ios_development_certificates(token)
+  require "uri"
+
+  query = URI.encode_www_form(
+    "filter[certificateType]" => "IOS_DEVELOPMENT",
+    "fields[certificates]" => "name,certificateType,displayName,serialNumber,platform,expirationDate",
+    "limit" => "200"
+  )
+  path = "/v1/certificates?#{query}"
+  certificates = []
+
+  loop do
+    body = app_store_connect_request(:get, path, token)
+    certificates.concat(body.fetch("data", []))
+    path = body.dig("links", "next")
+    break unless path
+  end
+
+  certificates
+end
+
+def prune_stale_api_created_development_certificate(key_id, issuer_id, key_content)
+  require "time"
+
+  token = app_store_connect_token(key_id, issuer_id, key_content)
+  certificates = ios_development_certificates(token)
   candidates = certificates.select do |certificate|
-    [certificate.display_name, certificate.name].compact.any? do |label|
+    attributes = certificate.fetch("attributes", {})
+    [attributes["displayName"], attributes["name"]].compact.any? do |label|
       label.include?("Created via API")
     end
   end
 
+  UI.message(
+    "Found #{certificates.length} iOS development certificates; " \
+    "#{candidates.length} are API-created cleanup candidates"
+  )
   return if candidates.empty? || certificates.length < 2
 
   certificate = candidates.min_by do |candidate|
-    Time.parse(candidate.expiration_date.to_s)
+    Time.parse(candidate.dig("attributes", "expirationDate").to_s)
   rescue ArgumentError, TypeError
     Time.at(0)
   end
 
+  label = certificate.dig("attributes", "displayName") ||
+          certificate.dig("attributes", "name") ||
+          "unnamed certificate"
   UI.important(
-    "Revoking stale API-created iOS development certificate #{certificate.id} " \
-    "to keep CI automatic signing below Apple's certificate limit"
+    "Revoking stale API-created iOS development certificate #{certificate.fetch("id")} " \
+    "(#{label}) to keep CI automatic signing below Apple's certificate limit"
   )
-  certificate.delete!
+  app_store_connect_request(:delete, "/v1/certificates/#{certificate.fetch("id")}", token)
 end
 
 platform :ios do
@@ -85,7 +152,7 @@ platform :ios do
       duration: 1200,
       in_house: false
     )
-    prune_stale_api_created_development_certificate
+    prune_stale_api_created_development_certificate(key_id, issuer_id, key_content)
 
     update_code_signing_settings(
       path: "Runner.xcodeproj",
