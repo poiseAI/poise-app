@@ -112,11 +112,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _SettingsTile(
             icon: Icons.cable_rounded,
             label: 'Exchange Connections',
-            onTap: () => showExchangeSetupSheet(
-              context,
-              ref,
-              onManualSetup: () => context.push(Routes.exchangeConnections),
-            ),
+            onTap: () => context.push(Routes.exchangeConnections),
           ),
           _SettingsTile(
             icon: Icons.percent_rounded,
