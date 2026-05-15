@@ -91,7 +91,6 @@ platform :ios do
       path: "Runner.xcodeproj",
       use_automatic_signing: true,
       team_id: team_id,
-      code_sign_identity: "Apple Distribution",
       targets: ["Runner"]
     )
 
@@ -112,7 +111,6 @@ platform :ios do
       "-authenticationKeyPath #{Shellwords.escape(key_path)}",
       "-authenticationKeyID #{Shellwords.escape(key_id)}",
       "-authenticationKeyIssuerID #{Shellwords.escape(issuer_id)}",
-      "CODE_SIGN_IDENTITY=#{Shellwords.escape("Apple Distribution")}",
       "DEVELOPMENT_TEAM=#{Shellwords.escape(team_id)}"
     ].join(" ")
 
