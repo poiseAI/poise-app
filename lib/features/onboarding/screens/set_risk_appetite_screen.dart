@@ -60,12 +60,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('% Risk per trade', '0.5% of balance'),
-        ('Maximum leverage per asset', '4x'),
-        ('Maximum trades per day', '5'),
+        ('Percentage risk per trade', '0.5% of balance'),
+        ('Max leverage per asset', '4x'),
+        ('Max trades per day', '5'),
         ('Daily maximum loss', '1% of balance'),
-        ('Maximum concurrent open positions', '5'),
-        ('Maximum allowed consecutive losses in a day', '3'),
+        ('Max concurrent open positions', '5'),
+        ('Max consecutive losses in a day', '3'),
       ],
     ),
     _RiskPreset(
@@ -92,12 +92,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('% Risk per trade', '1% of balance'),
-        ('Maximum leverage per asset', '10x'),
-        ('Maximum trades per day', '8'),
+        ('Percentage risk per trade', '1% of balance'),
+        ('Max leverage per asset', '10x'),
+        ('Max trades per day', '8'),
         ('Daily maximum loss', '2% of balance'),
-        ('Maximum concurrent open positions', '5'),
-        ('Maximum allowed consecutive losses in a day', '3'),
+        ('Max concurrent open positions', '5'),
+        ('Max consecutive losses in a day', '3'),
       ],
     ),
     _RiskPreset(
@@ -124,12 +124,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: false,
       ),
       rows: [
-        ('% Risk per trade', '2% of balance'),
-        ('Maximum leverage per asset', '20x'),
-        ('Maximum trades per day', '12'),
+        ('Percentage risk per trade', '2% of balance'),
+        ('Max leverage per asset', '20x'),
+        ('Max trades per day', '12'),
         ('Daily maximum loss', '5% of balance'),
-        ('Maximum concurrent open positions', '10'),
-        ('Maximum allowed consecutive losses in a day', '5'),
+        ('Max concurrent open positions', '10'),
+        ('Max consecutive losses in a day', '5'),
       ],
     ),
     _RiskPreset(
@@ -157,12 +157,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         requireOtpForExit: true,
       ),
       rows: [
-        ('% Risk per trade', '1% of balance'),
-        ('Maximum leverage per asset', '10x'),
-        ('Maximum trades per day', '8'),
+        ('Percentage risk per trade', '1% of balance'),
+        ('Max leverage per asset', '10x'),
+        ('Max trades per day', '8'),
         ('Daily maximum loss', '2% of balance'),
-        ('Maximum concurrent open positions', '5'),
-        ('Maximum allowed consecutive losses in a day', '3'),
+        ('Max concurrent open positions', '5'),
+        ('Max consecutive losses in a day', '3'),
       ],
     ),
   ];
@@ -365,6 +365,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
               ? 'Customize risk settings'
               : 'Confirm configuration',
         ),
+        centerTitle: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => setState(() => _confirming = false),
@@ -506,18 +507,18 @@ CreateStrategyRequest _requestFromStrategy(
 List<(String, String)> _rowsForRequest(CreateStrategyRequest request) {
   final usesPercent = request.dailyLossLimitType == 'percent_balance';
   return [
-    ('% Risk per trade', _riskPerTradeValue(request)),
-    ('Maximum leverage per asset', '${_formatNumber(request.maxLeverage)}x'),
-    ('Maximum trades per day', request.maxTradesPerDay.toString()),
+    ('Percentage risk per trade', _riskPerTradeValue(request)),
+    ('Max leverage per asset', '${_formatNumber(request.maxLeverage)}x'),
+    ('Max trades per day', request.maxTradesPerDay.toString()),
     (
       'Daily maximum loss',
       usesPercent
           ? '${_formatNumber(request.maxDailyLossPercent ?? 0)}% of balance'
           : '\$${_formatNumber(request.maxDailyLossUsd)}',
     ),
-    ('Maximum concurrent open positions', request.maxOpenPositions.toString()),
+    ('Max concurrent open positions', request.maxOpenPositions.toString()),
     (
-      'Maximum allowed consecutive losses in a day',
+      'Max consecutive losses in a day',
       request.maxConsecutiveLosses.toString(),
     ),
   ];
@@ -647,12 +648,12 @@ class _RiskSummaryCard extends StatelessWidget {
   }
 
   static const _summaryLabels = {
-    '% Risk per trade',
-    'Maximum leverage per asset',
-    'Maximum trades per day',
+    'Percentage risk per trade',
+    'Max leverage per asset',
+    'Max trades per day',
     'Daily maximum loss',
-    'Maximum concurrent open positions',
-    'Maximum allowed consecutive losses in a day',
+    'Max concurrent open positions',
+    'Max consecutive losses in a day',
   };
 }
 
@@ -670,6 +671,7 @@ class _RiskSelectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
+      width: double.infinity,
       duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
@@ -812,8 +814,8 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
                   controller: _riskPerTradeCtrl,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration:
-                      const InputDecoration(labelText: '% Risk per trade'),
+                  decoration: const InputDecoration(
+                      labelText: 'Percentage risk per trade'),
                   onChanged: (value) => _emit(
                     request.copyWith(
                       positionSizeType: 'percent_balance',
@@ -962,11 +964,26 @@ class _RiskConfirmCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        row.$1,
-                        style: AppTypography.bodySm.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              row.$1,
+                              style: AppTypography.bodySm.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Tooltip(
+                            message: _riskTooltip(row.$1),
+                            child: const Icon(
+                              Icons.help_outline_rounded,
+                              size: 16,
+                              color: AppColors.textDisabled,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -980,6 +997,23 @@ class _RiskConfirmCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _riskTooltip(String label) {
+  return switch (label) {
+    'Percentage risk per trade' =>
+      'The maximum account percentage Poise allows on one trade.',
+    'Max leverage per asset' =>
+      'The highest leverage allowed when opening a trade.',
+    'Max trades per day' => 'The maximum number of trades allowed in one day.',
+    'Daily maximum loss' =>
+      'The daily loss threshold where Poise stops new trades.',
+    'Max concurrent open positions' =>
+      'The maximum number of positions that can stay open at once.',
+    'Max consecutive losses in a day' =>
+      'The number of same-day losses allowed before trading is blocked.',
+    _ => 'This setting helps Poise enforce your trading guardrails.',
+  };
 }
 
 class _RiskAppetiteSuccessScreen extends ConsumerWidget {
@@ -1027,7 +1061,9 @@ class _RiskAppetiteSuccessScreen extends ConsumerWidget {
                   final prefs = await ref.read(appPreferencesProvider.future);
                   await prefs.setOnboardingComplete();
                   ref.read(authProvider.notifier).markHasActiveStrategy();
-                  if (context.mounted) context.go(Routes.home);
+                  if (context.mounted) {
+                    context.go('${Routes.exchangeConnections}?from=onboarding');
+                  }
                 },
               ),
               const SizedBox(height: AppSpacing.lg),

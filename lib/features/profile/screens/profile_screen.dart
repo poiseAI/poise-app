@@ -686,33 +686,39 @@ class ExchangeConnectionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fromOnboarding =
+        GoRouterState.of(context).uri.queryParameters['from'] == 'onboarding';
+    final exitRoute = fromOnboarding ? Routes.home : Routes.profile;
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         leading: IconButton(
           onPressed: () =>
-              context.canPop() ? context.pop() : context.go(Routes.profile),
+              context.canPop() ? context.pop() : context.go(exitRoute),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
-        title: const SizedBox.shrink(),
+        centerTitle: false,
+        title: Text(fromOnboarding ? 'Connect exchange' : ''),
         actions: [
           TextButton(
             onPressed: () =>
-                context.canPop() ? context.pop() : context.go(Routes.profile),
+                context.canPop() ? context.pop() : context.go(exitRoute),
             child: const Text('Skip'),
           ),
         ],
       ),
-      body: const SafeArea(
+      body: SafeArea(
         top: false,
-        child: _ExchangeConnectionsSection(),
+        child: _ExchangeConnectionsSection(fromOnboarding: fromOnboarding),
       ),
     );
   }
 }
 
 class _ExchangeConnectionsSection extends ConsumerStatefulWidget {
-  const _ExchangeConnectionsSection();
+  const _ExchangeConnectionsSection({required this.fromOnboarding});
+
+  final bool fromOnboarding;
 
   @override
   ConsumerState<_ExchangeConnectionsSection> createState() =>
@@ -796,6 +802,13 @@ class _ExchangeConnectionsSectionState
               expanded: _expandedExchange == 'binance',
               onToggle: () => _toggleExpanded('binance'),
               onChanged: _reload,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            PPrimaryButton(
+              label: widget.fromOnboarding ? 'Continue' : 'Done',
+              onPressed: () => context.go(
+                widget.fromOnboarding ? Routes.home : Routes.profile,
+              ),
             ),
           ],
         );

@@ -146,10 +146,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider).valueOrNull;
     final email = auth is AuthAuthenticated ? auth.email : 'your email';
+    final isSettingsVerification =
+        auth is AuthAuthenticated && auth.hasActiveStrategy;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verify new email address'),
+        centerTitle: false,
+        title: Text(isSettingsVerification ? 'Verify email' : 'Sign up'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: _goBack,
@@ -162,6 +165,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.md),
+              const Text(
+                'Verify your email address',
+                style: AppTypography.h4,
+              ),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'A 6-digit OTP has been sent to $email. Please enter it below to verify your email.',
                 style: AppTypography.body.copyWith(
@@ -256,7 +264,7 @@ class _EmailVerifiedSuccessScreen extends ConsumerWidget {
               ),
               const Spacer(flex: 2),
               PPrimaryButton(
-                label: 'Done',
+                label: 'Continue',
                 onPressed: () {
                   final auth = ref.read(authProvider).valueOrNull;
                   if (auth is AuthAuthenticated && auth.hasActiveStrategy) {

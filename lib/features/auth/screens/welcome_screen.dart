@@ -23,21 +23,21 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   static const _pages = [
     _WelcomePageData(
       asset: 'assets/images/onboarding_plant.png',
-      title: 'Trading Operating System',
+      title: 'The Trading Operating System',
       body:
-          'Plan, review, and execute every trade with discipline. Poise checks your rules before emotion gets a vote.',
+          'Stop losing to emotional mistakes. Poise enforces your strategy and discipline by evaluating every trade before it is executed.',
     ),
     _WelcomePageData(
       asset: 'assets/images/onboarding_shield.png',
       title: 'Automated Risk Guardrails',
       body:
-          'Set daily loss, leverage, and risk-per-trade limits. Poise blocks trades that break the guardrails you chose.',
+          'Define your limits - daily loss, max leverage, % risk per trade - and Poise automatically blocks trades that violate your rules.',
     ),
     _WelcomePageData(
       asset: 'assets/images/onboarding_light_bulb.png',
       title: 'Real-Time AI Coaching',
       body:
-          'Spot patterns like overtrading and revenge trading early. Chat with Poise AI before execution to stay consistent.',
+          'Get immediate feedback on emotional patterns like overtrading or revenge trading. Chat with Poise AI before you execute to stay consistent.',
     ),
   ];
 

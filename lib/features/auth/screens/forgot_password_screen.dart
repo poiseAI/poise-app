@@ -76,6 +76,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: false,
+        title: const Text('Forgot Password'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -88,7 +90,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.lg),
-              const Text('Reset password', style: AppTypography.display2),
+              const Text('Reset your password', style: AppTypography.h4),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Enter your email and we\'ll send a reset code.',
@@ -111,7 +113,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               ),
               const SizedBox(height: AppSpacing.xl),
               PPrimaryButton(
-                label: 'Send code',
+                label: 'Reset password',
                 state: _buttonState,
                 onPressed: _submit,
               ),
