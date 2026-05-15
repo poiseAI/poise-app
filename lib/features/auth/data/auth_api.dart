@@ -53,10 +53,17 @@ class AuthApi {
     required String fullName,
     required String email,
     required String password,
+    String? sessionId,
   }) async {
     try {
       final resp = await _dio.post<Map<String, dynamic>>(
         '/auth/register',
+        options: sessionId == null
+            ? null
+            : Options(headers: {
+                'X-Poise-Session-Id': sessionId,
+                'X-Poise-Session-Policy': 'single-device',
+              }),
         data: {
           'name': fullName,
           'full_name': fullName,

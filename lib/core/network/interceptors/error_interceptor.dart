@@ -32,6 +32,10 @@ class ErrorInterceptor extends Interceptor {
       return ServerError(status, _extractMessage(err.response?.data));
     }
 
+    if (status == 423 || status == 429) {
+      return ServerError(status, _extractMessage(err.response?.data));
+    }
+
     if (status == 422 || status == 400) {
       final data = err.response?.data;
       if (data is Map<String, dynamic>) {

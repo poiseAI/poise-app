@@ -122,6 +122,7 @@ class Auth extends _$Auth {
           fullName: fullName,
           email: email,
           password: password,
+          sessionId: sessionId,
         );
 
     return result.fold(

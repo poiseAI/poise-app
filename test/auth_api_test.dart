@@ -74,4 +74,46 @@ void main() {
     expect(result.error, isA<InvalidCredentialsError>());
     expect(result.error.userMessage, 'Invalid credentials');
   });
+
+  test('register sends session policy headers when session id is provided',
+      () async {
+    final dio = _MockDio();
+    Options? capturedOptions;
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        any(),
+        data: any<dynamic>(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer((invocation) async {
+      capturedOptions = invocation.namedArguments[#options] as Options?;
+      return Response<Map<String, dynamic>>(
+        requestOptions: RequestOptions(path: '/auth/register'),
+        statusCode: 201,
+        data: {
+          'token': 'jwt',
+          'user': {
+            'id': 'user-1',
+            'email': 'user@example.com',
+            'full_name': 'Test User',
+            'email_verified': false,
+          },
+        },
+      );
+    });
+
+    final result = await AuthApi(dio).register(
+      fullName: 'Test User',
+      email: 'user@example.com',
+      password: 'Password1!',
+      sessionId: 'session-1',
+    );
+
+    expect(result.isOk, isTrue);
+    expect(capturedOptions?.headers?['X-Poise-Session-Id'], 'session-1');
+    expect(
+      capturedOptions?.headers?['X-Poise-Session-Policy'],
+      'single-device',
+    );
+  });
 }
