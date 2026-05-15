@@ -125,7 +125,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       context.pop();
       return;
     }
-    context.go(Routes.login);
+    context.go(Routes.welcomeBack);
   }
 
   @override

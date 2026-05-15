@@ -1,6 +1,7 @@
 abstract final class Routes {
   // Auth
   static const welcome = '/auth/welcome';
+  static const welcomeBack = '/auth/welcome?from=back';
   static const login = '/auth/login';
   static const register = '/auth/register';
   static const verifyEmail = '/auth/verify-email';

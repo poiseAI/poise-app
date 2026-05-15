@@ -111,7 +111,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context.pop();
       return;
     }
-    context.go(Routes.welcome);
+    context.go(Routes.welcomeBack);
   }
 
   @override

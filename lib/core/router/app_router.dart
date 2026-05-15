@@ -175,7 +175,10 @@ String? _redirect(Ref ref, GoRouterState state) {
 
     // Returning signed-out users should go straight to login after the first
     // welcome run, while fresh installs still see the onboarding carousel.
-    AuthUnauthenticated() when hasSeenWelcome && loc == Routes.welcome =>
+    AuthUnauthenticated()
+        when hasSeenWelcome &&
+            loc == Routes.welcome &&
+            state.uri.queryParameters['from'] != 'back' =>
       Routes.login,
 
     // Logged in but onboarding incomplete → must be on onboarding route
