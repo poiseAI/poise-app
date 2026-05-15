@@ -63,7 +63,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('% Risk per trade', '0.5% of balance'),
         ('Maximum leverage per asset', '4x'),
         ('Maximum trades per day', '5'),
-        ('Daily maximum loss', '1% of UTC balance'),
+        ('Daily maximum loss', '1% of balance'),
         ('Maximum concurrent open positions', '5'),
         ('Maximum allowed consecutive losses in a day', '3'),
       ],
@@ -95,7 +95,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('% Risk per trade', '1% of balance'),
         ('Maximum leverage per asset', '10x'),
         ('Maximum trades per day', '8'),
-        ('Daily maximum loss', '2% of UTC balance'),
+        ('Daily maximum loss', '2% of balance'),
         ('Maximum concurrent open positions', '5'),
         ('Maximum allowed consecutive losses in a day', '3'),
       ],
@@ -127,7 +127,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('% Risk per trade', '2% of balance'),
         ('Maximum leverage per asset', '20x'),
         ('Maximum trades per day', '12'),
-        ('Daily maximum loss', '5% of UTC balance'),
+        ('Daily maximum loss', '5% of balance'),
         ('Maximum concurrent open positions', '10'),
         ('Maximum allowed consecutive losses in a day', '5'),
       ],
@@ -160,7 +160,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('% Risk per trade', '1% of balance'),
         ('Maximum leverage per asset', '10x'),
         ('Maximum trades per day', '8'),
-        ('Daily maximum loss', '2% of UTC balance'),
+        ('Daily maximum loss', '2% of balance'),
         ('Maximum concurrent open positions', '5'),
         ('Maximum allowed consecutive losses in a day', '3'),
       ],
@@ -512,7 +512,7 @@ List<(String, String)> _rowsForRequest(CreateStrategyRequest request) {
     (
       'Daily maximum loss',
       usesPercent
-          ? '${_formatNumber(request.maxDailyLossPercent ?? 0)}% of UTC balance'
+          ? '${_formatNumber(request.maxDailyLossPercent ?? 0)}% of balance'
           : '\$${_formatNumber(request.maxDailyLossUsd)}',
     ),
     ('Maximum concurrent open positions', request.maxOpenPositions.toString()),
