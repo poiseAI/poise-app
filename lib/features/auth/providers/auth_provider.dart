@@ -42,6 +42,10 @@ class Auth extends _$Auth {
                 as String? ??
             '';
         final emailVerified = data['email_verified'] as bool? ?? true;
+        final hasExchangeConnection =
+            data['has_exchange_connection'] as bool? ??
+                data['exchange_setup_complete'] as bool? ??
+                false;
         _connectWs(token);
         _scheduleProactiveRefresh(token);
 
@@ -61,6 +65,7 @@ class Auth extends _$Auth {
           isAdmin: data['is_admin'] as bool? ?? false,
           totpEnabled: data['totp_enabled'] as bool? ?? false,
           hasActiveStrategy: hasActiveStrategy,
+          hasExchangeConnection: hasExchangeConnection,
         );
       },
       onErr: (_) async {
@@ -183,6 +188,10 @@ class Auth extends _$Auth {
                 as String? ??
             '';
         final emailVerified = data['email_verified'] as bool? ?? true;
+        final hasExchangeConnection =
+            data['has_exchange_connection'] as bool? ??
+                data['exchange_setup_complete'] as bool? ??
+                false;
         final strategiesResult =
             await ref.read(strategiesApiProvider).getActiveStrategies();
         final hasActiveStrategy =
@@ -197,6 +206,7 @@ class Auth extends _$Auth {
           isAdmin: data['is_admin'] as bool? ?? false,
           totpEnabled: data['totp_enabled'] as bool? ?? false,
           hasActiveStrategy: hasActiveStrategy,
+          hasExchangeConnection: hasExchangeConnection,
         ));
       },
       onErr: (_) async => logout(),
@@ -207,6 +217,13 @@ class Auth extends _$Auth {
     final current = state.valueOrNull;
     if (current is AuthAuthenticated) {
       state = AsyncData(current.copyWith(hasActiveStrategy: true));
+    }
+  }
+
+  void markHasExchangeConnection() {
+    final current = state.valueOrNull;
+    if (current is AuthAuthenticated) {
+      state = AsyncData(current.copyWith(hasExchangeConnection: true));
     }
   }
 

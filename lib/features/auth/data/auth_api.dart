@@ -39,6 +39,10 @@ class AuthApi {
       return Ok(AuthResponse.fromJson(resp.data!));
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
+        final message = _responseErrorMessage(e.response?.data).toLowerCase();
+        if (message.contains('totp') || message.contains('2fa')) {
+          return Err(ServerError(401, message));
+        }
         return const Err(InvalidCredentialsError());
       }
       return Err(e.error is AppError
@@ -83,7 +87,7 @@ class AuthApi {
 
   Future<Result<Map<String, dynamic>, AppError>> getMe() async {
     try {
-      final resp = await _dio.get<Map<String, dynamic>>('/profile');
+      final resp = await _dio.get<Map<String, dynamic>>('/me');
       return Ok(resp.data!);
     } on DioException catch (e) {
       return Err(e.error is AppError
@@ -145,4 +149,14 @@ class AuthApi {
           : UnknownError(e.message ?? ''));
     }
   }
+}
+
+String _responseErrorMessage(Object? data) {
+  if (data is Map<String, dynamic>) {
+    return data['error']?.toString() ?? '';
+  }
+  if (data is Map<dynamic, dynamic>) {
+    return data['error']?.toString() ?? '';
+  }
+  return '';
 }

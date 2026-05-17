@@ -17,5 +17,6 @@ sealed class AuthState with _$AuthState {
     @Default(false) bool isAdmin,
     @Default(false) bool totpEnabled,
     @Default(false) bool hasActiveStrategy,
+    @Default(false) bool hasExchangeConnection,
   }) = AuthAuthenticated;
 }

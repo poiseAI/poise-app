@@ -66,7 +66,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Profile'),
+        title: const Text('Profile', style: AppTypography.h1),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: AppColors.borderLight),
@@ -76,19 +76,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
         children: [
           Text(
-            name.isNotEmpty ? name : 'Profile',
-            style: AppTypography.h3.copyWith(fontWeight: FontWeight.w700),
+            name.isNotEmpty ? _titleCaseName(name) : 'Profile',
+            style: AppTypography.h1.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 2),
           Text(
             authState.email,
-            style: AppTypography.body.copyWith(
+            style: AppTypography.bodyLg.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
           SizedBox(
-            height: 44,
+            height: 52,
             child: OutlinedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -110,12 +110,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 10),
           _SettingsTile(
-            icon: Icons.cable_outlined,
+            icon: Icons.electrical_services_outlined,
             label: 'Exchange Connections',
             onTap: () => context.push(Routes.exchangeConnections),
           ),
           _SettingsTile(
-            icon: Icons.settings_input_component_outlined,
+            icon: Icons.tune_rounded,
             label: 'Risk Appetite',
             subtitle: _riskAppetiteSubtitle(ref),
             onTap: () => Navigator.of(context).push(
@@ -129,12 +129,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _SettingsTile(
             icon: Icons.lock_outline_rounded,
             label: 'Security',
-            onTap: () => _showSecuritySheet(context, ref),
+            onTap: () => context.push(Routes.security),
           ),
           _SettingsTile(
             icon: Icons.notifications_none_rounded,
             label: 'Notification',
-            onTap: () => _showNotificationSheet(context, ref),
+            onTap: () => context.push(Routes.notificationSettings),
           ),
           _SettingsTile(
             icon: Icons.shield_outlined,
@@ -158,6 +158,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
+}
+
+String _titleCaseName(String value) {
+  return value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .map((part) {
+    if (part.length == 1) return part.toUpperCase();
+    return part[0].toUpperCase() + part.substring(1);
+  }).join(' ');
 }
 
 @immutable
@@ -200,10 +211,10 @@ class _SettingsTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: 60),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: 12,
+              vertical: 14,
             ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
@@ -211,7 +222,7 @@ class _SettingsTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, color: AppColors.textSecondary, size: 18),
+                Icon(icon, color: AppColors.textPrimary, size: 20),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -220,7 +231,7 @@ class _SettingsTile extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: AppTypography.bodyMedium.copyWith(
+                        style: AppTypography.bodyLg.copyWith(
                           color: AppColors.textPrimary,
                         ),
                       ),
@@ -269,7 +280,7 @@ class _ProfileActionTile extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: 58),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
@@ -281,11 +292,11 @@ class _ProfileActionTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: color),
+              Icon(icon, size: 20, color: color),
               const SizedBox(width: 14),
               Text(
                 label,
-                style: AppTypography.bodyMedium.copyWith(color: color),
+                style: AppTypography.bodyLg.copyWith(color: color),
               ),
             ],
           ),
@@ -340,15 +351,34 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.displayName);
     _emailCtrl = TextEditingController(text: widget.auth.email);
+    _nameCtrl.addListener(_onFieldChanged);
+    _emailCtrl.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
+    _nameCtrl.removeListener(_onFieldChanged);
+    _emailCtrl.removeListener(_onFieldChanged);
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _nameFocus.dispose();
     _emailFocus.dispose();
     super.dispose();
+  }
+
+  void _onFieldChanged() => setState(() {});
+
+  bool get _canSave {
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final changed = name != widget.displayName.trim() ||
+        email.toLowerCase() != widget.auth.email.trim().toLowerCase();
+    final emailValid =
+        RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+    return changed &&
+        name.isNotEmpty &&
+        emailValid &&
+        _profileButtonState != PButtonState.loading;
   }
 
   bool _validateName() {
@@ -371,6 +401,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    FocusScope.of(context).unfocus();
     final nameOk = _validateName();
     final emailOk = _validateEmail();
     if (!nameOk || !emailOk) return;
@@ -417,64 +448,65 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: const Text('Edit profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: AppBar(
+          centerTitle: false,
+          title: const Text('Edit profile', style: AppTypography.h1),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1, color: AppColors.borderLight),
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: AppSpacing.screenPadding,
-          children: [
-            const SizedBox(height: AppSpacing.md),
-            const Text('Enter Details', style: AppTypography.h2),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Update your personal details.',
-              style:
-                  AppTypography.body.copyWith(color: AppColors.textSecondary),
+        body: SafeArea(
+          child: Padding(
+            padding: AppSpacing.screenPadding,
+            child: Column(
+              children: [
+                const SizedBox(height: AppSpacing.md),
+                PTextField(
+                  controller: _nameCtrl,
+                  focusNode: _nameFocus,
+                  label: 'Your name',
+                  textInputAction: TextInputAction.next,
+                  fieldState: _nameState,
+                  errorText: _nameError,
+                  onChanged: (_) {
+                    if (_nameState != PFieldState.idle) _validateName();
+                  },
+                  onEditingComplete: () => _emailFocus.requestFocus(),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                PTextField(
+                  controller: _emailCtrl,
+                  focusNode: _emailFocus,
+                  label: 'Email address',
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.done,
+                  fieldState: _emailState,
+                  errorText: _emailError,
+                  onChanged: (_) {
+                    if (_emailState != PFieldState.idle) _validateEmail();
+                  },
+                  onEditingComplete: _canSave ? _saveProfile : null,
+                ),
+                const Spacer(),
+                PPrimaryButton(
+                  label: 'Save changes',
+                  state: _profileButtonState,
+                  onPressed: _canSave ? _saveProfile : null,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
             ),
-            const SizedBox(height: AppSpacing.xl),
-            PTextField(
-              controller: _nameCtrl,
-              focusNode: _nameFocus,
-              label: 'Your name',
-              textInputAction: TextInputAction.next,
-              fieldState: _nameState,
-              errorText: _nameError,
-              onChanged: (_) {
-                if (_nameState != PFieldState.idle) _validateName();
-              },
-              onEditingComplete: () => _emailFocus.requestFocus(),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            PTextField(
-              controller: _emailCtrl,
-              focusNode: _emailFocus,
-              label: 'Email address',
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.done,
-              fieldState: _emailState,
-              errorText: _emailError,
-              onChanged: (_) {
-                if (_emailState != PFieldState.idle) _validateEmail();
-              },
-              onEditingComplete: _saveProfile,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PPrimaryButton(
-              label: 'Save changes',
-              state: _profileButtonState,
-              onPressed: _profileButtonState == PButtonState.loading
-                  ? null
-                  : _saveProfile,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
+          ),
         ),
       ),
     );
@@ -1022,6 +1054,8 @@ class _ExchangeConnectionTileState
       onOk: (_) {
         _apiKeyCtrl.clear();
         _apiSecretCtrl.clear();
+        ref.read(authProvider.notifier).markHasExchangeConnection();
+        unawaited(ref.read(authProvider.notifier).refreshSession());
         PToast.success(context, '${_label(widget.exchange)} connected');
         widget.onChanged();
       },
@@ -1385,56 +1419,86 @@ Map<int, String> _apiInstructions(String label) => {
       5: 'Copy the API key and secret key into Poise, then continue.',
     };
 
-void _showSecuritySheet(
-  BuildContext context,
-  WidgetRef ref,
-) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) => _SheetFrame(
-      title: 'Security',
-      child: _SecuritySection(
-        onChangePassword: () {
-          Navigator.pop(sheetContext);
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const _ChangePasswordScreen(),
-            ),
-          );
-        },
-      ),
-    ),
-  );
-}
-
-class _SecuritySection extends StatelessWidget {
-  const _SecuritySection({required this.onChangePassword});
-
-  final VoidCallback onChangePassword;
+class SecurityScreen extends StatelessWidget {
+  const SecurityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(
-            Icons.lock_reset_rounded,
-            color: AppColors.textSecondary,
-          ),
-          title: const Text('Change password'),
-          trailing: const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textDisabled,
-          ),
-          onTap: onChangePassword,
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        centerTitle: false,
+        title: const Text('Security', style: AppTypography.h1),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
         ),
-        const Divider(height: 1, color: AppColors.borderLight),
-        const _TotpTile(),
-      ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
+          children: [
+            _SettingsActionRow(
+              label: 'Change password',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const _ChangePasswordScreen(),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const _TotpTile(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsActionRow extends StatelessWidget {
+  const _SettingsActionRow({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.bgSurface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 58),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.bodyLg.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textPrimary,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1487,13 +1551,45 @@ class _TotpTileState extends ConsumerState<_TotpTile> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider).valueOrNull;
     final totpEnabled = auth is AuthAuthenticated && auth.totpEnabled;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: const Text('Two-factor authentication'),
-      subtitle: Text(totpEnabled ? 'Enabled' : 'Not enabled'),
-      trailing: TextButton(
-        onPressed: totpEnabled ? _disable : _setup,
-        child: Text(totpEnabled ? 'Disable' : 'Set up'),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 70),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Two-factor authentication',
+                  style: AppTypography.bodyLg.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  totpEnabled ? 'Enabled' : 'Not enabled',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: totpEnabled ? _disable : _setup,
+            child: Text(totpEnabled ? 'Disable' : 'Set up'),
+          ),
+        ],
       ),
     );
   }
@@ -1651,91 +1747,132 @@ class _TotpDisableDialogState extends State<_TotpDisableDialog> {
   }
 }
 
-void _showNotificationSheet(BuildContext context, WidgetRef ref) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _SheetFrame(
-      title: 'Notification',
-      child: _NotificationPreferencesSection(),
-    ),
-  );
-}
+class NotificationSettingsScreen extends ConsumerWidget {
+  const NotificationSettingsScreen({super.key});
 
-class _NotificationPreferencesSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefsState = ref.watch(notificationPreferencesControllerProvider);
-    return prefsState.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Text('Failed to load notification settings'),
-      data: (prefs) => Column(
-        children: [
-          _PreferenceSwitch(
-            label: 'Trade execution updates',
-            value: prefs.tradeUpdates,
-            onChanged: (value) => _updateNotificationPreference(
-              context,
-              ref,
-              prefs.copyWith(tradeUpdates: value),
-            ),
-          ),
-          _PreferenceSwitch(
-            label: 'Guardrail warnings',
-            value: prefs.guardrails,
-            onChanged: (value) => _updateNotificationPreference(
-              context,
-              ref,
-              prefs.copyWith(guardrails: value),
-            ),
-          ),
-          _PreferenceSwitch(
-            label: 'External trade capture',
-            value: prefs.externalTrades,
-            onChanged: (value) => _updateNotificationPreference(
-              context,
-              ref,
-              prefs.copyWith(externalTrades: value),
-            ),
-          ),
-          _PreferenceSwitch(
-            label: 'Loss limit alerts',
-            value: prefs.lossLimits,
-            onChanged: (value) => _updateNotificationPreference(
-              context,
-              ref,
-              prefs.copyWith(lossLimits: value),
-            ),
-          ),
-          _PreferenceSwitch(
-            label: 'Weekly insights',
-            value: prefs.weeklyInsights,
-            onChanged: (value) => _updateNotificationPreference(
-              context,
-              ref,
-              prefs.copyWith(weeklyInsights: value),
-            ),
-          ),
-          _PreferenceSwitch(
-            label: 'AI feedback',
-            value: prefs.aiFeedback,
-            onChanged: (value) => _updateNotificationPreference(
-              context,
-              ref,
-              prefs.copyWith(aiFeedback: value),
-            ),
-          ),
-          _PreferenceSwitch(
-            label: 'Email notifications',
-            value: prefs.emailNotifications,
-            onChanged: (value) => _updateNotificationPreference(
-              context,
-              ref,
-              prefs.copyWith(emailNotifications: value),
-            ),
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        centerTitle: false,
+        title: const Text('Notifications', style: AppTypography.h1),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => PToast.info(context, 'Notification preferences'),
+            icon: const Icon(Icons.error_outline_rounded),
           ),
         ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: prefsState.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const Center(
+            child: Text('Failed to load notification settings'),
+          ),
+          data: (prefs) {
+            final appNotifications = prefs.tradeUpdates ||
+                prefs.guardrails ||
+                prefs.externalTrades ||
+                prefs.lossLimits ||
+                prefs.weeklyInsights ||
+                prefs.aiFeedback;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
+              children: [
+                _PreferenceSwitch(
+                  label: 'App notifications',
+                  value: appNotifications,
+                  onChanged: (value) => _updateNotificationPreference(
+                    context,
+                    ref,
+                    prefs.copyWith(
+                      tradeUpdates: value,
+                      guardrails: value,
+                      externalTrades: value,
+                      lossLimits: value,
+                      weeklyInsights: value,
+                      aiFeedback: value,
+                    ),
+                  ),
+                ),
+                _PreferenceSwitch(
+                  label: 'Email notifications (optional)',
+                  value: prefs.emailNotifications,
+                  onChanged: (value) => _updateNotificationPreference(
+                    context,
+                    ref,
+                    prefs.copyWith(emailNotifications: value),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Notifications',
+                  style: AppTypography.bodyLg.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _PreferenceSwitch(
+                  label: 'Trade executions updates',
+                  value: prefs.tradeUpdates,
+                  onChanged: (value) => _updateNotificationPreference(
+                    context,
+                    ref,
+                    prefs.copyWith(tradeUpdates: value),
+                  ),
+                ),
+                _PreferenceSwitch(
+                  label: 'Guardrail warnings',
+                  value: prefs.guardrails,
+                  onChanged: (value) => _updateNotificationPreference(
+                    context,
+                    ref,
+                    prefs.copyWith(guardrails: value),
+                  ),
+                ),
+                _PreferenceSwitch(
+                  label: 'Loss limit alerts',
+                  value: prefs.lossLimits,
+                  onChanged: (value) => _updateNotificationPreference(
+                    context,
+                    ref,
+                    prefs.copyWith(lossLimits: value),
+                  ),
+                ),
+                _PreferenceSwitch(
+                  label: 'Weekly insights',
+                  value: prefs.weeklyInsights,
+                  onChanged: (value) => _updateNotificationPreference(
+                    context,
+                    ref,
+                    prefs.copyWith(weeklyInsights: value),
+                  ),
+                ),
+                _PreferenceSwitch(
+                  label: 'Poise AI feedback',
+                  value: prefs.aiFeedback,
+                  onChanged: (value) => _updateNotificationPreference(
+                    context,
+                    ref,
+                    prefs.copyWith(aiFeedback: value),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -1768,11 +1905,29 @@ class _PreferenceSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      value: value,
-      onChanged: onChanged,
-      title: Text(label, style: AppTypography.body),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 58),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: AppTypography.bodyLg.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1785,8 +1940,18 @@ class DataPrivacyScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Data & Privacy'),
+        centerTitle: false,
+        title: const Text('Data & privacy', style: AppTypography.h1),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => PToast.info(context, 'Data and privacy'),
+            icon: const Icon(Icons.error_outline_rounded),
+          ),
+        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: AppColors.borderLight),
@@ -1796,7 +1961,7 @@ class DataPrivacyScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
         children: [
           Text(
-            'Poise uses your Binance or Bybit exchange connection to show balances, ingest trading activity, validate trades, and provide discipline feedback.',
+            'Poise uses your data exclusively to operate as your Trading Operating System and help you improve discipline. We securely connect to your exchange (Binance or Bybit) using your encrypted API and secret keys.',
             style: AppTypography.bodyLg.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
@@ -1816,7 +1981,8 @@ class DataPrivacyScreen extends StatelessWidget {
           ),
           const _PrivacyBulletRow(
             strong: 'Ingest all trading activity',
-            rest: ' from your connected exchange as it becomes available.',
+            rest:
+                ' (historical and real-time) to establish a performance baseline.',
           ),
           const _PrivacyBulletRow(
             strong: 'Analyze trade data',
@@ -1829,7 +1995,7 @@ class DataPrivacyScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'API keys and secrets are encrypted before storage and are never returned to the app after they are saved.',
+            'Your API keys are stored securely and your trade data is only used to provide you with execution discipline and performance analysis.',
             style: AppTypography.bodyLg.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
@@ -1913,7 +2079,7 @@ class _PolicyRow extends StatelessWidget {
           child: Row(
             children: [
               const Icon(
-                Icons.policy_outlined,
+                Icons.privacy_tip_outlined,
                 size: 18,
                 color: AppColors.textSecondary,
               ),
@@ -2007,9 +2173,12 @@ void _showLogoutSheet(BuildContext context, WidgetRef ref) {
       title: 'Log out',
       body: 'Are you sure you want to log out?',
       primaryLabel: 'Log out',
+      primaryColor: AppColors.lossRed,
+      primaryIcon: Icons.logout_rounded,
       onPrimary: () {
         Navigator.pop(context);
         ref.read(authProvider.notifier).logout();
+        context.go(Routes.welcomeBack);
       },
     ),
   );
@@ -2033,6 +2202,7 @@ void _showDeleteSheet(BuildContext context, WidgetRef ref) {
           onOk: (_) {
             Navigator.pop(context);
             ref.read(authProvider.notifier).logout();
+            context.go(Routes.welcomeBack);
           },
           onErr: (err) => PToast.error(context, err.userMessage),
         );
@@ -2076,12 +2246,19 @@ class _ConfirmSheet extends StatelessWidget {
                 AppTypography.bodyLg.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xl),
-          OutlinedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.textPrimary,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: AppRadius.buttonRadius,
+              ),
+            ),
             child: const Text('No'),
           ),
           const SizedBox(height: AppSpacing.md),
-          OutlinedButton.icon(
+          FilledButton.icon(
             onPressed: () async => onPrimary(),
             icon: primaryIcon == null
                 ? const SizedBox.shrink()
@@ -2091,7 +2268,13 @@ class _ConfirmSheet extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            style: OutlinedButton.styleFrom(foregroundColor: color),
+            style: FilledButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: AppRadius.buttonRadius,
+              ),
+            ),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import '../../storage/secure_storage.dart';
 /// Increments when any request gets a 401 — auth_provider watches this
 /// and transitions to unauthenticated when it changes.
 final authInvalidatedProvider = StateProvider<int>((_) => 0);
+final authInvalidationReasonProvider = StateProvider<String?>((_) => null);
 
 /// QueuedInterceptor ensures only ONE 401 handler fires even when multiple
 /// requests fail simultaneously. All others queue behind it.
@@ -34,6 +35,8 @@ class AuthInterceptor extends QueuedInterceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401 &&
         !_isExchangeCredentialRequest(err.requestOptions.path)) {
+      _ref.read(authInvalidationReasonProvider.notifier).state =
+          _friendlyInvalidationMessage(err.response?.data);
       await _ref.read(secureStorageProvider).deleteToken();
       _ref.read(authInvalidatedProvider.notifier).update((n) => n + 1);
     }
@@ -44,4 +47,19 @@ class AuthInterceptor extends QueuedInterceptor {
     return path == '/exchange-connections' ||
         path == '/exchange-connections/test';
   }
+}
+
+String _friendlyInvalidationMessage(Object? data) {
+  final raw = switch (data) {
+    final Map<String, dynamic> map => map['error']?.toString() ?? '',
+    final Map<dynamic, dynamic> map => map['error']?.toString() ?? '',
+    _ => '',
+  };
+  final lower = raw.toLowerCase();
+  if (lower.contains('session expired') ||
+      lower.contains('active session') ||
+      lower.contains('another device')) {
+    return 'Your account was signed in on another device, so this session was ended.';
+  }
+  return 'Your session has expired. Please log in again.';
 }

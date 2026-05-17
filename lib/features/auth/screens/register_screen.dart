@@ -89,6 +89,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     final nameOk = _validateName(_nameCtrl.text);
     final emailOk = _validateEmail(_emailCtrl.text.trim());
     final passOk = _validatePassword(_passwordCtrl.text);

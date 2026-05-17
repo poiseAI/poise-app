@@ -72,6 +72,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(Routes.login);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,44 +88,53 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         title: const Text('Forgot Password'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: _goBack,
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.lg),
-              const Text('Reset your password', style: AppTypography.h4),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Enter your email and we\'ll send a reset code.',
-                style: AppTypography.bodyLg
-                    .copyWith(color: AppColors.textSecondary),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: AppSpacing.screenPadding,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Reset your password', style: AppTypography.h4),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Enter the email associated with your account and we\'ll send a code to reset your password.',
+                      style: AppTypography.bodyLg.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    PTextField(
+                      controller: _emailCtrl,
+                      label: 'Email Address',
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.done,
+                      fieldState: _emailState,
+                      errorText: _emailError,
+                      autofocus: true,
+                      onChanged: (val) {
+                        if (_emailState != PFieldState.idle) _validate();
+                      },
+                      onEditingComplete: _submit,
+                    ),
+                    const Spacer(),
+                    PPrimaryButton(
+                      label: 'Reset password',
+                      state: _buttonState,
+                      onPressed: _submit,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.xxl),
-              PTextField(
-                controller: _emailCtrl,
-                label: 'Email',
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.done,
-                fieldState: _emailState,
-                errorText: _emailError,
-                autofocus: true,
-                onChanged: (val) {
-                  if (_emailState != PFieldState.idle) _validate();
-                },
-                onEditingComplete: _submit,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              PPrimaryButton(
-                label: 'Reset password',
-                state: _buttonState,
-                onPressed: _submit,
-              ),
-            ],
+            ),
           ),
         ),
       ),

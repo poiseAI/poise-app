@@ -117,28 +117,71 @@ class _IntroSplash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppColors.primary,
       body: SafeArea(
         child: Center(
+          child: _PoiseWordmark(color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+class _PoiseWordmark extends StatelessWidget {
+  const _PoiseWordmark({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 44,
+          height: 52,
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Icon(Icons.candlestick_chart_rounded,
-                  color: Colors.white, size: 38),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'poise',
-                style: AppTypography.display2.copyWith(
-                  color: Colors.white,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 0,
-                ),
-              ),
+              _LogoBar(color: color, height: 30),
+              const SizedBox(width: 5),
+              _LogoBar(color: color, height: 44),
+              const SizedBox(width: 5),
+              _LogoBar(color: color, height: 36),
             ],
           ),
         ),
+        const SizedBox(width: AppSpacing.md),
+        Text(
+          'poise',
+          style: AppTypography.display2.copyWith(
+            color: color,
+            fontFamily: 'Orbitron',
+            fontWeight: FontWeight.w700,
+            fontSize: 44,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LogoBar extends StatelessWidget {
+  const _LogoBar({required this.color, required this.height});
+
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 9,
+      height: height,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(2),
       ),
     );
   }

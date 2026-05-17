@@ -75,6 +75,34 @@ void main() {
     expect(result.error.userMessage, 'Invalid credentials');
   });
 
+  test('login preserves totp challenge errors so 2fa field can open', () async {
+    final dio = _MockDio();
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        any(),
+        data: any<dynamic>(named: 'data'),
+      ),
+    ).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/auth/login'),
+        response: Response<Map<String, dynamic>>(
+          requestOptions: RequestOptions(path: '/auth/login'),
+          statusCode: 401,
+          data: {'error': 'TOTP token required'},
+        ),
+      ),
+    );
+
+    final result = await AuthApi(dio).login(
+      email: 'user@example.com',
+      password: 'correct-password',
+    );
+
+    expect(result.isErr, isTrue);
+    expect(result.error, isA<ServerError>());
+    expect(result.error.userMessage, contains('totp'));
+  });
+
   test('register sends session policy headers when session id is provided',
       () async {
     final dio = _MockDio();

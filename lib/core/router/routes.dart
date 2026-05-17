@@ -16,6 +16,8 @@ abstract final class Routes {
   static const notifications = '/app/notifications';
   static const orders = '/app/orders';
   static const profile = '/app/profile';
+  static const security = '/app/profile/security';
+  static const notificationSettings = '/app/profile/notification-settings';
   static const dataPrivacy = '/app/profile/data-privacy';
   static const exchangeConnections = '/app/profile/exchange-connections';
 

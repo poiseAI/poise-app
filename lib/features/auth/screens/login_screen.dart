@@ -62,6 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     final emailOk = _validateEmail(_emailCtrl.text.trim());
     final passOk = _validatePassword(_passwordCtrl.text);
     if (!emailOk || !passOk) return;

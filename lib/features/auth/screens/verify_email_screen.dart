@@ -152,10 +152,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Text(isSettingsVerification ? 'Verify email' : 'Sign up'),
+        title: Text(
+          isSettingsVerification ? 'Verify new email address' : 'Verify email',
+          style: AppTypography.h1,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: _goBack,
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
         ),
       ),
       body: SafeArea(
@@ -164,16 +171,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: AppSpacing.md),
-              const Text(
-                'Verify your email address',
-                style: AppTypography.h4,
-              ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.lg),
               Text(
-                'A 6-digit OTP has been sent to $email. Please enter it below to verify your email.',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
+                isSettingsVerification
+                    ? 'A 6-digit OTP has been sent to your email. Please enter it below to verify your email.'
+                    : 'A 6-digit OTP has been sent to $email. Please enter it below to verify your email.',
+                style: AppTypography.bodyLg.copyWith(
+                  color: AppColors.textPrimary,
                   height: 1.45,
                 ),
               ),
@@ -208,12 +212,6 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                             : 'Request a new OTP',
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              PPrimaryButton(
-                label: 'Verify email',
-                state: _buttonState,
-                onPressed: _otpComplete ? _verify : null,
               ),
               const SizedBox(height: AppSpacing.lg),
             ],

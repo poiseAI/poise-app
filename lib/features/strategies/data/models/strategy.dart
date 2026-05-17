@@ -23,6 +23,7 @@ abstract class Strategy with _$Strategy {
     String dailyLossLimitType,
     @JsonKey(name: 'max_daily_loss_usd') @Default(0.0) double maxDailyLossUsd,
     @JsonKey(name: 'max_daily_loss_percent') double? maxDailyLossPercent,
+    @JsonKey(name: 'max_weekly_loss_usd') @Default(0.0) double maxWeeklyLossUsd,
     @JsonKey(name: 'max_open_positions') @Default(5) int maxOpenPositions,
     @JsonKey(name: 'max_trades_per_day') @Default(5) int maxTradesPerDay,
     @JsonKey(name: 'max_consecutive_losses')
@@ -63,6 +64,7 @@ abstract class CreateStrategyRequest with _$CreateStrategyRequest {
     String dailyLossLimitType,
     @JsonKey(name: 'max_daily_loss_usd') @Default(200.0) double maxDailyLossUsd,
     @JsonKey(name: 'max_daily_loss_percent') double? maxDailyLossPercent,
+    @JsonKey(name: 'max_weekly_loss_usd') @Default(0.0) double maxWeeklyLossUsd,
     @JsonKey(name: 'max_open_positions') @Default(5) int maxOpenPositions,
     @JsonKey(name: 'max_trades_per_day') @Default(5) int maxTradesPerDay,
     @JsonKey(name: 'max_consecutive_losses')

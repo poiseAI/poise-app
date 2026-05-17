@@ -20,6 +20,8 @@ _Strategy _$StrategyFromJson(Map<String, dynamic> json) => _Strategy(
           json['daily_loss_limit_type'] as String? ?? 'fixed_usd',
       maxDailyLossUsd: (json['max_daily_loss_usd'] as num?)?.toDouble() ?? 0.0,
       maxDailyLossPercent: (json['max_daily_loss_percent'] as num?)?.toDouble(),
+      maxWeeklyLossUsd:
+          (json['max_weekly_loss_usd'] as num?)?.toDouble() ?? 0.0,
       maxOpenPositions: (json['max_open_positions'] as num?)?.toInt() ?? 5,
       maxTradesPerDay: (json['max_trades_per_day'] as num?)?.toInt() ?? 5,
       maxConsecutiveLosses:
@@ -46,6 +48,7 @@ Map<String, dynamic> _$StrategyToJson(_Strategy instance) => <String, dynamic>{
       'daily_loss_limit_type': instance.dailyLossLimitType,
       'max_daily_loss_usd': instance.maxDailyLossUsd,
       'max_daily_loss_percent': instance.maxDailyLossPercent,
+      'max_weekly_loss_usd': instance.maxWeeklyLossUsd,
       'max_open_positions': instance.maxOpenPositions,
       'max_trades_per_day': instance.maxTradesPerDay,
       'max_consecutive_losses': instance.maxConsecutiveLosses,
@@ -72,6 +75,8 @@ _CreateStrategyRequest _$CreateStrategyRequestFromJson(
       maxDailyLossUsd:
           (json['max_daily_loss_usd'] as num?)?.toDouble() ?? 200.0,
       maxDailyLossPercent: (json['max_daily_loss_percent'] as num?)?.toDouble(),
+      maxWeeklyLossUsd:
+          (json['max_weekly_loss_usd'] as num?)?.toDouble() ?? 0.0,
       maxOpenPositions: (json['max_open_positions'] as num?)?.toInt() ?? 5,
       maxTradesPerDay: (json['max_trades_per_day'] as num?)?.toInt() ?? 5,
       maxConsecutiveLosses:
@@ -95,6 +100,7 @@ Map<String, dynamic> _$CreateStrategyRequestToJson(
       'daily_loss_limit_type': instance.dailyLossLimitType,
       'max_daily_loss_usd': instance.maxDailyLossUsd,
       'max_daily_loss_percent': instance.maxDailyLossPercent,
+      'max_weekly_loss_usd': instance.maxWeeklyLossUsd,
       'max_open_positions': instance.maxOpenPositions,
       'max_trades_per_day': instance.maxTradesPerDay,
       'max_consecutive_losses': instance.maxConsecutiveLosses,
