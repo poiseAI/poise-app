@@ -278,7 +278,7 @@ class _SummaryGrid extends StatelessWidget {
             Expanded(
               child: _SummaryTile(
                 label: 'Position Size',
-                value: _money(validation.margin),
+                value: _money(validation.positionSize),
               ),
             ),
           ],
@@ -658,7 +658,7 @@ class _GuardrailTile extends StatelessWidget {
           if (!blocked) ...[
             const SizedBox(height: AppSpacing.md),
             OutlinedButton(
-              onPressed: () => context.go(
+              onPressed: () => context.push(
                 Routes.ai,
                 extra: item.aiPrompt ?? item.message,
               ),

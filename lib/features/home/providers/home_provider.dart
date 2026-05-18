@@ -55,8 +55,17 @@ class Home extends _$Home {
     final connResult =
         await ref.read(profileApiProvider).getExchangeConnections();
     if (_disposed) return;
+    if (connResult.isErr) {
+      state = HomeState.error(message: connResult.error.userMessage);
+      return;
+    }
     final connections = connResult.valueOrNull ?? [];
     if (!connections.any(_isActiveConnection)) {
+      await ref.read(localCacheProvider).delete(
+            CacheBoxNames.positions,
+            _posKey,
+          );
+      if (_disposed) return;
       state = const HomeState.noExchange();
       return;
     }
@@ -67,7 +76,7 @@ class Home extends _$Home {
     final pnlResult = await api.getPnlSummary();
     if (_disposed) return;
 
-    if (posResult.isErr && state is HomeLoading) {
+    if (posResult.isErr) {
       state = HomeState.error(message: posResult.error.userMessage);
       return;
     }
@@ -81,6 +90,12 @@ class Home extends _$Home {
             _posKey,
             positions,
             (p) => p.toJson(),
+          );
+      if (_disposed) return;
+    } else {
+      await ref.read(localCacheProvider).delete(
+            CacheBoxNames.positions,
+            _posKey,
           );
       if (_disposed) return;
     }

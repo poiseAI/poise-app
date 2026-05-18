@@ -199,9 +199,7 @@ class TradeForm extends _$TradeForm {
     final raw =
         price > 0 ? (marginAmount * state.leverage) / price : state.quantity;
     final step = state.symbol?.qtyStep ?? 0;
-    final rounded = step > 0 ? (raw / step).floor() * step : raw;
-    final minQty = state.symbol?.minQty ?? 0;
-    return rounded < minQty ? minQty : rounded;
+    return step > 0 ? (raw / step).floor() * step : raw;
   }
 
   String? get localValidationError {
@@ -223,7 +221,11 @@ class TradeForm extends _$TradeForm {
       return 'Margin cannot exceed your available balance.';
     }
     if (entryPrice <= 0) return 'Entry price is unavailable for ${sym.symbol}.';
-    final notional = marginAmount * state.leverage;
+    final qty = quantity;
+    if (sym.minQty > 0 && qty < sym.minQty) {
+      return 'Quantity must be at least ${sym.minQty.toStringAsFixed(6)} ${sym.baseAsset}. Increase margin or leverage.';
+    }
+    final notional = qty * entryPrice;
     if (sym.minNotional > 0 && notional < sym.minNotional) {
       return 'Position notional must be at least ${sym.minNotional.toStringAsFixed(2)} ${state.balanceCurrency}.';
     }
