@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/result.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/feedback/p_error_state.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
@@ -798,24 +800,24 @@ class _ExchangeConnectionsSection extends ConsumerStatefulWidget {
 
 class _ExchangeConnectionsSectionState
     extends ConsumerState<_ExchangeConnectionsSection> {
-  late Future<dynamic> _future;
+  late Future<Result<List<Map<String, dynamic>>, AppError>> _future;
   String? _expandedExchange;
 
   @override
   void initState() {
     super.initState();
-    _future = ref.read(profileApiProvider).getExchangeConnections();
+    _future = _loadConnections();
   }
 
   void _reload() {
     setState(() {
-      _future = ref.read(profileApiProvider).getExchangeConnections();
+      _future = _loadConnections();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<dynamic>(
+    return FutureBuilder<Result<List<Map<String, dynamic>>, AppError>>(
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
@@ -833,7 +835,7 @@ class _ExchangeConnectionsSectionState
             style: AppTypography.body.copyWith(color: AppColors.textSecondary),
           );
         }
-        final connections = result.value as List<Map<String, dynamic>>;
+        final connections = result.value;
         final activeConnections = connections.where(_isActiveConnection).length;
         final hasMissingExchange =
             _connectionFor(connections, 'bybit') == null ||
@@ -885,6 +887,18 @@ class _ExchangeConnectionsSectionState
         );
       },
     );
+  }
+
+  Future<Result<List<Map<String, dynamic>>, AppError>>
+      _loadConnections() async {
+    final result = await ref.read(profileApiProvider).getExchangeConnections();
+    final connections = result.valueOrNull;
+    if (mounted &&
+        connections != null &&
+        connections.any(_isActiveConnection)) {
+      ref.read(authProvider.notifier).markHasExchangeConnection();
+    }
+    return result;
   }
 
   Future<void> _sendDesktopSetupLink() async {

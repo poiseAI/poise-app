@@ -176,7 +176,6 @@ String? _redirect(Ref ref, GoRouterState state) {
   final loc = state.matchedLocation;
   final onAuth = loc.startsWith('/auth');
   final onOnboarding = loc.startsWith('/onboarding');
-  final onExchangeSetup = loc == Routes.exchangeConnections;
   final hasSeenWelcome =
       ref.read(appPreferencesProvider).valueOrNull?.hasSeenWelcome ?? false;
 
@@ -204,27 +203,9 @@ String? _redirect(Ref ref, GoRouterState state) {
     AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
         when emailVerified && !hasActiveStrategy && !onOnboarding =>
       Routes.riskAppetite,
-    AuthAuthenticated(
-      :final hasActiveStrategy,
-      :final emailVerified,
-      :final hasExchangeConnection
-    )
-        when emailVerified &&
-            hasActiveStrategy &&
-            !hasExchangeConnection &&
-            !onExchangeSetup =>
-      '${Routes.exchangeConnections}?from=onboarding',
-
     // Logged in and onboarding done → leave auth/onboarding routes
-    AuthAuthenticated(
-      :final hasActiveStrategy,
-      :final emailVerified,
-      :final hasExchangeConnection
-    )
-        when emailVerified &&
-            hasActiveStrategy &&
-            hasExchangeConnection &&
-            (onAuth || onOnboarding) =>
+    AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
+        when emailVerified && hasActiveStrategy && (onAuth || onOnboarding) =>
       Routes.home,
     _ => null,
   };

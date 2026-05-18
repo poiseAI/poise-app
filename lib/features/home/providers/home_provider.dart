@@ -56,7 +56,7 @@ class Home extends _$Home {
         await ref.read(profileApiProvider).getExchangeConnections();
     if (_disposed) return;
     final connections = connResult.valueOrNull ?? [];
-    if (connections.isEmpty) {
+    if (!connections.any(_isActiveConnection)) {
       state = const HomeState.noExchange();
       return;
     }
@@ -89,6 +89,9 @@ class Home extends _$Home {
         ? HomeState.empty(summary: summary)
         : HomeState.data(positions: positions, summary: summary);
   }
+
+  bool _isActiveConnection(Map<String, dynamic> connection) =>
+      (connection['is_active'] as bool?) ?? true;
 
   void _subscribeWs() {
     _wsSub = ref.read(wsServiceProvider).stream.listen((msg) {
