@@ -24,7 +24,6 @@ abstract final class Routes {
   // Full-screen overlays (no bottom nav)
   static const positionExit = '/app/position/:id/exit';
   static const positionExitOtp = '/app/position/:id/exit/otp';
-  static const tradePreview = '/app/trade/preview';
   static const tradeValidation = '/app/trade/validation';
 
   // Helpers
