@@ -17,6 +17,8 @@ mixin _$TradeFormState {
   TradingSymbol? get symbol;
   OrderType get orderType;
   OrderSide get side;
+  CollateralMode get collateralMode;
+  AmountInputMode get amountInputMode;
   double get quantity;
   double? get limitPrice;
   MarginMode get marginMode;
@@ -38,6 +40,17 @@ mixin _$TradeFormState {
   String? get validationError;
   String? get submitError;
   Order? get lastOrder;
+  bool get symbolTouched;
+  bool get orderTypeTouched;
+  bool get amountTouched;
+  bool get collateralModeTouched;
+  bool get leverageTouched;
+  bool get directionTouched;
+  bool get exitPlanTouched;
+  String get signalText;
+  TradeSignalParse? get parsedSignal;
+  bool get isApplyingSignal;
+  String? get signalError;
 
   /// Create a copy of TradeFormState
   /// with the given fields replaced by the non-null parameter values.
@@ -56,6 +69,10 @@ mixin _$TradeFormState {
             (identical(other.orderType, orderType) ||
                 other.orderType == orderType) &&
             (identical(other.side, side) || other.side == side) &&
+            (identical(other.collateralMode, collateralMode) ||
+                other.collateralMode == collateralMode) &&
+            (identical(other.amountInputMode, amountInputMode) ||
+                other.amountInputMode == amountInputMode) &&
             (identical(other.quantity, quantity) ||
                 other.quantity == quantity) &&
             (identical(other.limitPrice, limitPrice) ||
@@ -97,7 +114,29 @@ mixin _$TradeFormState {
             (identical(other.submitError, submitError) ||
                 other.submitError == submitError) &&
             (identical(other.lastOrder, lastOrder) ||
-                other.lastOrder == lastOrder));
+                other.lastOrder == lastOrder) &&
+            (identical(other.symbolTouched, symbolTouched) ||
+                other.symbolTouched == symbolTouched) &&
+            (identical(other.orderTypeTouched, orderTypeTouched) ||
+                other.orderTypeTouched == orderTypeTouched) &&
+            (identical(other.amountTouched, amountTouched) ||
+                other.amountTouched == amountTouched) &&
+            (identical(other.collateralModeTouched, collateralModeTouched) ||
+                other.collateralModeTouched == collateralModeTouched) &&
+            (identical(other.leverageTouched, leverageTouched) ||
+                other.leverageTouched == leverageTouched) &&
+            (identical(other.directionTouched, directionTouched) ||
+                other.directionTouched == directionTouched) &&
+            (identical(other.exitPlanTouched, exitPlanTouched) ||
+                other.exitPlanTouched == exitPlanTouched) &&
+            (identical(other.signalText, signalText) ||
+                other.signalText == signalText) &&
+            (identical(other.parsedSignal, parsedSignal) ||
+                other.parsedSignal == parsedSignal) &&
+            (identical(other.isApplyingSignal, isApplyingSignal) ||
+                other.isApplyingSignal == isApplyingSignal) &&
+            (identical(other.signalError, signalError) ||
+                other.signalError == signalError));
   }
 
   @override
@@ -106,6 +145,8 @@ mixin _$TradeFormState {
         symbol,
         orderType,
         side,
+        collateralMode,
+        amountInputMode,
         quantity,
         limitPrice,
         marginMode,
@@ -126,12 +167,23 @@ mixin _$TradeFormState {
         preflightError,
         validationError,
         submitError,
-        lastOrder
+        lastOrder,
+        symbolTouched,
+        orderTypeTouched,
+        amountTouched,
+        collateralModeTouched,
+        leverageTouched,
+        directionTouched,
+        exitPlanTouched,
+        signalText,
+        parsedSignal,
+        isApplyingSignal,
+        signalError
       ]);
 
   @override
   String toString() {
-    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder)';
+    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, collateralMode: $collateralMode, amountInputMode: $amountInputMode, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder, symbolTouched: $symbolTouched, orderTypeTouched: $orderTypeTouched, amountTouched: $amountTouched, collateralModeTouched: $collateralModeTouched, leverageTouched: $leverageTouched, directionTouched: $directionTouched, exitPlanTouched: $exitPlanTouched, signalText: $signalText, parsedSignal: $parsedSignal, isApplyingSignal: $isApplyingSignal, signalError: $signalError)';
   }
 }
 
@@ -145,6 +197,8 @@ abstract mixin class $TradeFormStateCopyWith<$Res> {
       {TradingSymbol? symbol,
       OrderType orderType,
       OrderSide side,
+      CollateralMode collateralMode,
+      AmountInputMode amountInputMode,
       double quantity,
       double? limitPrice,
       MarginMode marginMode,
@@ -165,7 +219,18 @@ abstract mixin class $TradeFormStateCopyWith<$Res> {
       String? preflightError,
       String? validationError,
       String? submitError,
-      Order? lastOrder});
+      Order? lastOrder,
+      bool symbolTouched,
+      bool orderTypeTouched,
+      bool amountTouched,
+      bool collateralModeTouched,
+      bool leverageTouched,
+      bool directionTouched,
+      bool exitPlanTouched,
+      String signalText,
+      TradeSignalParse? parsedSignal,
+      bool isApplyingSignal,
+      String? signalError});
 
   $TradingSymbolCopyWith<$Res>? get symbol;
   $RiskScoreCopyWith<$Res>? get riskScore;
@@ -188,6 +253,8 @@ class _$TradeFormStateCopyWithImpl<$Res>
     Object? symbol = freezed,
     Object? orderType = null,
     Object? side = null,
+    Object? collateralMode = null,
+    Object? amountInputMode = null,
     Object? quantity = null,
     Object? limitPrice = freezed,
     Object? marginMode = null,
@@ -209,6 +276,17 @@ class _$TradeFormStateCopyWithImpl<$Res>
     Object? validationError = freezed,
     Object? submitError = freezed,
     Object? lastOrder = freezed,
+    Object? symbolTouched = null,
+    Object? orderTypeTouched = null,
+    Object? amountTouched = null,
+    Object? collateralModeTouched = null,
+    Object? leverageTouched = null,
+    Object? directionTouched = null,
+    Object? exitPlanTouched = null,
+    Object? signalText = null,
+    Object? parsedSignal = freezed,
+    Object? isApplyingSignal = null,
+    Object? signalError = freezed,
   }) {
     return _then(_self.copyWith(
       symbol: freezed == symbol
@@ -223,6 +301,14 @@ class _$TradeFormStateCopyWithImpl<$Res>
           ? _self.side
           : side // ignore: cast_nullable_to_non_nullable
               as OrderSide,
+      collateralMode: null == collateralMode
+          ? _self.collateralMode
+          : collateralMode // ignore: cast_nullable_to_non_nullable
+              as CollateralMode,
+      amountInputMode: null == amountInputMode
+          ? _self.amountInputMode
+          : amountInputMode // ignore: cast_nullable_to_non_nullable
+              as AmountInputMode,
       quantity: null == quantity
           ? _self.quantity
           : quantity // ignore: cast_nullable_to_non_nullable
@@ -307,6 +393,50 @@ class _$TradeFormStateCopyWithImpl<$Res>
           ? _self.lastOrder
           : lastOrder // ignore: cast_nullable_to_non_nullable
               as Order?,
+      symbolTouched: null == symbolTouched
+          ? _self.symbolTouched
+          : symbolTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      orderTypeTouched: null == orderTypeTouched
+          ? _self.orderTypeTouched
+          : orderTypeTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      amountTouched: null == amountTouched
+          ? _self.amountTouched
+          : amountTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      collateralModeTouched: null == collateralModeTouched
+          ? _self.collateralModeTouched
+          : collateralModeTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      leverageTouched: null == leverageTouched
+          ? _self.leverageTouched
+          : leverageTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      directionTouched: null == directionTouched
+          ? _self.directionTouched
+          : directionTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      exitPlanTouched: null == exitPlanTouched
+          ? _self.exitPlanTouched
+          : exitPlanTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      signalText: null == signalText
+          ? _self.signalText
+          : signalText // ignore: cast_nullable_to_non_nullable
+              as String,
+      parsedSignal: freezed == parsedSignal
+          ? _self.parsedSignal
+          : parsedSignal // ignore: cast_nullable_to_non_nullable
+              as TradeSignalParse?,
+      isApplyingSignal: null == isApplyingSignal
+          ? _self.isApplyingSignal
+          : isApplyingSignal // ignore: cast_nullable_to_non_nullable
+              as bool,
+      signalError: freezed == signalError
+          ? _self.signalError
+          : signalError // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 
@@ -450,6 +580,8 @@ extension TradeFormStatePatterns on TradeFormState {
             TradingSymbol? symbol,
             OrderType orderType,
             OrderSide side,
+            CollateralMode collateralMode,
+            AmountInputMode amountInputMode,
             double quantity,
             double? limitPrice,
             MarginMode marginMode,
@@ -470,7 +602,18 @@ extension TradeFormStatePatterns on TradeFormState {
             String? preflightError,
             String? validationError,
             String? submitError,
-            Order? lastOrder)?
+            Order? lastOrder,
+            bool symbolTouched,
+            bool orderTypeTouched,
+            bool amountTouched,
+            bool collateralModeTouched,
+            bool leverageTouched,
+            bool directionTouched,
+            bool exitPlanTouched,
+            String signalText,
+            TradeSignalParse? parsedSignal,
+            bool isApplyingSignal,
+            String? signalError)?
         $default, {
     required TResult orElse(),
   }) {
@@ -481,6 +624,8 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.symbol,
             _that.orderType,
             _that.side,
+            _that.collateralMode,
+            _that.amountInputMode,
             _that.quantity,
             _that.limitPrice,
             _that.marginMode,
@@ -501,7 +646,18 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.preflightError,
             _that.validationError,
             _that.submitError,
-            _that.lastOrder);
+            _that.lastOrder,
+            _that.symbolTouched,
+            _that.orderTypeTouched,
+            _that.amountTouched,
+            _that.collateralModeTouched,
+            _that.leverageTouched,
+            _that.directionTouched,
+            _that.exitPlanTouched,
+            _that.signalText,
+            _that.parsedSignal,
+            _that.isApplyingSignal,
+            _that.signalError);
       case _:
         return orElse();
     }
@@ -526,6 +682,8 @@ extension TradeFormStatePatterns on TradeFormState {
             TradingSymbol? symbol,
             OrderType orderType,
             OrderSide side,
+            CollateralMode collateralMode,
+            AmountInputMode amountInputMode,
             double quantity,
             double? limitPrice,
             MarginMode marginMode,
@@ -546,7 +704,18 @@ extension TradeFormStatePatterns on TradeFormState {
             String? preflightError,
             String? validationError,
             String? submitError,
-            Order? lastOrder)
+            Order? lastOrder,
+            bool symbolTouched,
+            bool orderTypeTouched,
+            bool amountTouched,
+            bool collateralModeTouched,
+            bool leverageTouched,
+            bool directionTouched,
+            bool exitPlanTouched,
+            String signalText,
+            TradeSignalParse? parsedSignal,
+            bool isApplyingSignal,
+            String? signalError)
         $default,
   ) {
     final _that = this;
@@ -556,6 +725,8 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.symbol,
             _that.orderType,
             _that.side,
+            _that.collateralMode,
+            _that.amountInputMode,
             _that.quantity,
             _that.limitPrice,
             _that.marginMode,
@@ -576,7 +747,18 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.preflightError,
             _that.validationError,
             _that.submitError,
-            _that.lastOrder);
+            _that.lastOrder,
+            _that.symbolTouched,
+            _that.orderTypeTouched,
+            _that.amountTouched,
+            _that.collateralModeTouched,
+            _that.leverageTouched,
+            _that.directionTouched,
+            _that.exitPlanTouched,
+            _that.signalText,
+            _that.parsedSignal,
+            _that.isApplyingSignal,
+            _that.signalError);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -600,6 +782,8 @@ extension TradeFormStatePatterns on TradeFormState {
             TradingSymbol? symbol,
             OrderType orderType,
             OrderSide side,
+            CollateralMode collateralMode,
+            AmountInputMode amountInputMode,
             double quantity,
             double? limitPrice,
             MarginMode marginMode,
@@ -620,7 +804,18 @@ extension TradeFormStatePatterns on TradeFormState {
             String? preflightError,
             String? validationError,
             String? submitError,
-            Order? lastOrder)?
+            Order? lastOrder,
+            bool symbolTouched,
+            bool orderTypeTouched,
+            bool amountTouched,
+            bool collateralModeTouched,
+            bool leverageTouched,
+            bool directionTouched,
+            bool exitPlanTouched,
+            String signalText,
+            TradeSignalParse? parsedSignal,
+            bool isApplyingSignal,
+            String? signalError)?
         $default,
   ) {
     final _that = this;
@@ -630,6 +825,8 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.symbol,
             _that.orderType,
             _that.side,
+            _that.collateralMode,
+            _that.amountInputMode,
             _that.quantity,
             _that.limitPrice,
             _that.marginMode,
@@ -650,7 +847,18 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.preflightError,
             _that.validationError,
             _that.submitError,
-            _that.lastOrder);
+            _that.lastOrder,
+            _that.symbolTouched,
+            _that.orderTypeTouched,
+            _that.amountTouched,
+            _that.collateralModeTouched,
+            _that.leverageTouched,
+            _that.directionTouched,
+            _that.exitPlanTouched,
+            _that.signalText,
+            _that.parsedSignal,
+            _that.isApplyingSignal,
+            _that.signalError);
       case _:
         return null;
     }
@@ -664,13 +872,15 @@ class _TradeFormState implements TradeFormState {
       {this.symbol,
       this.orderType = OrderType.market,
       this.side = OrderSide.long,
+      this.collateralMode = CollateralMode.isolated,
+      this.amountInputMode = AmountInputMode.margin,
       this.quantity = 1.0,
       this.limitPrice,
       this.marginMode = MarginMode.percentage,
       this.marginValue = 20.0,
       this.availableBalance = 0.0,
       this.balanceCurrency = 'USD',
-      this.leverage = 1.0,
+      this.leverage = 5.0,
       this.takeProfit1,
       this.takeProfit2,
       this.slPrice,
@@ -684,7 +894,18 @@ class _TradeFormState implements TradeFormState {
       this.preflightError,
       this.validationError,
       this.submitError,
-      this.lastOrder});
+      this.lastOrder,
+      this.symbolTouched = false,
+      this.orderTypeTouched = false,
+      this.amountTouched = false,
+      this.collateralModeTouched = false,
+      this.leverageTouched = false,
+      this.directionTouched = false,
+      this.exitPlanTouched = false,
+      this.signalText = '',
+      this.parsedSignal,
+      this.isApplyingSignal = false,
+      this.signalError});
 
   @override
   final TradingSymbol? symbol;
@@ -694,6 +915,12 @@ class _TradeFormState implements TradeFormState {
   @override
   @JsonKey()
   final OrderSide side;
+  @override
+  @JsonKey()
+  final CollateralMode collateralMode;
+  @override
+  @JsonKey()
+  final AmountInputMode amountInputMode;
   @override
   @JsonKey()
   final double quantity;
@@ -746,6 +973,37 @@ class _TradeFormState implements TradeFormState {
   final String? submitError;
   @override
   final Order? lastOrder;
+  @override
+  @JsonKey()
+  final bool symbolTouched;
+  @override
+  @JsonKey()
+  final bool orderTypeTouched;
+  @override
+  @JsonKey()
+  final bool amountTouched;
+  @override
+  @JsonKey()
+  final bool collateralModeTouched;
+  @override
+  @JsonKey()
+  final bool leverageTouched;
+  @override
+  @JsonKey()
+  final bool directionTouched;
+  @override
+  @JsonKey()
+  final bool exitPlanTouched;
+  @override
+  @JsonKey()
+  final String signalText;
+  @override
+  final TradeSignalParse? parsedSignal;
+  @override
+  @JsonKey()
+  final bool isApplyingSignal;
+  @override
+  final String? signalError;
 
   /// Create a copy of TradeFormState
   /// with the given fields replaced by the non-null parameter values.
@@ -764,6 +1022,10 @@ class _TradeFormState implements TradeFormState {
             (identical(other.orderType, orderType) ||
                 other.orderType == orderType) &&
             (identical(other.side, side) || other.side == side) &&
+            (identical(other.collateralMode, collateralMode) ||
+                other.collateralMode == collateralMode) &&
+            (identical(other.amountInputMode, amountInputMode) ||
+                other.amountInputMode == amountInputMode) &&
             (identical(other.quantity, quantity) ||
                 other.quantity == quantity) &&
             (identical(other.limitPrice, limitPrice) ||
@@ -805,7 +1067,29 @@ class _TradeFormState implements TradeFormState {
             (identical(other.submitError, submitError) ||
                 other.submitError == submitError) &&
             (identical(other.lastOrder, lastOrder) ||
-                other.lastOrder == lastOrder));
+                other.lastOrder == lastOrder) &&
+            (identical(other.symbolTouched, symbolTouched) ||
+                other.symbolTouched == symbolTouched) &&
+            (identical(other.orderTypeTouched, orderTypeTouched) ||
+                other.orderTypeTouched == orderTypeTouched) &&
+            (identical(other.amountTouched, amountTouched) ||
+                other.amountTouched == amountTouched) &&
+            (identical(other.collateralModeTouched, collateralModeTouched) ||
+                other.collateralModeTouched == collateralModeTouched) &&
+            (identical(other.leverageTouched, leverageTouched) ||
+                other.leverageTouched == leverageTouched) &&
+            (identical(other.directionTouched, directionTouched) ||
+                other.directionTouched == directionTouched) &&
+            (identical(other.exitPlanTouched, exitPlanTouched) ||
+                other.exitPlanTouched == exitPlanTouched) &&
+            (identical(other.signalText, signalText) ||
+                other.signalText == signalText) &&
+            (identical(other.parsedSignal, parsedSignal) ||
+                other.parsedSignal == parsedSignal) &&
+            (identical(other.isApplyingSignal, isApplyingSignal) ||
+                other.isApplyingSignal == isApplyingSignal) &&
+            (identical(other.signalError, signalError) ||
+                other.signalError == signalError));
   }
 
   @override
@@ -814,6 +1098,8 @@ class _TradeFormState implements TradeFormState {
         symbol,
         orderType,
         side,
+        collateralMode,
+        amountInputMode,
         quantity,
         limitPrice,
         marginMode,
@@ -834,12 +1120,23 @@ class _TradeFormState implements TradeFormState {
         preflightError,
         validationError,
         submitError,
-        lastOrder
+        lastOrder,
+        symbolTouched,
+        orderTypeTouched,
+        amountTouched,
+        collateralModeTouched,
+        leverageTouched,
+        directionTouched,
+        exitPlanTouched,
+        signalText,
+        parsedSignal,
+        isApplyingSignal,
+        signalError
       ]);
 
   @override
   String toString() {
-    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder)';
+    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, collateralMode: $collateralMode, amountInputMode: $amountInputMode, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder, symbolTouched: $symbolTouched, orderTypeTouched: $orderTypeTouched, amountTouched: $amountTouched, collateralModeTouched: $collateralModeTouched, leverageTouched: $leverageTouched, directionTouched: $directionTouched, exitPlanTouched: $exitPlanTouched, signalText: $signalText, parsedSignal: $parsedSignal, isApplyingSignal: $isApplyingSignal, signalError: $signalError)';
   }
 }
 
@@ -855,6 +1152,8 @@ abstract mixin class _$TradeFormStateCopyWith<$Res>
       {TradingSymbol? symbol,
       OrderType orderType,
       OrderSide side,
+      CollateralMode collateralMode,
+      AmountInputMode amountInputMode,
       double quantity,
       double? limitPrice,
       MarginMode marginMode,
@@ -875,7 +1174,18 @@ abstract mixin class _$TradeFormStateCopyWith<$Res>
       String? preflightError,
       String? validationError,
       String? submitError,
-      Order? lastOrder});
+      Order? lastOrder,
+      bool symbolTouched,
+      bool orderTypeTouched,
+      bool amountTouched,
+      bool collateralModeTouched,
+      bool leverageTouched,
+      bool directionTouched,
+      bool exitPlanTouched,
+      String signalText,
+      TradeSignalParse? parsedSignal,
+      bool isApplyingSignal,
+      String? signalError});
 
   @override
   $TradingSymbolCopyWith<$Res>? get symbol;
@@ -901,6 +1211,8 @@ class __$TradeFormStateCopyWithImpl<$Res>
     Object? symbol = freezed,
     Object? orderType = null,
     Object? side = null,
+    Object? collateralMode = null,
+    Object? amountInputMode = null,
     Object? quantity = null,
     Object? limitPrice = freezed,
     Object? marginMode = null,
@@ -922,6 +1234,17 @@ class __$TradeFormStateCopyWithImpl<$Res>
     Object? validationError = freezed,
     Object? submitError = freezed,
     Object? lastOrder = freezed,
+    Object? symbolTouched = null,
+    Object? orderTypeTouched = null,
+    Object? amountTouched = null,
+    Object? collateralModeTouched = null,
+    Object? leverageTouched = null,
+    Object? directionTouched = null,
+    Object? exitPlanTouched = null,
+    Object? signalText = null,
+    Object? parsedSignal = freezed,
+    Object? isApplyingSignal = null,
+    Object? signalError = freezed,
   }) {
     return _then(_TradeFormState(
       symbol: freezed == symbol
@@ -936,6 +1259,14 @@ class __$TradeFormStateCopyWithImpl<$Res>
           ? _self.side
           : side // ignore: cast_nullable_to_non_nullable
               as OrderSide,
+      collateralMode: null == collateralMode
+          ? _self.collateralMode
+          : collateralMode // ignore: cast_nullable_to_non_nullable
+              as CollateralMode,
+      amountInputMode: null == amountInputMode
+          ? _self.amountInputMode
+          : amountInputMode // ignore: cast_nullable_to_non_nullable
+              as AmountInputMode,
       quantity: null == quantity
           ? _self.quantity
           : quantity // ignore: cast_nullable_to_non_nullable
@@ -1020,6 +1351,50 @@ class __$TradeFormStateCopyWithImpl<$Res>
           ? _self.lastOrder
           : lastOrder // ignore: cast_nullable_to_non_nullable
               as Order?,
+      symbolTouched: null == symbolTouched
+          ? _self.symbolTouched
+          : symbolTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      orderTypeTouched: null == orderTypeTouched
+          ? _self.orderTypeTouched
+          : orderTypeTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      amountTouched: null == amountTouched
+          ? _self.amountTouched
+          : amountTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      collateralModeTouched: null == collateralModeTouched
+          ? _self.collateralModeTouched
+          : collateralModeTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      leverageTouched: null == leverageTouched
+          ? _self.leverageTouched
+          : leverageTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      directionTouched: null == directionTouched
+          ? _self.directionTouched
+          : directionTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      exitPlanTouched: null == exitPlanTouched
+          ? _self.exitPlanTouched
+          : exitPlanTouched // ignore: cast_nullable_to_non_nullable
+              as bool,
+      signalText: null == signalText
+          ? _self.signalText
+          : signalText // ignore: cast_nullable_to_non_nullable
+              as String,
+      parsedSignal: freezed == parsedSignal
+          ? _self.parsedSignal
+          : parsedSignal // ignore: cast_nullable_to_non_nullable
+              as TradeSignalParse?,
+      isApplyingSignal: null == isApplyingSignal
+          ? _self.isApplyingSignal
+          : isApplyingSignal // ignore: cast_nullable_to_non_nullable
+              as bool,
+      signalError: freezed == signalError
+          ? _self.signalError
+          : signalError // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 

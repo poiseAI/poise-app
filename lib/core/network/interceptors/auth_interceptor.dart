@@ -34,6 +34,7 @@ class AuthInterceptor extends QueuedInterceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401 &&
+        !_isAuthRequest(err.requestOptions.path) &&
         !_isExchangeCredentialRequest(err.requestOptions.path)) {
       _ref.read(authInvalidationReasonProvider.notifier).state =
           _friendlyInvalidationMessage(err.response?.data);
@@ -41,6 +42,10 @@ class AuthInterceptor extends QueuedInterceptor {
       _ref.read(authInvalidatedProvider.notifier).update((n) => n + 1);
     }
     handler.next(err);
+  }
+
+  bool _isAuthRequest(String path) {
+    return path.startsWith('/auth/');
   }
 
   bool _isExchangeCredentialRequest(String path) {

@@ -174,7 +174,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Choose market',
+                      'Choose trading pair',
                       style: AppTypography.h2.copyWith(letterSpacing: 0),
                     ),
                   ),
@@ -244,7 +244,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                 child: searchState.when(
                   loading: () => const _SymbolLoadingList(),
                   error: (_, __) => _SymbolPanelMessage(
-                    title: 'Failed to load markets',
+                    title: 'Failed to load trading pairs',
                     actionLabel: 'Retry',
                     onAction: () => ref
                         .read(symbolSearchProvider.notifier)
@@ -253,7 +253,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                   data: (symbols) {
                     if (symbols.isEmpty) {
                       return const _SymbolPanelMessage(
-                        title: 'No matching market found',
+                        title: 'No matching trading pair found',
                       );
                     }
                     return ListView.separated(
@@ -294,7 +294,7 @@ class _SymbolPrompt extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Market', style: AppTypography.bodyMedium),
+        const Text('Trading pair', style: AppTypography.bodyMedium),
         const SizedBox(height: 2),
         Text(
           'Tap to pick BTC, ETH, SOL or a recent ${exchange.toUpperCase()} pair',
@@ -387,9 +387,20 @@ class _SymbolResultTile extends StatelessWidget {
                   ),
                 )
               else if (hasPct)
-                Text(
-                  '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
-                  style: AppTypography.numericSm.copyWith(color: pctColor),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
+                      style: AppTypography.numericSm.copyWith(color: pctColor),
+                    ),
+                    Text(
+                      '24h',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
                 )
               else
                 Text(

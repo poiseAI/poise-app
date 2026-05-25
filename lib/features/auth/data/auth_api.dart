@@ -39,9 +39,16 @@ class AuthApi {
       return Ok(AuthResponse.fromJson(resp.data!));
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
-        final message = _responseErrorMessage(e.response?.data).toLowerCase();
+        final rawMessage = _responseErrorMessage(e.response?.data);
+        final message = rawMessage.toLowerCase();
         if (message.contains('totp') || message.contains('2fa')) {
-          return Err(ServerError(401, message));
+          return Err(ServerError(401, rawMessage));
+        }
+        if (message.contains('disabled') || message.contains('inactive')) {
+          return const Err(ServerError(
+            401,
+            'Account is disabled. Please contact support.',
+          ));
         }
         return const Err(InvalidCredentialsError());
       }
@@ -153,10 +160,10 @@ class AuthApi {
 
 String _responseErrorMessage(Object? data) {
   if (data is Map<String, dynamic>) {
-    return data['error']?.toString() ?? '';
+    return data['error']?.toString() ?? data['message']?.toString() ?? '';
   }
   if (data is Map<dynamic, dynamic>) {
-    return data['error']?.toString() ?? '';
+    return data['error']?.toString() ?? data['message']?.toString() ?? '';
   }
   return '';
 }

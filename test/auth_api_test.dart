@@ -100,7 +100,36 @@ void main() {
 
     expect(result.isErr, isTrue);
     expect(result.error, isA<ServerError>());
-    expect(result.error.userMessage, contains('totp'));
+    expect(result.error.userMessage.toLowerCase(), contains('totp'));
+  });
+
+  test('login preserves disabled account errors', () async {
+    final dio = _MockDio();
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        any(),
+        data: any<dynamic>(named: 'data'),
+      ),
+    ).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/auth/login'),
+        response: Response<Map<String, dynamic>>(
+          requestOptions: RequestOptions(path: '/auth/login'),
+          statusCode: 401,
+          data: {'error': 'account is disabled'},
+        ),
+      ),
+    );
+
+    final result = await AuthApi(dio).login(
+      email: 'user@example.com',
+      password: 'correct-password',
+    );
+
+    expect(result.isErr, isTrue);
+    expect(result.error, isA<ServerError>());
+    expect(result.error.userMessage,
+        'Account is disabled. Please contact support.');
   });
 
   test('register sends session policy headers when session id is provided',

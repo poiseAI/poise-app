@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
@@ -20,55 +20,32 @@ class TradeValidationScreen extends ConsumerWidget {
     final form = ref.watch(tradeFormProvider);
     final notifier = ref.read(tradeFormProvider.notifier);
     final validation = form.validation;
-    final needsAcknowledgement = validation != null &&
-        (validation.hasWarnings ||
-            validation.dailyLimitAcknowledgementRequired ||
-            validation.requiresExternalRiskReview);
 
     if (validation == null) {
-      return Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: () => context.go(Routes.trade),
-            icon: const Icon(Icons.arrow_back_rounded),
-          ),
-          title: const Text('Trade Validation'),
-          bottom: const PreferredSize(
-            preferredSize: Size.fromHeight(1),
-            child: Divider(height: 1, color: AppColors.borderLight),
-          ),
-        ),
-        body: SafeArea(
-          top: false,
-          child: Padding(
-            padding: AppSpacing.screenPadding,
-            child: Column(
-              children: [
-                const Spacer(),
-                const Text('Trade validation is not ready',
-                    style: AppTypography.h3),
-                const SizedBox(height: AppSpacing.md),
-                PPrimaryButton(
-                  label: 'Back to trade',
-                  onPressed: () => context.go(Routes.trade),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-        ),
-      );
+      return _ValidationMissingScreen(onBack: () => context.go(Routes.trade));
     }
 
+    final needsAcknowledgement = validation.hasWarnings ||
+        validation.dailyLimitAcknowledgementRequired ||
+        validation.requiresExternalRiskReview;
+    final exchangeRequired = validation.requiresExchangeConnection;
+
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.bgSecondary,
       appBar: AppBar(
+        backgroundColor: AppColors.bgPrimary,
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
-        title: const Text('Trade Validation'),
+        titleSpacing: 0,
+        title: const Text('Review & Execute'),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: AppSpacing.md),
+            child: _GuardianChip(),
+          ),
+        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: AppColors.borderLight),
@@ -80,18 +57,18 @@ class TradeValidationScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                 children: [
-                  const Text('Summary', style: AppTypography.h3),
-                  const SizedBox(height: AppSpacing.sm),
-                  _SummaryGrid(validation: validation),
-                  const SizedBox(height: AppSpacing.xl),
-                  _GuardrailPanel(validation: validation),
+                  _ReviewHero(
+                    form: form,
+                    notifier: notifier,
+                    validation: validation,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _OutcomeReview(
+                      form: form, notifier: notifier, validation: validation),
+                  const SizedBox(height: AppSpacing.md),
+                  _GuardrailReview(validation: validation),
                   if (form.submitError != null) ...[
                     const SizedBox(height: AppSpacing.md),
                     _ErrorCard(form.submitError!),
@@ -100,42 +77,76 @@ class TradeValidationScreen extends ConsumerWidget {
               ),
             ),
             Container(
-              padding: AppSpacing.screenPadding,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               decoration: const BoxDecoration(
                 color: AppColors.bgPrimary,
                 border: Border(top: BorderSide(color: AppColors.borderLight)),
               ),
-              child: PPrimaryButton(
-                label: validation.isBlocked
-                    ? 'Trade blocked'
-                    : form.isSubmitting
-                        ? 'Submitting...'
-                        : needsAcknowledgement
-                            ? 'Acknowledge & submit'
-                            : 'Submit trade',
-                state: form.isSubmitting
-                    ? PButtonState.loading
-                    : PButtonState.idle,
-                onPressed: validation.isBlocked || form.isSubmitting
-                    ? null
-                    : () async {
-                        HapticFeedback.mediumImpact();
-                        if (needsAcknowledgement) {
-                          final confirmed = await _confirmWarning(context);
-                          if (confirmed != true) return;
-                        }
-                        await notifier.submit(
-                          bypassWarnings: needsAcknowledgement,
-                        );
-                        final latest = ref.read(tradeFormProvider);
-                        if (context.mounted && latest.lastOrder != null) {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const _TradeOrderSuccessScreen(),
-                            ),
-                          );
-                        }
-                      },
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 56,
+                    height: 52,
+                    child: Tooltip(
+                      message: 'Edit setup',
+                      child: OutlinedButton(
+                        onPressed:
+                            form.isSubmitting ? null : () => context.pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Icon(Icons.arrow_back_rounded, size: 20),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: PPrimaryButton(
+                      label: validation.isBlocked
+                          ? exchangeRequired
+                              ? 'Connect exchange'
+                              : 'Trade Blocked'
+                          : form.isSubmitting
+                              ? 'Submitting...'
+                              : 'Execute Trade',
+                      state: form.isSubmitting
+                          ? PButtonState.loading
+                          : PButtonState.idle,
+                      onPressed: form.isSubmitting ||
+                              (validation.isBlocked && !exchangeRequired)
+                          ? null
+                          : () async {
+                              if (exchangeRequired) {
+                                context.push(Routes.exchangeConnections);
+                                return;
+                              }
+                              final bypassWarnings = needsAcknowledgement &&
+                                  await _confirmGuardrailOverride(
+                                    context,
+                                    validation,
+                                  );
+                              if (needsAcknowledgement && !bypassWarnings) {
+                                return;
+                              }
+                              HapticFeedback.mediumImpact();
+                              await notifier.submit(
+                                bypassWarnings: bypassWarnings,
+                              );
+                              final latest = ref.read(tradeFormProvider);
+                              if (context.mounted && latest.lastOrder != null) {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => _TradeOrderSuccessScreen(
+                                      symbol: latest.symbol?.symbol,
+                                      side: latest.side,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -143,113 +154,102 @@ class TradeValidationScreen extends ConsumerWidget {
       ),
     );
   }
-
-  Future<bool?> _confirmWarning(BuildContext context) {
-    return showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        padding: AppSpacing.screenPadding,
-        decoration: const BoxDecoration(
-          color: AppColors.bgCard,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: AppColors.warningAmber.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: AppColors.warningAmber,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text('Guardrail warning', style: AppTypography.h2),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'This trade can still be submitted, but it would continue after one or more Poise guardrail warnings. Review the warning before proceeding.',
-                style: AppTypography.bodyLg
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              OutlinedButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Go back'),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Submit trade'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
-class _TradeOrderSuccessScreen extends StatelessWidget {
-  const _TradeOrderSuccessScreen();
+Future<bool> _confirmGuardrailOverride(
+  BuildContext context,
+  TradeValidationResult validation,
+) async {
+  final items = _guardrailAcknowledgementItems(validation);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Continue anyway?'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This violates your guardrails. Continuing will cost discipline score points.',
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (items.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              for (final item in items) ...[
+                Text(item.title, style: AppTypography.bodyMedium),
+                const SizedBox(height: 2),
+                Text(
+                  item.message,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Go back'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Continue anyway'),
+        ),
+      ],
+    ),
+  );
+  return confirmed ?? false;
+}
+
+List<({String title, String message})> _guardrailAcknowledgementItems(
+  TradeValidationResult validation,
+) {
+  return [
+    if (validation.dailyLimitAcknowledgementRequired)
+      (
+        title: 'Daily risk budget',
+        message:
+            'Projected loss becomes ${_money(validation.projectedDailyLossUsd)} of ${_money(validation.dailyLossLimitUsd)}.',
+      ),
+    if (validation.requiresExternalRiskReview)
+      (
+        title: 'External positions',
+        message:
+            '${validation.externalOpenPositions} open exchange position${validation.externalOpenPositions == 1 ? '' : 's'} need review.',
+      ),
+    for (final item in validation.guardrailWarnings)
+      (title: item.title, message: item.message),
+  ];
+}
+
+class _ValidationMissingScreen extends StatelessWidget {
+  const _ValidationMissingScreen({required this.onBack});
+
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(title: const Text('Trade Validation')),
       body: SafeArea(
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
             children: [
-              const Spacer(flex: 2),
-              Image.asset(
-                'assets/images/success_bag.png',
-                width: 190,
-                height: 190,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-              ).animate().fadeIn(duration: 240.ms).scale(
-                    begin: const Offset(0.92, 0.92),
-                    end: const Offset(1, 1),
-                    curve: Curves.easeOutBack,
-                  ),
               const Spacer(),
-              const Text(
-                'Trade Submitted Successfully',
-                textAlign: TextAlign.center,
-                style: AppTypography.h2,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Your Poise trade has been submitted and is now being tracked.',
-                textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
-              ),
-              const Spacer(flex: 2),
-              PPrimaryButton(
-                label: 'View trades',
-                onPressed: () => context.go(Routes.orders),
-              ),
-              const SizedBox(height: AppSpacing.lg),
+              const Text('Trade validation is not ready',
+                  style: AppTypography.h3),
+              const SizedBox(height: AppSpacing.md),
+              PPrimaryButton(label: 'Back to trade', onPressed: onBack),
+              const Spacer(),
             ],
           ),
         ),
@@ -258,331 +258,115 @@ class _TradeOrderSuccessScreen extends StatelessWidget {
   }
 }
 
-class _SummaryGrid extends StatelessWidget {
-  const _SummaryGrid({required this.validation});
+class _ReviewHero extends StatelessWidget {
+  const _ReviewHero({
+    required this.form,
+    required this.notifier,
+    required this.validation,
+  });
+
+  final TradeFormState form;
+  final TradeForm notifier;
   final TradeValidationResult validation;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _SummaryTile(
-                label: 'Risk',
-                value: '${validation.riskPct.toStringAsFixed(2)}%',
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _SummaryTile(
-                label: 'Position Size',
-                value: _money(validation.positionSize),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _SummaryTile(
-                label: 'Risk-to-Reward Ratio',
-                value: validation.riskRewardRatio,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _SummaryTile(
-                label: 'Possible Loss',
-                value: '-${_money(validation.possibleLoss)}',
-                valueColor: AppColors.lossRed,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _SummaryTile(
-          label: 'Possible Profit',
-          value: '+${_money(validation.possibleProfit)}',
-          valueColor: AppColors.profitGreen,
-          centered: true,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _SummaryTile(
-                label: 'Daily Risk After Entry',
-                value: _money(validation.projectedDailyLossUsd),
-                valueColor: validation.dailyLimitAcknowledgementRequired
-                    ? AppColors.lossRed
-                    : AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _SummaryTile(
-                label: 'Daily Loss Limit',
-                value: _money(validation.dailyLossLimitUsd),
-                caption: _dailyLimitCaption(validation),
-              ),
-            ),
-          ],
-        ),
-        if (!validation.balanceSnapshotComplete ||
-            validation.requiresExternalRiskReview) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _SummaryTile(
-            label: validation.requiresExternalRiskReview
-                ? 'External Risk Review'
-                : 'Balance Baseline',
-            value: validation.requiresExternalRiskReview
-                ? '${validation.externalOpenPositions} external open'
-                : 'Snapshot incomplete',
-            valueColor: AppColors.warningAmber,
-            centered: true,
-          ),
-        ],
-      ],
-    );
-  }
-}
+    final sideColor =
+        form.side == OrderSide.long ? AppColors.profitGreen : AppColors.lossRed;
+    final sideLabel = form.side == OrderSide.long ? 'LONG' : 'SHORT';
+    final symbol = form.symbol?.symbol ?? 'Trade';
+    final notional = notifier.quantity * notifier.entryPrice;
 
-class _SummaryTile extends StatelessWidget {
-  const _SummaryTile({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.caption,
-    this.centered = false,
-  });
-
-  final String label;
-  final String value;
-  final Color? valueColor;
-  final String? caption;
-  final bool centered;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      height: caption == null ? 86 : 104,
-      width: double.infinity,
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: AppColors.bgPrimary,
         borderRadius: AppRadius.cardRadius,
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
-        crossAxisAlignment:
-            centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-            textAlign: centered ? TextAlign.center : TextAlign.left,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: AppTypography.numericMd
-                  .copyWith(color: valueColor ?? AppColors.textPrimary),
-            ),
-          ),
-          if (caption != null) ...[
-            const SizedBox(height: 3),
-            Text(
-              caption!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _GuardrailPanel extends StatelessWidget {
-  const _GuardrailPanel({required this.validation});
-  final TradeValidationResult validation;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!validation.isBlocked &&
-        !validation.hasWarnings &&
-        !validation.dailyLimitAcknowledgementRequired &&
-        !validation.requiresExternalRiskReview) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Risk guardrails check', style: AppTypography.h3),
-          const SizedBox(height: AppSpacing.sm),
-          Container(
-            height: 280,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: AppRadius.cardRadius,
-              border: Border.all(color: AppColors.borderLight),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/images/success_check_circle.png',
-                  width: 92,
-                  height: 92,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Text('No guardrails triggered', style: AppTypography.h3),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  "You're all set and ready to roll!",
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    final items = validation.isBlocked
-        ? validation.blockingGuardrails
-        : validation.warningGuardrails;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          validation.isBlocked ? 'Risk guardrails check' : 'Guardrail warnings',
-          style: AppTypography.h3,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (validation.dailyLimitAcknowledgementRequired) ...[
-          _DailyLimitWarningCard(validation: validation),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        for (final item in items) ...[
-          _GuardrailTile(item: item),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-      ],
-    );
-  }
-}
-
-class _DailyLimitWarningCard extends StatelessWidget {
-  const _DailyLimitWarningCard({required this.validation});
-
-  final TradeValidationResult validation;
-
-  @override
-  Widget build(BuildContext context) {
-    final limit = validation.dailyLossLimitUsd;
-    final projected = validation.projectedDailyLossUsd;
-    final remaining = validation.remainingDailyLossBudgetUsd;
-    final progress = limit <= 0 ? 1.0 : (projected / limit).clamp(0.0, 1.0);
-    final overLimit = projected > limit && limit > 0;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.lossRed.withValues(alpha: 0.06),
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.lossRed.withValues(alpha: 0.28)),
-      ),
-      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.lossRed.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 5,
                 ),
-                child: const Icon(
-                  Icons.shield_outlined,
-                  color: AppColors.lossRed,
-                  size: 20,
+                decoration: BoxDecoration(
+                  color: sideColor.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.pillRadius,
+                ),
+                child: Text(
+                  sideLabel,
+                  style: AppTypography.label.copyWith(color: sideColor),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text(symbol, style: AppTypography.h2)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${form.leverage.toStringAsFixed(0)}x · ${_label(form.collateralMode.name)} · ${_label(form.orderType.name)}',
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: _HeroMetric(
+                  label: 'Your margin',
+                  value: _money(notifier.marginAmount),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      overLimit
-                          ? 'Daily loss limit would be exceeded'
-                          : 'Daily loss limit needs acknowledgement',
-                      style: AppTypography.h4,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Poise is counting realized loss, reserved stop-loss risk, and external exchange exposure before this order is sent.',
-                      style: AppTypography.bodySm.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
+                child: _HeroMetric(
+                  label: 'Notional',
+                  value:
+                      _money(notional > 0 ? notional : validation.positionSize),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          ClipRRect(
-            borderRadius: AppRadius.pillRadius,
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              color: AppColors.lossRed,
-              backgroundColor: AppColors.lossRed.withValues(alpha: 0.13),
+          const SizedBox(height: AppSpacing.sm),
+          _RiskRewardBar(validation: validation),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiskRewardBar extends StatelessWidget {
+  const _RiskRewardBar({required this.validation});
+
+  final TradeValidationResult validation;
+
+  @override
+  Widget build(BuildContext context) {
+    final ok = _rrValue(validation.riskRewardRatio) >= 1.5;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: (ok ? AppColors.profitGreen : AppColors.warningAmber)
+            .withValues(alpha: 0.08),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(
+          color: (ok ? AppColors.profitGreen : AppColors.warningAmber)
+              .withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Text('Risk : Reward', style: AppTypography.label),
+          const Spacer(),
+          Text(
+            validation.riskRewardRatio,
+            style: AppTypography.numericSm.copyWith(
+              color: ok ? AppColors.profitGreen : AppColors.warningAmber,
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _LimitMetric(
-                  label: 'After trade',
-                  value: _money(projected),
-                  color: AppColors.lossRed,
-                ),
-              ),
-              Expanded(
-                child: _LimitMetric(
-                  label: 'Daily limit',
-                  value: _money(limit),
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Expanded(
-                child: _LimitMetric(
-                  label: remaining < 0 ? 'Over by' : 'Remaining',
-                  value: _money(remaining),
-                  color:
-                      remaining < 0 ? AppColors.lossRed : AppColors.textPrimary,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -590,81 +374,453 @@ class _DailyLimitWarningCard extends StatelessWidget {
   }
 }
 
-class _LimitMetric extends StatelessWidget {
-  const _LimitMetric({
-    required this.label,
-    required this.value,
-    required this.color,
+class _OutcomeReview extends StatelessWidget {
+  const _OutcomeReview({
+    required this.form,
+    required this.notifier,
+    required this.validation,
   });
 
-  final String label;
-  final String value;
-  final Color color;
+  final TradeFormState form;
+  final TradeForm notifier;
+  final TradeValidationResult validation;
 
   @override
   Widget build(BuildContext context) {
+    final entry = notifier.entryPrice;
+    final sl = form.slPrice;
+    final tp = form.takeProfit1;
+    final stopCaption = sl == null
+        ? 'Stop loss missing'
+        : 'Stop at ${_money(sl)} · ${_roiLabel(form, entry, sl)} ROI · ${_moveLabel(form, entry, sl)} move';
+    final tpCaption = tp == null
+        ? 'Take profit missing'
+        : 'Target ${_money(tp)} · ${_roiLabel(form, entry, tp)} ROI · ${_moveLabel(form, entry, tp)} move';
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+        _OutcomeCard(
+          title: 'If Stop Loss Hits',
+          status: 'LOSS',
+          value: '-${_money(validation.possibleLoss)}',
+          caption: stopCaption,
+          color: AppColors.lossRed,
         ),
-        const SizedBox(height: 3),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            value,
-            maxLines: 1,
-            style: AppTypography.numericSm.copyWith(color: color),
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        _OutcomeCard(
+          title: 'If TP1 Hits',
+          status: 'PROFIT',
+          value: '+${_money(validation.possibleProfit)}',
+          caption: tpCaption,
+          color: AppColors.profitGreen,
         ),
       ],
     );
   }
 }
 
-class _GuardrailTile extends StatelessWidget {
-  const _GuardrailTile({required this.item});
-  final GuardrailResult item;
+class _GuardrailReview extends StatelessWidget {
+  const _GuardrailReview({required this.validation});
+
+  final TradeValidationResult validation;
 
   @override
   Widget build(BuildContext context) {
-    final blocked = item.severity == 'block' || item.severity == 'blocked';
-    final color = blocked ? AppColors.lossRed : AppColors.warningAmber;
+    final exchangeRequired = validation.requiresExchangeConnection;
+    final warnings = validation.guardrailWarnings;
+    final warningCount = warnings.length +
+        (validation.dailyLimitAcknowledgementRequired ? 1 : 0) +
+        (validation.requiresExternalRiskReview ? 1 : 0);
+    final color = exchangeRequired
+        ? AppColors.warningAmber
+        : warningCount > 0
+            ? AppColors.warningAmber
+            : AppColors.profitGreen;
+    final title = exchangeRequired
+        ? 'Connect exchange'
+        : warningCount > 0
+            ? '$warningCount guardrail warning${warningCount == 1 ? '' : 's'}'
+            : 'Guardrails OK';
+
     return Container(
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(blocked ? Icons.block_rounded : Icons.warning_amber_rounded,
-                  color: color),
+              _StatusBubble(
+                icon: exchangeRequired
+                    ? Icons.link_rounded
+                    : warningCount > 0
+                        ? Icons.warning_amber_rounded
+                        : Icons.check_rounded,
+                color: color,
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: Text(item.title, style: AppTypography.h4)),
+              Expanded(child: Text(title, style: AppTypography.h4)),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(item.message,
-              style:
-                  AppTypography.body.copyWith(color: AppColors.textSecondary)),
-          if (!blocked) ...[
-            const SizedBox(height: AppSpacing.md),
-            OutlinedButton(
-              onPressed: () => context.push(
-                Routes.ai,
-                extra: item.aiPrompt ?? item.message,
-              ),
-              child: const Text('Ask Poise AI'),
+          Text(
+            exchangeRequired
+                ? 'Connect an exchange before execution.'
+                : warningCount > 0
+                    ? 'You can continue after confirming.'
+                    : 'This setup is inside your rules.',
+            style: AppTypography.bodySm.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (validation.dailyLimitAcknowledgementRequired)
+            _GuardrailLine(
+              title: 'Daily risk budget',
+              message:
+                  'After trade ${_money(validation.projectedDailyLossUsd)} of ${_money(validation.dailyLossLimitUsd)}',
+              color: AppColors.warningAmber,
+              warning: true,
+            ),
+          if (validation.requiresExternalRiskReview)
+            _GuardrailLine(
+              title: 'External positions',
+              message:
+                  '${validation.externalOpenPositions} open exchange position${validation.externalOpenPositions == 1 ? '' : 's'} need review',
+              color: AppColors.warningAmber,
+              warning: true,
+            ),
+          for (final item in warnings)
+            _GuardrailLine(
+              title: item.title,
+              message: item.message,
+              color: AppColors.warningAmber,
+              warning: true,
+            ),
+          if (!exchangeRequired && warningCount == 0) ...[
+            _GuardrailLine(
+              title: 'Risk per trade',
+              message: '${validation.riskPct.toStringAsFixed(2)}% at risk',
+              color: AppColors.profitGreen,
+            ),
+            const _GuardrailLine(
+              title: 'Daily trade limit',
+              message: 'Within your current daily rule',
+              color: AppColors.profitGreen,
+            ),
+            const _GuardrailLine(
+              title: 'Stop loss distance',
+              message: 'Stop loss is present before execution',
+              color: AppColors.profitGreen,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TradeOrderSuccessScreen extends ConsumerWidget {
+  const _TradeOrderSuccessScreen({
+    required this.symbol,
+    required this.side,
+  });
+
+  final String? symbol;
+  final OrderSide side;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sideLabel = side == OrderSide.long ? 'LONG' : 'SHORT';
+    final sideColor =
+        side == OrderSide.long ? AppColors.profitGreen : AppColors.lossRed;
+
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Trade Executed'),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: AppSpacing.md),
+            child: _GuardianChip(),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPadding,
+          child: Column(
+            children: [
+              const Spacer(),
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.09),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.brand50),
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: AppColors.accent,
+                  size: 38,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const Text(
+                'Trade Executed',
+                textAlign: TextAlign.center,
+                style: AppTypography.h1,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text.rich(
+                TextSpan(
+                  text: 'Your ${symbol ?? 'trade'} ',
+                  children: [
+                    TextSpan(
+                      text: sideLabel,
+                      style: TextStyle(
+                        color: sideColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const TextSpan(
+                      text: ' position is live. Guardian Mode is watching.',
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyLg.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              PPrimaryButton(
+                label: 'View in Orders',
+                onPressed: () => context.go(Routes.orders),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ref.read(tradeFormProvider.notifier).resetDraft();
+                    context.go(Routes.trade);
+                  },
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('New Trade'),
+                ),
+              ),
+              const Spacer(flex: 2),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTypography.caption),
+          const SizedBox(height: AppSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, style: AppTypography.numericMd),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OutcomeCard extends StatelessWidget {
+  const _OutcomeCard({
+    required this.title,
+    required this.status,
+    required this.value,
+    required this.caption,
+    required this.color,
+  });
+
+  final String title;
+  final String status;
+  final String value;
+  final String caption;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(title, style: AppTypography.label)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: AppRadius.chipRadius,
+                ),
+                child: Text(
+                  status,
+                  style: AppTypography.label.copyWith(color: color),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(value, style: AppTypography.numericLg.copyWith(color: color)),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            caption,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuardrailLine extends StatelessWidget {
+  const _GuardrailLine({
+    required this.title,
+    required this.message,
+    required this.color,
+    this.warning = false,
+  });
+
+  final String title;
+  final String message;
+  final Color color;
+  final bool warning;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StatusBubble(
+            icon: warning ? Icons.priority_high_rounded : Icons.check_rounded,
+            color: color,
+            small: true,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTypography.bodyMedium),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBubble extends StatelessWidget {
+  const _StatusBubble({
+    required this.icon,
+    required this.color,
+    this.small = false,
+  });
+
+  final IconData icon;
+  final Color color;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = small ? 24.0 : 40.0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: color, size: small ? 14 : 20),
+    );
+  }
+}
+
+class _GuardianChip extends StatelessWidget {
+  const _GuardianChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.08),
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: AppColors.brand50),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              color: AppColors.profitGreen,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Guardian',
+            style: AppTypography.label.copyWith(color: AppColors.accent),
+          ),
         ],
       ),
     );
@@ -673,6 +829,7 @@ class _GuardrailTile extends StatelessWidget {
 
 class _ErrorCard extends StatelessWidget {
   const _ErrorCard(this.message);
+
   final String message;
 
   @override
@@ -684,18 +841,39 @@ class _ErrorCard extends StatelessWidget {
         borderRadius: AppRadius.cardRadius,
         border: Border.all(color: AppColors.lossRed.withValues(alpha: 0.35)),
       ),
-      child: Text(message,
-          style: AppTypography.body.copyWith(color: AppColors.lossRed)),
+      child: Text(
+        message,
+        style: AppTypography.body.copyWith(color: AppColors.lossRed),
+      ),
     );
   }
 }
 
+String _label(String value) {
+  if (value.isEmpty) return value;
+  return '${value[0].toUpperCase()}${value.substring(1)}';
+}
+
 String _money(double value) => '\$${value.abs().toStringAsFixed(2)}';
 
-String _dailyLimitCaption(TradeValidationResult validation) {
-  if (validation.dailyLossLimitType == 'percent_balance' &&
-      validation.dailyBaselineBalanceUsd > 0) {
-    return 'Based on ${_money(validation.dailyBaselineBalanceUsd)} portfolio baseline';
-  }
-  return 'Fixed daily cap';
+String _roiLabel(TradeFormState form, double entry, double price) {
+  if (entry <= 0) return '0.00%';
+  final move = form.side == OrderSide.long
+      ? (price - entry) / entry
+      : (entry - price) / entry;
+  return '${(move * form.leverage * 100).toStringAsFixed(2)}%';
+}
+
+String _moveLabel(TradeFormState form, double entry, double price) {
+  if (entry <= 0) return '0.00%';
+  final move = form.side == OrderSide.long
+      ? (price - entry) / entry
+      : (entry - price) / entry;
+  return '${(move * 100).toStringAsFixed(2)}%';
+}
+
+double _rrValue(String raw) {
+  final matches = RegExp(r'([0-9]+(?:\.[0-9]+)?)').allMatches(raw).toList();
+  if (matches.isEmpty) return 0;
+  return double.tryParse(matches.last.group(1) ?? '') ?? 0;
 }

@@ -312,8 +312,16 @@ class TradeValidationResult {
   final List<GuardrailResult> warningGuardrails;
   final String? aiSessionId;
 
-  bool get hasWarnings => warningGuardrails.isNotEmpty;
-  bool get isBlocked => blockingGuardrails.isNotEmpty;
+  List<GuardrailResult> get guardrailWarnings => [
+        ...warningGuardrails,
+        ...blockingGuardrails.where((item) => !_isExchangeGuardrail(item)),
+      ];
+
+  bool get requiresExchangeConnection =>
+      blockingGuardrails.any(_isExchangeGuardrail);
+
+  bool get hasWarnings => guardrailWarnings.isNotEmpty;
+  bool get isBlocked => requiresExchangeConnection;
 }
 
 List<GuardrailResult> _guardrails(Object? raw) {
@@ -322,4 +330,11 @@ List<GuardrailResult> _guardrails(Object? raw) {
       .whereType<Map<String, dynamic>>()
       .map(GuardrailResult.fromJson)
       .toList();
+}
+
+bool _isExchangeGuardrail(GuardrailResult item) {
+  final text = '${item.title} ${item.message}'.toLowerCase();
+  return text.contains('exchange') ||
+      text.contains('api key') ||
+      text.contains('connection');
 }

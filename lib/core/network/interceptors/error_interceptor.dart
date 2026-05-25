@@ -24,7 +24,12 @@ class ErrorInterceptor extends Interceptor {
     final status = err.response?.statusCode;
     if (status == null) return const NetworkError();
 
-    if (status == 401) return const UnauthorizedError();
+    if (status == 401) {
+      if (err.requestOptions.path.startsWith('/auth/')) {
+        return ServerError(status, _extractMessage(err.response?.data));
+      }
+      return const UnauthorizedError();
+    }
 
     if (status == 404) return const NotFoundError();
 
