@@ -59,6 +59,7 @@ class _TradeValidationScreenState extends ConsumerState<TradeValidationScreen> {
                   _ValidationSummaryGrid(form: form, validation: validation),
                   const SizedBox(height: 28),
                   _GuardrailChecks(
+                    form: form,
                     validation: validation,
                     onAskAi: (item) => _openPoiseAiSheet(item, notifier),
                   ),
@@ -412,16 +413,18 @@ class _OutcomeCard extends StatelessWidget {
 
 class _GuardrailChecks extends StatelessWidget {
   const _GuardrailChecks({
+    required this.form,
     required this.validation,
     required this.onAskAi,
   });
 
+  final TradeFormState form;
   final TradeValidationResult validation;
   final ValueChanged<GuardrailResult> onAskAi;
 
   @override
   Widget build(BuildContext context) {
-    final rows = _guardrailReviewRows(validation);
+    final rows = _guardrailReviewRows(validation, form);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -505,14 +508,6 @@ class _GuardrailCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onAskAi != null) ...[
-                const SizedBox(width: AppSpacing.xs),
-                Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 18,
-                  color: color,
-                ),
-              ],
             ],
           ),
         ),
@@ -841,44 +836,26 @@ class _ErrorCard extends StatelessWidget {
 }
 
 List<({String title, String message, GuardrailResult? warning})>
-    _guardrailReviewRows(TradeValidationResult validation) {
+    _guardrailReviewRows(
+  TradeValidationResult validation,
+  TradeFormState form,
+) {
   final warnings = _guardrailItems(validation);
   final used = <GuardrailResult>{};
-  final baseRows = [
-    (
-      title: 'Risk per trade',
-      message: 'This trade is within your configured risk-per-trade limit.',
-      category: 'risk',
-    ),
-    (
-      title: 'Stop loss distance',
-      message: 'Stop loss distance is within your configured setup rules.',
-      category: 'stop_loss',
-    ),
-    (
-      title: 'Daily trade count',
-      message: 'This trade is within your daily trade limit.',
-      category: 'daily_trade',
-    ),
-    (
-      title: 'Leverage limit',
-      message: 'This trade is within your configured leverage limit.',
-      category: 'leverage',
-    ),
-  ];
-
+  final cleanChecks = _cleanGuardrailChecks(form, validation);
   final rows = <({String title, String message, GuardrailResult? warning})>[];
-  for (final base in baseRows) {
+
+  for (final check in cleanChecks) {
     final warning = warnings
-        .where((item) => _guardrailCategory(item) == base.category)
+        .where((item) => _guardrailCategory(item) == check.category)
         .firstOrNull;
     if (warning == null) {
-      rows.add((title: base.title, message: base.message, warning: null));
+      rows.add((title: check.title, message: check.message, warning: null));
       continue;
     }
     used.add(warning);
     rows.add((
-      title: base.title,
+      title: _guardrailTitle(warning, fallback: check.title),
       message: warning.message,
       warning: warning,
     ));
@@ -887,9 +864,59 @@ List<({String title, String message, GuardrailResult? warning})>
   for (final warning in warnings) {
     if (used.contains(warning)) continue;
     rows.add((
-      title: warning.title,
+      title: _guardrailTitle(warning),
       message: warning.message,
       warning: warning,
+    ));
+  }
+  if (rows.isEmpty) {
+    rows.add((
+      title: 'Trade setup',
+      message: 'Poise did not receive any guardrail warnings for this setup.',
+      warning: null,
+    ));
+  }
+  return rows;
+}
+
+List<({String title, String message, String category})> _cleanGuardrailChecks(
+  TradeFormState form,
+  TradeValidationResult validation,
+) {
+  final rows = <({String title, String message, String category})>[];
+  if (validation.riskPct > 0 || validation.possibleLoss > 0) {
+    rows.add((
+      title: 'Risk per trade',
+      message:
+          'Risk is ${validation.riskPct.toStringAsFixed(2)}% with possible loss capped at ${_money(validation.possibleLoss)}.',
+      category: 'risk',
+    ));
+  }
+  if ((form.slPrice ?? 0) > 0) {
+    rows.add((
+      title: 'Stop loss distance',
+      message:
+          'Stop loss is set at ${_money(form.slPrice!)} for this ${form.side.name} setup.',
+      category: 'stop_loss',
+    ));
+  }
+  final preflight = form.preflight;
+  if (preflight != null && preflight.maxTradesPerDay > 0) {
+    rows.add((
+      title: 'Daily trade count',
+      message:
+          'Trades today: ${preflight.tradesToday}/${preflight.maxTradesPerDay}.',
+      category: 'daily_trade',
+    ));
+  }
+  if (form.leverage > 0) {
+    final max = preflight?.maxLeverage;
+    rows.add((
+      title: 'Leverage limit',
+      message: max != null && max > 0
+          ? 'Using ${form.leverage.toStringAsFixed(0)}x of up to ${max.toStringAsFixed(0)}x allowed.'
+          : 'Using ${form.leverage.toStringAsFixed(0)}x leverage for this setup.',
+      category: 'leverage',
     ));
   }
   return rows;
@@ -913,6 +940,14 @@ List<GuardrailResult> _guardrailItems(TradeValidationResult validation) {
       ),
     ...validation.guardrailWarnings,
   ];
+}
+
+String _guardrailTitle(GuardrailResult item, {String? fallback}) {
+  final title = item.title.trim();
+  if (title.isEmpty || title.toLowerCase() == 'guardrail') {
+    return fallback ?? 'Guardrail';
+  }
+  return title;
 }
 
 String _guardrailCategory(GuardrailResult item) {
