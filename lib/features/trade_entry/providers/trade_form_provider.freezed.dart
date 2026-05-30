@@ -28,6 +28,7 @@ mixin _$TradeFormState {
   double get leverage;
   double? get takeProfit1;
   double? get takeProfit2;
+  double? get takeProfit3;
   double? get slPrice;
   bool get autoStopLossProgression;
   RiskScore? get riskScore;
@@ -91,6 +92,8 @@ mixin _$TradeFormState {
                 other.takeProfit1 == takeProfit1) &&
             (identical(other.takeProfit2, takeProfit2) ||
                 other.takeProfit2 == takeProfit2) &&
+            (identical(other.takeProfit3, takeProfit3) ||
+                other.takeProfit3 == takeProfit3) &&
             (identical(other.slPrice, slPrice) || other.slPrice == slPrice) &&
             (identical(
                     other.autoStopLossProgression, autoStopLossProgression) ||
@@ -156,6 +159,7 @@ mixin _$TradeFormState {
         leverage,
         takeProfit1,
         takeProfit2,
+        takeProfit3,
         slPrice,
         autoStopLossProgression,
         riskScore,
@@ -183,7 +187,7 @@ mixin _$TradeFormState {
 
   @override
   String toString() {
-    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, collateralMode: $collateralMode, amountInputMode: $amountInputMode, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder, symbolTouched: $symbolTouched, orderTypeTouched: $orderTypeTouched, amountTouched: $amountTouched, collateralModeTouched: $collateralModeTouched, leverageTouched: $leverageTouched, directionTouched: $directionTouched, exitPlanTouched: $exitPlanTouched, signalText: $signalText, parsedSignal: $parsedSignal, isApplyingSignal: $isApplyingSignal, signalError: $signalError)';
+    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, collateralMode: $collateralMode, amountInputMode: $amountInputMode, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, takeProfit3: $takeProfit3, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder, symbolTouched: $symbolTouched, orderTypeTouched: $orderTypeTouched, amountTouched: $amountTouched, collateralModeTouched: $collateralModeTouched, leverageTouched: $leverageTouched, directionTouched: $directionTouched, exitPlanTouched: $exitPlanTouched, signalText: $signalText, parsedSignal: $parsedSignal, isApplyingSignal: $isApplyingSignal, signalError: $signalError)';
   }
 }
 
@@ -208,6 +212,7 @@ abstract mixin class $TradeFormStateCopyWith<$Res> {
       double leverage,
       double? takeProfit1,
       double? takeProfit2,
+      double? takeProfit3,
       double? slPrice,
       bool autoStopLossProgression,
       RiskScore? riskScore,
@@ -264,6 +269,7 @@ class _$TradeFormStateCopyWithImpl<$Res>
     Object? leverage = null,
     Object? takeProfit1 = freezed,
     Object? takeProfit2 = freezed,
+    Object? takeProfit3 = freezed,
     Object? slPrice = freezed,
     Object? autoStopLossProgression = null,
     Object? riskScore = freezed,
@@ -344,6 +350,10 @@ class _$TradeFormStateCopyWithImpl<$Res>
       takeProfit2: freezed == takeProfit2
           ? _self.takeProfit2
           : takeProfit2 // ignore: cast_nullable_to_non_nullable
+              as double?,
+      takeProfit3: freezed == takeProfit3
+          ? _self.takeProfit3
+          : takeProfit3 // ignore: cast_nullable_to_non_nullable
               as double?,
       slPrice: freezed == slPrice
           ? _self.slPrice
@@ -591,6 +601,7 @@ extension TradeFormStatePatterns on TradeFormState {
             double leverage,
             double? takeProfit1,
             double? takeProfit2,
+            double? takeProfit3,
             double? slPrice,
             bool autoStopLossProgression,
             RiskScore? riskScore,
@@ -635,6 +646,7 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.leverage,
             _that.takeProfit1,
             _that.takeProfit2,
+            _that.takeProfit3,
             _that.slPrice,
             _that.autoStopLossProgression,
             _that.riskScore,
@@ -693,6 +705,7 @@ extension TradeFormStatePatterns on TradeFormState {
             double leverage,
             double? takeProfit1,
             double? takeProfit2,
+            double? takeProfit3,
             double? slPrice,
             bool autoStopLossProgression,
             RiskScore? riskScore,
@@ -736,6 +749,7 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.leverage,
             _that.takeProfit1,
             _that.takeProfit2,
+            _that.takeProfit3,
             _that.slPrice,
             _that.autoStopLossProgression,
             _that.riskScore,
@@ -793,6 +807,7 @@ extension TradeFormStatePatterns on TradeFormState {
             double leverage,
             double? takeProfit1,
             double? takeProfit2,
+            double? takeProfit3,
             double? slPrice,
             bool autoStopLossProgression,
             RiskScore? riskScore,
@@ -836,6 +851,7 @@ extension TradeFormStatePatterns on TradeFormState {
             _that.leverage,
             _that.takeProfit1,
             _that.takeProfit2,
+            _that.takeProfit3,
             _that.slPrice,
             _that.autoStopLossProgression,
             _that.riskScore,
@@ -876,13 +892,14 @@ class _TradeFormState implements TradeFormState {
       this.amountInputMode = AmountInputMode.margin,
       this.quantity = 1.0,
       this.limitPrice,
-      this.marginMode = MarginMode.percentage,
-      this.marginValue = 20.0,
+      this.marginMode = MarginMode.fixed,
+      this.marginValue = 0.0,
       this.availableBalance = 0.0,
       this.balanceCurrency = 'USD',
       this.leverage = 5.0,
       this.takeProfit1,
       this.takeProfit2,
+      this.takeProfit3,
       this.slPrice,
       this.autoStopLossProgression = false,
       this.riskScore,
@@ -945,6 +962,8 @@ class _TradeFormState implements TradeFormState {
   final double? takeProfit1;
   @override
   final double? takeProfit2;
+  @override
+  final double? takeProfit3;
   @override
   final double? slPrice;
   @override
@@ -1044,6 +1063,8 @@ class _TradeFormState implements TradeFormState {
                 other.takeProfit1 == takeProfit1) &&
             (identical(other.takeProfit2, takeProfit2) ||
                 other.takeProfit2 == takeProfit2) &&
+            (identical(other.takeProfit3, takeProfit3) ||
+                other.takeProfit3 == takeProfit3) &&
             (identical(other.slPrice, slPrice) || other.slPrice == slPrice) &&
             (identical(
                     other.autoStopLossProgression, autoStopLossProgression) ||
@@ -1109,6 +1130,7 @@ class _TradeFormState implements TradeFormState {
         leverage,
         takeProfit1,
         takeProfit2,
+        takeProfit3,
         slPrice,
         autoStopLossProgression,
         riskScore,
@@ -1136,7 +1158,7 @@ class _TradeFormState implements TradeFormState {
 
   @override
   String toString() {
-    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, collateralMode: $collateralMode, amountInputMode: $amountInputMode, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder, symbolTouched: $symbolTouched, orderTypeTouched: $orderTypeTouched, amountTouched: $amountTouched, collateralModeTouched: $collateralModeTouched, leverageTouched: $leverageTouched, directionTouched: $directionTouched, exitPlanTouched: $exitPlanTouched, signalText: $signalText, parsedSignal: $parsedSignal, isApplyingSignal: $isApplyingSignal, signalError: $signalError)';
+    return 'TradeFormState(symbol: $symbol, orderType: $orderType, side: $side, collateralMode: $collateralMode, amountInputMode: $amountInputMode, quantity: $quantity, limitPrice: $limitPrice, marginMode: $marginMode, marginValue: $marginValue, availableBalance: $availableBalance, balanceCurrency: $balanceCurrency, leverage: $leverage, takeProfit1: $takeProfit1, takeProfit2: $takeProfit2, takeProfit3: $takeProfit3, slPrice: $slPrice, autoStopLossProgression: $autoStopLossProgression, riskScore: $riskScore, preflight: $preflight, validation: $validation, isLoadingPreflight: $isLoadingPreflight, isValidating: $isValidating, isSubmitting: $isSubmitting, preflightError: $preflightError, validationError: $validationError, submitError: $submitError, lastOrder: $lastOrder, symbolTouched: $symbolTouched, orderTypeTouched: $orderTypeTouched, amountTouched: $amountTouched, collateralModeTouched: $collateralModeTouched, leverageTouched: $leverageTouched, directionTouched: $directionTouched, exitPlanTouched: $exitPlanTouched, signalText: $signalText, parsedSignal: $parsedSignal, isApplyingSignal: $isApplyingSignal, signalError: $signalError)';
   }
 }
 
@@ -1163,6 +1185,7 @@ abstract mixin class _$TradeFormStateCopyWith<$Res>
       double leverage,
       double? takeProfit1,
       double? takeProfit2,
+      double? takeProfit3,
       double? slPrice,
       bool autoStopLossProgression,
       RiskScore? riskScore,
@@ -1222,6 +1245,7 @@ class __$TradeFormStateCopyWithImpl<$Res>
     Object? leverage = null,
     Object? takeProfit1 = freezed,
     Object? takeProfit2 = freezed,
+    Object? takeProfit3 = freezed,
     Object? slPrice = freezed,
     Object? autoStopLossProgression = null,
     Object? riskScore = freezed,
@@ -1302,6 +1326,10 @@ class __$TradeFormStateCopyWithImpl<$Res>
       takeProfit2: freezed == takeProfit2
           ? _self.takeProfit2
           : takeProfit2 // ignore: cast_nullable_to_non_nullable
+              as double?,
+      takeProfit3: freezed == takeProfit3
+          ? _self.takeProfit3
+          : takeProfit3 // ignore: cast_nullable_to_non_nullable
               as double?,
       slPrice: freezed == slPrice
           ? _self.slPrice

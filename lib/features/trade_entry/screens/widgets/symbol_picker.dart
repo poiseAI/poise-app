@@ -45,35 +45,51 @@ class SymbolPicker extends ConsumerWidget {
           );
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm,
-          ),
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: AppColors.transparent),
+            border: Border.all(color: const Color(0xFFD0D5DD)),
           ),
           child: Row(
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: const BoxDecoration(
-                  color: AppColors.warningAmber,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.currency_bitcoin_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: selected == null
-                    ? _SymbolPrompt(exchange: normalizedExchange)
-                    : _SelectedSymbol(symbol: selected),
+                    ? const Text(
+                        'Select trading pair',
+                        style: TextStyle(
+                          color: AppColors.textDisabled,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                        ),
+                      )
+                    : Text(
+                        _displayPair(selected),
+                        style: AppTypography.bodyLg,
+                        overflow: TextOverflow.ellipsis,
+                      ),
               ),
+              if (selected != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '\$${_formatPrice(selected.lastPrice)}',
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      _formatPct(selected.priceChangePct),
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.pnlColor(selected.priceChangePct),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(width: AppSpacing.sm),
               const Icon(
                 Icons.keyboard_arrow_down_rounded,
@@ -142,15 +158,10 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.78,
           ),
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(28)),
+            borderRadius: BorderRadius.all(Radius.circular(10)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -160,8 +171,8 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Select trading pair',
-                      style: AppTypography.h2.copyWith(letterSpacing: 0),
+                      'Trading pair',
+                      style: AppTypography.h4.copyWith(letterSpacing: 0),
                     ),
                   ),
                   IconButton(
@@ -171,7 +182,30 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                   ),
                 ],
               ),
-              const Divider(height: 1, color: AppColors.borderLight),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Search pairs..',
+                  prefixIcon: Icon(Icons.search_rounded),
+                  filled: true,
+                  fillColor: AppColors.bgCard,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: AppRadius.cardRadius,
+                    borderSide: BorderSide(color: AppColors.borderLight),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppRadius.cardRadius,
+                    borderSide:
+                        BorderSide(color: AppColors.primary, width: 1.4),
+                  ),
+                ),
+                onChanged: (value) => ref
+                    .read(symbolSearchProvider.notifier)
+                    .search(value, exchange: widget.exchange),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Flexible(
                 child: searchState.when(
                   loading: () => const _SymbolLoadingList(),
@@ -194,11 +228,17 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                       separatorBuilder: (_, __) => const SizedBox.shrink(),
                       itemBuilder: (context, index) {
                         final symbol = symbols[index];
-                        return _SymbolResultTile(
-                          symbol: symbol,
-                          selected: symbol.symbol == widget.selected?.symbol,
-                          enabled: symbol.lastPrice > 0,
-                          onTap: () => _select(symbol),
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom:
+                                index == symbols.length - 1 ? 0 : AppSpacing.sm,
+                          ),
+                          child: _SymbolResultTile(
+                            symbol: symbol,
+                            selected: symbol.symbol == widget.selected?.symbol,
+                            enabled: symbol.lastPrice > 0,
+                            onTap: () => _select(symbol),
+                          ),
                         );
                       },
                     );
@@ -209,65 +249,6 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SymbolPrompt extends StatelessWidget {
-  const _SymbolPrompt({required this.exchange});
-
-  final String exchange;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Select trading pair', style: AppTypography.bodyMedium),
-        const SizedBox(height: 2),
-        Text(
-          'Tap to pick BTC, ETH, SOL or a recent ${exchange.toUpperCase()} pair',
-          style: AppTypography.caption.copyWith(
-            color: AppColors.textSecondary,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-}
-
-class _SelectedSymbol extends StatelessWidget {
-  const _SelectedSymbol({required this.symbol});
-
-  final TradingSymbol symbol;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                _displayPair(symbol),
-                style: AppTypography.h3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Futures',
-          style: AppTypography.bodySm.copyWith(
-            color: AppColors.textSecondary,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
     );
   }
 }
@@ -288,34 +269,23 @@ class _SymbolResultTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: AppColors.bgCard,
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
+        borderRadius: AppRadius.cardRadius,
         onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 0,
-            vertical: 13,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(
             children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                  color: AppColors.warningAmber,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.currency_bitcoin_rounded,
-                  color: Colors.white,
-                  size: 15,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   _displayPair(symbol),
-                  style: AppTypography.bodyMedium.copyWith(
+                  style: AppTypography.bodyLg.copyWith(
                     color: enabled
                         ? AppColors.textPrimary
                         : AppColors.textSecondary,
@@ -323,12 +293,31 @@ class _SymbolResultTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (selected)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$${_formatPrice(symbol.lastPrice)}',
+                    style: AppTypography.bodySm.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    _formatPct(symbol.priceChangePct),
+                    style: AppTypography.bodySm.copyWith(
+                      color: AppColors.pnlColor(symbol.priceChangePct),
+                    ),
+                  ),
+                ],
+              ),
+              if (selected) ...[
+                const SizedBox(width: AppSpacing.sm),
                 const Icon(
                   Icons.check_rounded,
                   color: AppColors.primary,
                   size: 18,
                 ),
+              ],
             ],
           ),
         ),
@@ -392,4 +381,15 @@ String _displayPair(TradingSymbol symbol) {
     return '${symbol.baseAsset}/${symbol.quoteAsset}';
   }
   return symbol.symbol;
+}
+
+String _formatPrice(double value) {
+  if (value >= 100) return value.toStringAsFixed(2);
+  if (value >= 1) return value.toStringAsFixed(4);
+  return value.toStringAsFixed(6);
+}
+
+String _formatPct(double value) {
+  final sign = value >= 0 ? '+' : '';
+  return '$sign${value.toStringAsFixed(2)}%';
 }

@@ -110,7 +110,7 @@ class _NoExchangeBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: AppSpacing.screenPadding,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -201,7 +201,7 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverPadding(
-            padding: AppSpacing.screenPadding,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,13 +447,19 @@ class _ConnectExchangeEmptyState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.sm),
-        TextButton.icon(
+        TextButton(
           onPressed: onConnect,
-          icon: const Icon(Icons.add_rounded, size: 16),
-          label: const Text('Connect Exchange'),
           style: TextButton.styleFrom(
             foregroundColor: const Color(0xFF0057FF),
             textStyle: AppTypography.bodyMedium,
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Connect Exchange'),
+              SizedBox(width: AppSpacing.sm),
+              Icon(Icons.chevron_right_rounded, size: 18),
+            ],
           ),
         ),
       ],
@@ -1264,28 +1270,17 @@ class _ChooseExchangeSheet extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.fromLTRB(30, 0, 30, 24),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(16)),
+            borderRadius: BorderRadius.all(Radius.circular(10)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 34,
-                  height: 3,
-                  decoration: const BoxDecoration(
-                    color: AppColors.borderLight,
-                    borderRadius: AppRadius.pillRadius,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
                   const Expanded(

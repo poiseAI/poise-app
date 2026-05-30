@@ -6,7 +6,7 @@ part of 'trade_form_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$tradeFormHash() => r'd91bc47fe25dcdea0a97d5219acb2074a8f202f6';
+String _$tradeFormHash() => r'2c1788ad47fbd03d9f4412da136fe7c2c456258f';
 
 /// See also [TradeForm].
 @ProviderFor(TradeForm)

@@ -36,13 +36,14 @@ abstract class TradeFormState with _$TradeFormState {
     @Default(AmountInputMode.margin) AmountInputMode amountInputMode,
     @Default(1.0) double quantity,
     double? limitPrice,
-    @Default(MarginMode.percentage) MarginMode marginMode,
-    @Default(20.0) double marginValue,
+    @Default(MarginMode.fixed) MarginMode marginMode,
+    @Default(0.0) double marginValue,
     @Default(0.0) double availableBalance,
     @Default('USD') String balanceCurrency,
     @Default(5.0) double leverage,
     double? takeProfit1,
     double? takeProfit2,
+    double? takeProfit3,
     double? slPrice,
     @Default(false) bool autoStopLossProgression,
     RiskScore? riskScore,
@@ -113,8 +114,6 @@ class TradeForm extends _$TradeForm {
   }
 
   void setSymbol(TradingSymbol symbol) {
-    final entry = _entryFor(symbol);
-    final defaults = _defaultTpSl(entry, state.side);
     state = state.copyWith(
       symbol: symbol,
       riskScore: null,
@@ -122,8 +121,6 @@ class TradeForm extends _$TradeForm {
         1.0,
         _maxAllowedLeverage(symbol, state.preflight),
       ),
-      slPrice: state.slPrice ?? defaults.stopLoss,
-      takeProfit1: state.takeProfit1 ?? defaults.takeProfit,
       symbolTouched: true,
       validation: null,
       validationError: null,
@@ -143,13 +140,8 @@ class TradeForm extends _$TradeForm {
   }
 
   void setSide(OrderSide side) {
-    final entry = entryPrice > 0 ? entryPrice : _entryFor(state.symbol);
-    final defaults = _defaultTpSl(entry, side);
     state = state.copyWith(
       side: side,
-      slPrice: defaults.stopLoss,
-      takeProfit1: defaults.takeProfit,
-      takeProfit2: null,
       directionTouched: true,
       exitPlanTouched: false,
       validation: null,
@@ -214,6 +206,12 @@ class TradeForm extends _$TradeForm {
 
   void setTakeProfit2(double? price) => state = state.copyWith(
         takeProfit2: price,
+        exitPlanTouched: true,
+        validation: null,
+      );
+
+  void setTakeProfit3(double? price) => state = state.copyWith(
+        takeProfit3: price,
         exitPlanTouched: true,
         validation: null,
       );
@@ -304,6 +302,9 @@ class TradeForm extends _$TradeForm {
     final secondTp = parsed.takeProfits.length > 1
         ? parsed.takeProfits[1]
         : state.takeProfit2;
+    final thirdTp = parsed.takeProfits.length > 2
+        ? parsed.takeProfits[2]
+        : state.takeProfit3;
     final maxLev =
         _maxAllowedLeverage(resolvedSymbol ?? state.symbol, state.preflight);
     final nextLeverage = parsed.leverage == null
@@ -324,6 +325,7 @@ class TradeForm extends _$TradeForm {
       slPrice: parsed.stopLoss ?? state.slPrice,
       takeProfit1: firstTp,
       takeProfit2: secondTp,
+      takeProfit3: thirdTp,
       marginMode: hasMargin ? MarginMode.fixed : state.marginMode,
       amountInputMode:
           hasMargin ? AmountInputMode.margin : state.amountInputMode,
@@ -381,6 +383,10 @@ class TradeForm extends _$TradeForm {
     final pf = state.preflight;
     if (pf == null) return false;
     if (state.symbol == null) return false;
+    if (!state.collateralModeTouched) return false;
+    if (!state.leverageTouched) return false;
+    if (!state.orderTypeTouched) return false;
+    if (!state.directionTouched) return false;
     if (marginAmount <= 0) return false;
     if (state.orderType != OrderType.market && state.limitPrice == null) {
       return false;
@@ -425,7 +431,13 @@ class TradeForm extends _$TradeForm {
     }
     final pf = state.preflight;
     if (sym == null) return 'Choose a trading pair to continue.';
+    if (!state.collateralModeTouched) {
+      return 'Select a margin type to continue.';
+    }
+    if (!state.leverageTouched) return 'Choose leverage to continue.';
+    if (!state.orderTypeTouched) return 'Choose an entry type to continue.';
     if (!state.amountTouched) return 'Enter trade size to continue.';
+    if (!state.directionTouched) return 'Select a direction to continue.';
     if (!state.exitPlanTouched) {
       return 'Confirm a take profit and stop loss to continue.';
     }
@@ -456,6 +468,7 @@ class TradeForm extends _$TradeForm {
     if (sl == null || sl <= 0) return 'Stop loss is required.';
     final tp1 = state.takeProfit1;
     final tp2 = state.takeProfit2;
+    final tp3 = state.takeProfit3;
     if (state.side == OrderSide.long) {
       if (sl >= entryPrice) {
         return 'For a long trade, stop loss must be below entry.';
@@ -466,6 +479,9 @@ class TradeForm extends _$TradeForm {
       if (tp2 != null && tp2 <= entryPrice) {
         return 'For a long trade, take profit 2 must be above entry.';
       }
+      if (tp3 != null && tp3 <= entryPrice) {
+        return 'For a long trade, take profit 3 must be above entry.';
+      }
     } else {
       if (sl <= entryPrice) {
         return 'For a short trade, stop loss must be above entry.';
@@ -475,6 +491,9 @@ class TradeForm extends _$TradeForm {
       }
       if (tp2 != null && tp2 >= entryPrice) {
         return 'For a short trade, take profit 2 must be below entry.';
+      }
+      if (tp3 != null && tp3 >= entryPrice) {
+        return 'For a short trade, take profit 3 must be below entry.';
       }
     }
     return null;
@@ -505,6 +524,7 @@ class TradeForm extends _$TradeForm {
       'stop_loss': state.slPrice,
       'take_profit_1': state.takeProfit1,
       'take_profit_2': state.takeProfit2,
+      'take_profit_3': state.takeProfit3,
       'auto_stop_loss_progression': state.autoStopLossProgression,
     };
   }
@@ -575,12 +595,18 @@ class TradeForm extends _$TradeForm {
   TradeValidationResult _localSetupValidation() {
     final margin = marginAmount;
     final entry = entryPrice;
-    final tp = state.takeProfit1;
+    final tps = [
+      state.takeProfit1,
+      state.takeProfit2,
+      state.takeProfit3,
+    ].whereType<double>();
     final sl = state.slPrice;
     final possibleLoss =
         sl == null ? 0.0 : _pnlAt(price: sl, entry: entry).abs();
-    final possibleProfit =
-        tp == null ? 0.0 : _pnlAt(price: tp, entry: entry).abs();
+    final possibleProfit = tps.fold<double>(
+      0,
+      (total, tp) => total + _pnlAt(price: tp, entry: entry).abs(),
+    );
     final rr = possibleLoss > 0
         ? '1 : ${(possibleProfit / possibleLoss).toStringAsFixed(2)}'
         : '-';
@@ -669,8 +695,6 @@ class TradeForm extends _$TradeForm {
   }
 }
 
-double _entryFor(TradingSymbol? symbol) => symbol?.lastPrice ?? 0;
-
 String _normalizeExchange(String value) {
   final normalized = value.trim().toLowerCase();
   if (normalized == 'binance') return 'binance';
@@ -695,23 +719,4 @@ bool _requiresExchangeConnection(TradePreflight? preflight) {
   return reason.contains('exchange') ||
       reason.contains('api key') ||
       reason.contains('connection');
-}
-
-({double? stopLoss, double? takeProfit}) _defaultTpSl(
-  double entry,
-  OrderSide side,
-) {
-  if (entry <= 0) return (stopLoss: null, takeProfit: null);
-  final stopLoss = side == OrderSide.long ? entry * 0.98 : entry * 1.02;
-  final takeProfit = side == OrderSide.long ? entry * 1.04 : entry * 0.96;
-  return (
-    stopLoss: _roundPrice(stopLoss),
-    takeProfit: _roundPrice(takeProfit),
-  );
-}
-
-double _roundPrice(double value) {
-  if (value >= 100) return double.parse(value.toStringAsFixed(2));
-  if (value >= 1) return double.parse(value.toStringAsFixed(4));
-  return double.parse(value.toStringAsFixed(6));
 }

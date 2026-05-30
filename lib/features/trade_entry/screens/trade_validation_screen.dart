@@ -34,11 +34,7 @@ class _TradeValidationScreenState extends ConsumerState<TradeValidationScreen> {
     }
 
     final exchangeRequired = validation.requiresExchangeConnection;
-    final warningCount = _validationWarningCount(validation);
-    final needsResolution = warningCount > 0;
-    final canSubmit = !form.isSubmitting &&
-        !validation.isBlocked &&
-        (!needsResolution || _guardrailsAcknowledged);
+    final canSubmit = !form.isSubmitting && !validation.isBlocked;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -49,7 +45,7 @@ class _TradeValidationScreenState extends ConsumerState<TradeValidationScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         titleSpacing: 0,
-        title: const Text('Trade validation', style: AppTypography.h2),
+        title: const Text('Trade review', style: AppTypography.h2),
       ),
       body: SafeArea(
         top: false,
@@ -57,10 +53,10 @@ class _TradeValidationScreenState extends ConsumerState<TradeValidationScreen> {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
                 children: [
-                  _ValidationSummaryGrid(validation: validation),
-                  const SizedBox(height: AppSpacing.lg),
+                  _ValidationSummaryGrid(form: form, validation: validation),
+                  const SizedBox(height: 28),
                   _GuardrailChecks(
                     validation: validation,
                     onAskAi: (item) => _openPoiseAiSheet(item, notifier),
@@ -122,15 +118,12 @@ class _TradeValidationScreenState extends ConsumerState<TradeValidationScreen> {
       return;
     }
 
-    final requiresFinalConfirmation =
-        validation.dailyLimitAcknowledgementRequired ||
-            validation.requiresExternalRiskReview;
-    final confirmed = !requiresFinalConfirmation ||
-        await _confirmTradeSubmit(context, validation);
-    if (!confirmed) return;
-
     HapticFeedback.mediumImpact();
-    await notifier.submit(bypassWarnings: _guardrailsAcknowledged);
+    final bypassWarnings = _guardrailsAcknowledged ||
+        validation.hasWarnings ||
+        validation.dailyLimitAcknowledgementRequired ||
+        validation.requiresExternalRiskReview;
+    await notifier.submit(bypassWarnings: bypassWarnings);
     final latest = ref.read(tradeFormProvider);
     if (mounted && latest.lastOrder != null) {
       Navigator.of(context).pushReplacement(
@@ -176,110 +169,238 @@ class _ValidationMissingScreen extends StatelessWidget {
 }
 
 class _ValidationSummaryGrid extends StatelessWidget {
-  const _ValidationSummaryGrid({required this.validation});
+  const _ValidationSummaryGrid({
+    required this.form,
+    required this.validation,
+  });
 
+  final TradeFormState form;
   final TradeValidationResult validation;
 
   @override
   Widget build(BuildContext context) {
+    final symbol = form.symbol;
+    final side = form.side == OrderSide.long ? 'Long' : 'Short';
+    final sideColor =
+        form.side == OrderSide.long ? AppColors.profitGreen : AppColors.lossRed;
+    final qty = form.amountInputMode == AmountInputMode.quantity
+        ? form.quantity
+        : form.marginValue > 0 && form.leverage > 0 && form.symbol != null
+            ? validation.positionSize / form.symbol!.lastPrice
+            : 0.0;
+    final notional = validation.positionSize;
+    final tpProfits = _tpProfitRows(form, validation);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Summary', style: AppTypography.h2),
-        const SizedBox(height: AppSpacing.sm),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ReviewPill(label: side, color: sideColor),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    _displayPair(symbol),
+                    style: AppTypography.h2.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Margin',
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _money(validation.margin),
+                  style: AppTypography.h1.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_formatQty(qty)} ${symbol?.baseAsset ?? ''}',
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_money(notional)} Notional',
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 28),
         Row(
           children: [
             Expanded(
-              child: _SummaryTile(
-                label: 'Risk',
-                value: '${validation.riskPct.toStringAsFixed(2)}%',
+              child: _InfoTile(
+                label: 'Margin type',
+                value: form.collateralMode == CollateralMode.cross
+                    ? 'Cross'
+                    : 'Isolated',
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.xs),
             Expanded(
-              child: _SummaryTile(
-                label: 'Position Size',
-                value: _money(validation.positionSize),
+              child: _InfoTile(
+                label: 'Leverage',
+                value: '${form.leverage.toStringAsFixed(0)}x',
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: _InfoTile(
+                label: 'Entry type',
+                value: form.orderType == OrderType.limit ? 'Limit' : 'Market',
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _SummaryTile(
-                label: 'Risk-to-Reward Ratio',
-                value: validation.riskRewardRatio,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _SummaryTile(
-                label: 'Possible Loss',
-                value: '-${_money(validation.possibleLoss)}',
-                valueColor: AppColors.lossRed,
-              ),
-            ),
-          ],
+        const SizedBox(height: 26),
+        _OutcomeCard(
+          title: 'Possible Loss',
+          value: '-${_money(validation.possibleLoss)}',
+          caption:
+              'If loss stops at ${_money(form.slPrice ?? 0)} or ${symbol?.baseAsset ?? 'price'} moves ${_lossMove(form)}',
+          color: AppColors.lossRed,
         ),
-        const SizedBox(height: AppSpacing.sm),
-        _SummaryTile(
-          label: 'Possible Profit',
-          value: '+${_money(validation.possibleProfit)}',
-          valueColor: AppColors.profitGreen,
-          centered: true,
-        ),
+        for (final row in tpProfits) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _OutcomeCard(
+            title: row.label,
+            value: '+${_money(row.profit)}',
+            caption:
+                'If target hits ${_money(row.price)} or moves ${_formatSignedPct(row.movePct)}',
+            color: AppColors.profitGreen,
+          ),
+        ],
       ],
     );
   }
 }
 
-class _SummaryTile extends StatelessWidget {
-  const _SummaryTile({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.centered = false,
-  });
+class _ReviewPill extends StatelessWidget {
+  const _ReviewPill({required this.label, required this.color});
 
   final String label;
-  final String value;
-  final Color? valueColor;
-  final bool centered;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 90),
-      padding: AppSpacing.cardPadding,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: color.withValues(alpha: 0.12),
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.bodySm.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  const _InfoTile({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      decoration: BoxDecoration(
         borderRadius: AppRadius.cardRadius,
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment:
-            centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            textAlign: centered ? TextAlign.center : TextAlign.start,
-            style: AppTypography.bodyMedium.copyWith(
+            style: AppTypography.bodySm.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: AppTypography.body.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OutcomeCard extends StatelessWidget {
+  const _OutcomeCard({
+    required this.title,
+    required this.value,
+    required this.caption,
+    required this.color,
+  });
+
+  final String title;
+  final String value;
+  final String caption;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: color.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTypography.body),
           const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: centered ? Alignment.center : Alignment.centerLeft,
-            child: Text(
-              value,
-              style: AppTypography.numericLg.copyWith(
-                color: valueColor ?? AppColors.textPrimary,
-              ),
+          Text(
+            value,
+            style: AppTypography.h3.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            caption,
+            style: AppTypography.bodySm.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -300,40 +421,21 @@ class _GuardrailChecks extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _guardrailItems(validation);
-    final riskItems = items.where((item) => !_isBehavioralGuardrail(item));
-    final behavioralItems = items.where(_isBehavioralGuardrail);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (items.isEmpty) ...[
-          const Text('Risk guardrails check', style: AppTypography.h2),
-          const SizedBox(height: AppSpacing.sm),
-          const _CleanGuardrailCard(),
-        ] else ...[
-          if (riskItems.isNotEmpty) ...[
-            const Text('Risk guardrails check', style: AppTypography.h2),
+        const Text('Review guardrails', style: AppTypography.bodyMedium),
+        const SizedBox(height: AppSpacing.md),
+        if (items.isEmpty)
+          const _GuardrailCard.clean(
+            title: 'Leverage limit',
+            message: 'This trade is within your configured leverage limit',
+          )
+        else
+          for (final item in items) ...[
+            _GuardrailCard(item: item, onAskAi: () => onAskAi(item)),
             const SizedBox(height: AppSpacing.sm),
-            for (final item in riskItems) ...[
-              _GuardrailCard(
-                item: item,
-                onAskAi: () => onAskAi(item),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
           ],
-          if (behavioralItems.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            const Text('Behavioural Analysis', style: AppTypography.h2),
-            const SizedBox(height: AppSpacing.sm),
-            for (final item in behavioralItems) ...[
-              _GuardrailCard(
-                item: item,
-                onAskAi: () => onAskAi(item),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-          ],
-        ],
       ],
     );
   }
@@ -343,89 +445,68 @@ class _GuardrailCard extends StatelessWidget {
   const _GuardrailCard({
     required this.item,
     required this.onAskAi,
-  });
+  })  : cleanTitle = null,
+        cleanMessage = null;
 
-  final GuardrailResult item;
-  final VoidCallback onAskAi;
+  const _GuardrailCard.clean({
+    required String title,
+    required String message,
+  })  : item = null,
+        onAskAi = null,
+        cleanTitle = title,
+        cleanMessage = message;
+
+  final GuardrailResult? item;
+  final VoidCallback? onAskAi;
+  final String? cleanTitle;
+  final String? cleanMessage;
 
   @override
   Widget build(BuildContext context) {
-    final color = _guardrailTone(item);
+    final isClean = item == null;
+    final color = isClean ? AppColors.profitGreen : AppColors.warningAmber;
+    final title = item?.title ?? cleanTitle ?? 'Guardrail';
+    final message = item?.message ?? cleanMessage ?? '';
     return Container(
       width: double.infinity,
-      padding: AppSpacing.cardPadding,
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: color,
-                size: 24,
-              ),
-              const Spacer(),
-              OutlinedButton(
-                onPressed: onAskAi,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.brand100),
-                  shape: const StadiumBorder(),
+          Icon(
+            isClean
+                ? Icons.check_circle_outline_rounded
+                : Icons.warning_amber_rounded,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: isClean
+                        ? const Color(0xFF027A48)
+                        : const Color(0xFFB54708),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                child: const Text('Ask Poise AI'),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(item.title, style: AppTypography.h3),
-          const SizedBox(height: 2),
-          Text(
-            item.message,
-            style: AppTypography.body.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.35,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CleanGuardrailCard extends StatelessWidget {
-  const _CleanGuardrailCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.shield_outlined,
-            color: AppColors.primary,
-            size: 42,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const Text('No guardrails triggered', style: AppTypography.h3),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'You\'re all set and ready to roll!',
-            textAlign: TextAlign.center,
-            style: AppTypography.body.copyWith(
-              color: AppColors.textSecondary,
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -450,8 +531,20 @@ class _ValidationSubmitBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final exchangeRequired = validation.requiresExchangeConnection;
+    final hasWarnings = validation.hasWarnings ||
+        validation.dailyLimitAcknowledgementRequired ||
+        validation.requiresExternalRiskReview;
+    final label = validation.isBlocked
+        ? exchangeRequired
+            ? 'Connect exchange'
+            : 'Trade blocked'
+        : loading
+            ? 'Submitting...'
+            : hasWarnings
+                ? 'Submit trade anyway'
+                : 'Submit trade';
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 26),
       decoration: const BoxDecoration(
         color: AppColors.bgPrimary,
         border: Border(top: BorderSide(color: AppColors.borderLight)),
@@ -459,16 +552,31 @@ class _ValidationSubmitBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PPrimaryButton(
-            label: validation.isBlocked
-                ? exchangeRequired
-                    ? 'Connect exchange'
-                    : 'Trade blocked'
-                : loading
-                    ? 'Submitting...'
-                    : 'Submit trade',
-            state: loading ? PButtonState.loading : PButtonState.idle,
-            onPressed: canSubmit ? onSubmit : null,
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: FilledButton(
+              onPressed: canSubmit ? onSubmit : null,
+              style: FilledButton.styleFrom(
+                backgroundColor:
+                    hasWarnings ? AppColors.warningAmber : AppColors.primary,
+                disabledBackgroundColor: AppColors.bgCardElevated,
+                foregroundColor: Colors.white,
+                disabledForegroundColor: AppColors.textDisabled,
+                shape: const StadiumBorder(),
+                textStyle: AppTypography.button,
+              ),
+              child: loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(label),
+            ),
           ),
         ],
       ),
@@ -640,10 +748,10 @@ class _TradeSubmittedSuccessScreen extends ConsumerWidget {
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
-          padding: AppSpacing.screenPadding,
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           child: Column(
             children: [
-              const Spacer(flex: 2),
+              const Spacer(),
               Image.asset(
                 'assets/images/success_bag.png',
                 width: 150,
@@ -659,19 +767,43 @@ class _TradeSubmittedSuccessScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Your ${symbol ?? 'trade'} order has been successfully submitted. Tap below to check the trade status.',
+                'Your trade order has been successfully submitted. Tap below to view the trade status.',
                 textAlign: TextAlign.center,
                 style: AppTypography.body.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.45,
                 ),
               ),
-              const Spacer(flex: 2),
-              PPrimaryButton(
-                label: 'View trade',
-                onPressed: () => context.go(Routes.orders),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: FilledButton(
+                  onPressed: () => context.go(Routes.orders),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    textStyle: AppTypography.button,
+                  ),
+                  child: const Text('View trade'),
+                ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: () => context.go(Routes.home),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.borderLight),
+                    shape: const StadiumBorder(),
+                    textStyle: AppTypography.button,
+                  ),
+                  child: const Text('Go to home'),
+                ),
+              ),
             ],
           ),
         ),
@@ -702,43 +834,6 @@ class _ErrorCard extends StatelessWidget {
   }
 }
 
-Future<bool> _confirmTradeSubmit(
-  BuildContext context,
-  TradeValidationResult validation,
-) async {
-  final dailyLimitPct = validation.dailyLossLimitUsd <= 0
-      ? null
-      : (validation.possibleLoss / validation.dailyLossLimitUsd * 100)
-          .clamp(0, 999)
-          .toDouble();
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Are you sure?'),
-      content: Text(
-        dailyLimitPct == null
-            ? 'Submitting this trade will use part of your daily loss limit. Do you want to proceed?'
-            : 'Submitting this trade will use ${_formatLimitPct(dailyLimitPct)} of your daily loss limit. Do you want to proceed?',
-        style: AppTypography.body.copyWith(
-          color: AppColors.textSecondary,
-          height: 1.45,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Go back'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Submit trade'),
-        ),
-      ],
-    ),
-  );
-  return confirmed ?? false;
-}
-
 List<GuardrailResult> _guardrailItems(TradeValidationResult validation) {
   return [
     if (validation.dailyLimitAcknowledgementRequired)
@@ -759,10 +854,6 @@ List<GuardrailResult> _guardrailItems(TradeValidationResult validation) {
   ];
 }
 
-int _validationWarningCount(TradeValidationResult validation) {
-  return _guardrailItems(validation).length;
-}
-
 String _aiExplanation(GuardrailResult item) {
   if (item.aiPrompt != null && item.aiPrompt!.trim().isNotEmpty) {
     return item.aiPrompt!;
@@ -770,34 +861,79 @@ String _aiExplanation(GuardrailResult item) {
   return 'Based on your risk profile, ${item.message.toLowerCase()} Reducing your margin can bring this setup back within your configured guardrails.';
 }
 
-bool _isBehavioralGuardrail(GuardrailResult item) {
-  final category = item.category?.toLowerCase();
-  if (category != null &&
-      (category.contains('behavior') || category.contains('behaviour'))) {
-    return true;
-  }
-  final text =
-      '${item.title} ${item.message} ${item.aiPrompt ?? ''}'.toLowerCase();
-  return text.contains('behaviour') ||
-      text.contains('behavior') ||
-      text.contains('revenge') ||
-      text.contains('emotional') ||
-      text.contains('overtrade') ||
-      text.contains('bypass') ||
-      text.contains('cooldown') ||
-      text.contains('session boundary') ||
-      text.contains('trading session');
-}
-
-Color _guardrailTone(GuardrailResult item) {
-  if (_isBehavioralGuardrail(item)) return AppColors.warningAmber;
-  if (item.severity.toLowerCase() == 'warning') return AppColors.lossRed;
-  return AppColors.lossRed;
-}
-
-String _formatLimitPct(double value) {
-  if (value >= 10 || value % 1 == 0) return '${value.toStringAsFixed(0)}%';
-  return '${value.toStringAsFixed(1)}%';
-}
-
 String _money(double value) => '\$${value.abs().toStringAsFixed(2)}';
+
+String _displayPair(dynamic symbol) {
+  if (symbol == null) return 'BTC/USDT';
+  final base = symbol.baseAsset as String? ?? '';
+  final quote = symbol.quoteAsset as String? ?? '';
+  if (base.isNotEmpty && quote.isNotEmpty) return '$base/$quote';
+  return symbol.symbol as String? ?? 'BTC/USDT';
+}
+
+String _formatQty(double value) {
+  if (value <= 0) return '0.0000';
+  if (value >= 1) return value.toStringAsFixed(4);
+  return value.toStringAsFixed(6);
+}
+
+String _formatSignedPct(double value) {
+  final sign = value >= 0 ? '+' : '-';
+  return '$sign${value.abs().toStringAsFixed(2)}%';
+}
+
+String _lossMove(TradeFormState form) {
+  final entry = form.orderType == OrderType.limit
+      ? form.limitPrice
+      : form.symbol?.lastPrice;
+  final sl = form.slPrice;
+  if (entry == null || entry <= 0 || sl == null || sl <= 0) return '-';
+  final pct = (sl - entry) / entry * 100;
+  return _formatSignedPct(pct);
+}
+
+List<({String label, double price, double profit, double movePct})>
+    _tpProfitRows(
+  TradeFormState form,
+  TradeValidationResult validation,
+) {
+  final entry = form.orderType == OrderType.limit
+      ? form.limitPrice
+      : form.symbol?.lastPrice;
+  final tps = [
+    form.takeProfit1,
+    form.takeProfit2,
+    form.takeProfit3,
+  ].whereType<double>().toList();
+  if (entry == null || entry <= 0 || tps.isEmpty) {
+    return [
+      (
+        label: 'Possible Profit',
+        price: 0,
+        profit: validation.possibleProfit,
+        movePct: 0,
+      ),
+    ];
+  }
+  return [
+    for (var i = 0; i < tps.length; i++)
+      (
+        label:
+            tps.length == 1 ? 'Possible Profit' : 'TP${i + 1} Possible Profit',
+        price: tps[i],
+        profit: _tpProfit(form, entry, tps[i]),
+        movePct: ((tps[i] - entry).abs() / entry) * 100,
+      ),
+  ];
+}
+
+double _tpProfit(TradeFormState form, double entry, double price) {
+  final margin = form.marginMode == MarginMode.fixed
+      ? form.marginValue
+      : form.availableBalance * (form.marginValue / 100);
+  if (entry <= 0 || margin <= 0) return 0;
+  final move = form.side == OrderSide.long
+      ? (price - entry) / entry
+      : (entry - price) / entry;
+  return (margin * form.leverage * move).abs();
+}

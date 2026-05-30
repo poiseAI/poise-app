@@ -10,8 +10,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/buttons/p_primary_button.dart';
-import '../data/models/symbol.dart';
 import '../data/signal_parser.dart';
 import '../providers/symbol_search_provider.dart';
 import '../providers/trade_form_provider.dart';
@@ -76,7 +74,7 @@ class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         titleSpacing: 0,
-        title: const Text('Open a new trade', style: AppTypography.h2),
+        title: const Text('New Trade', style: AppTypography.h2),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -90,86 +88,81 @@ class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => notifier.loadPreflight(),
-                color: AppColors.accent,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  children: [
-                    if (form.isLoadingPreflight)
-                      const _InfoCard(
-                        message:
-                            'Checking exchange connection and live prices.',
-                      ),
-                    if (form.preflightError != null) ...[
-                      _BlockingCard(message: form.preflightError),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    _TradeBalanceHeader(form: form),
-                    const SizedBox(height: AppSpacing.sm),
-                    _TradingPairHeader(form: form),
-                    const SizedBox(height: AppSpacing.md),
-                    _RiskStatusPanel(form: form),
-                    const SizedBox(height: AppSpacing.lg),
-                    _ExecutionModePanel(form: form, notifier: notifier),
-                    if (form.orderType == OrderType.limit) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      _TradeNumberField(
-                        key: const ValueKey('limit-entry-price'),
-                        label: 'Limit price',
-                        prefix: '\$',
-                        value: form.limitPrice,
-                        hint: form.symbol == null
-                            ? '0.00'
-                            : _price(form.symbol!.lastPrice),
-                        onChanged: notifier.setLimitPrice,
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.lg),
-                    _MarginPanel(form: form, notifier: notifier),
-                    const SizedBox(height: AppSpacing.lg),
-                    _LeveragePanel(form: form, notifier: notifier),
-                    const SizedBox(height: AppSpacing.lg),
-                    _TradeTpSlPanel(form: form, notifier: notifier),
-                    const SizedBox(height: AppSpacing.md),
-                    _TradeSideRow(form: form, notifier: notifier),
-                    if (formError != null && hasStarted) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      _BlockingCard(message: formError),
-                    ],
-                    if (setupOnly &&
-                        form.symbol != null &&
-                        form.amountTouched) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      const _InlineNotice(
-                        icon: Icons.lock_outline_rounded,
-                        color: AppColors.warningAmber,
-                        message:
-                            'You can review this setup now. Connect an exchange before execution.',
-                      ),
-                    ],
-                  ],
+        child: RefreshIndicator(
+          onRefresh: () => notifier.loadPreflight(),
+          color: AppColors.accent,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+            children: [
+              if (form.isLoadingPreflight)
+                const _InfoCard(
+                  message: 'Checking exchange connection and live prices.',
                 ),
+              if (form.preflightError != null) ...[
+                _BlockingCard(message: form.preflightError),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              if (_preflightNotice(form) != null) ...[
+                _TradeAlertBanner(message: _preflightNotice(form)!),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              _TradingPairHeader(form: form),
+              const SizedBox(height: 20),
+              _MarginPanel(form: form, notifier: notifier),
+              const SizedBox(height: 20),
+              _LeveragePanel(form: form, notifier: notifier),
+              const SizedBox(height: 20),
+              _ExecutionModePanel(form: form, notifier: notifier),
+              if (form.orderType == OrderType.limit &&
+                  form.orderTypeTouched) ...[
+                const SizedBox(height: 18),
+                _TradeNumberField(
+                  key: const ValueKey('limit-entry-price'),
+                  label: 'Limit price',
+                  prefix: '\$',
+                  value: form.limitPrice,
+                  hint: form.symbol == null
+                      ? '\$'
+                      : _price(form.symbol!.lastPrice),
+                  onChanged: notifier.setLimitPrice,
+                ),
+              ],
+              const SizedBox(height: 20),
+              _TradeAmountPanel(form: form, notifier: notifier),
+              const SizedBox(height: 20),
+              _TradeSideRow(form: form, notifier: notifier),
+              const SizedBox(height: 20),
+              _TradeTpSlPanel(form: form, notifier: notifier),
+              if (formError != null && hasStarted) ...[
+                const SizedBox(height: AppSpacing.md),
+                _BlockingCard(message: formError),
+              ],
+              if (setupOnly && form.symbol != null && form.amountTouched) ...[
+                const SizedBox(height: AppSpacing.md),
+                const _InlineNotice(
+                  icon: Icons.lock_outline_rounded,
+                  color: AppColors.warningAmber,
+                  message:
+                      'You can review this setup now. Connect an exchange before execution.',
+                ),
+              ],
+              const SizedBox(height: 28),
+              _TradeReviewBar(
+                enabled: canReview,
+                loading: form.isValidating,
+                message: canReview
+                    ? 'Complete all fields above to review trade'
+                    : formError ?? 'Complete all fields above to review trade',
+                onPressed: () async {
+                  HapticFeedback.mediumImpact();
+                  final ok = await notifier.validateTrade();
+                  if (ok && context.mounted) {
+                    context.push(Routes.tradeValidation);
+                  }
+                },
               ),
-            ),
-            _TradeReviewBar(
-              enabled: canReview,
-              loading: form.isValidating,
-              message: canReview || !hasStarted
-                  ? null
-                  : formError ?? 'Complete the required trade details.',
-              onPressed: () async {
-                HapticFeedback.mediumImpact();
-                final ok = await notifier.validateTrade();
-                if (ok && context.mounted) {
-                  context.push(Routes.tradeValidation);
-                }
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -543,37 +536,6 @@ class _ParsedSignalSummary extends StatelessWidget {
   }
 }
 
-class _TradeBalanceHeader extends StatelessWidget {
-  const _TradeBalanceHeader({required this.form});
-
-  final TradeFormState form;
-
-  @override
-  Widget build(BuildContext context) {
-    final balance = form.availableBalance > 0 ? form.availableBalance : 0.0;
-    return Row(
-      children: [
-        Text(
-          'Available balance:',
-          style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-        ),
-        const Spacer(),
-        Text(
-          _compactMoney(balance),
-          style: AppTypography.h3,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          form.balanceCurrency,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _TradingPairHeader extends StatelessWidget {
   const _TradingPairHeader({required this.form});
 
@@ -581,78 +543,11 @@ class _TradingPairHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final symbol = form.symbol;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: SymbolPicker(
-            selected: symbol,
-            exchange: form.preflight?.exchange ?? symbol?.exchange ?? 'bybit',
-          ),
-        ),
-        if (symbol != null) ...[
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _price(symbol.lastPrice),
-                style: AppTypography.h3.copyWith(
-                  color: AppColors.profitGreen,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _priceMoveLabel(symbol),
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.pnlColor(symbol.priceChangePct),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _RiskStatusPanel extends StatelessWidget {
-  const _RiskStatusPanel({required this.form});
-
-  final TradeFormState form;
-
-  @override
-  Widget build(BuildContext context) {
-    final preflight = form.preflight;
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.cardPadding,
-      decoration: const BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: AppRadius.cardRadius,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Risk status', style: AppTypography.bodyMedium),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: [
-              _StatusChip(
-                'Risk per trade: ${_formatPct(preflight?.riskPerTradePct ?? 0)}',
-              ),
-              _StatusChip(
-                'Max leverage: ${_formatNumber(preflight?.maxLeverage ?? _maxLeverage(form))}x',
-              ),
-              _StatusChip(
-                'Trades today: ${preflight?.tradesToday ?? 0} / ${preflight?.maxTradesPerDay ?? 0}',
-              ),
-            ],
-          ),
-        ],
+    return _LabeledBlock(
+      label: 'Trading pair',
+      child: SymbolPicker(
+        selected: form.symbol,
+        exchange: form.preflight?.exchange ?? form.symbol?.exchange ?? 'bybit',
       ),
     );
   }
@@ -670,18 +565,29 @@ class _ExecutionModePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _LabeledBlock(
-      label: 'Execution mode',
-      child: _SegmentedTabs(
-        tabs: [
-          (
-            label: 'Market execution',
-            active: form.orderType == OrderType.market,
-            onTap: () => notifier.setOrderType(OrderType.market),
+      label: 'Entry type',
+      child: Row(
+        children: [
+          Expanded(
+            child: _EntryTypeCard(
+              title: 'Market',
+              description:
+                  'Executes instantly at the current best available price.',
+              active:
+                  form.orderTypeTouched && form.orderType == OrderType.market,
+              onTap: () => notifier.setOrderType(OrderType.market),
+            ),
           ),
-          (
-            label: 'Price limit',
-            active: form.orderType == OrderType.limit,
-            onTap: () => notifier.setOrderType(OrderType.limit),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _EntryTypeCard(
+              title: 'Limit',
+              description:
+                  'Executes only when price reaches your specified level',
+              active:
+                  form.orderTypeTouched && form.orderType == OrderType.limit,
+              onTap: () => notifier.setOrderType(OrderType.limit),
+            ),
           ),
         ],
       ),
@@ -700,66 +606,28 @@ class _MarginPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fixedActive = form.amountInputMode == AmountInputMode.margin &&
-        form.marginMode == MarginMode.fixed;
-    final pctValue = form.marginValue.clamp(1.0, 100.0).toDouble();
-
+    final selected = form.collateralModeTouched
+        ? _collateralLabel(form.collateralMode)
+        : 'Select margin type';
     return _LabeledBlock(
-      label: 'Margin',
+      label: 'Margin type',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SegmentedTabs(
-            tabs: [
-              (
-                label: 'Percentage',
-                active: !fixedActive,
-                onTap: () => notifier.setMarginMode(MarginMode.percentage),
-              ),
-              (
-                label: 'Fixed amount',
-                active: fixedActive,
-                onTap: () => notifier.setMarginMode(MarginMode.fixed),
-              ),
-            ],
+          _SelectField(
+            value: selected,
+            placeholder: !form.collateralModeTouched,
+            onTap: () => _openMarginTypeSheet(context, notifier),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          if (fixedActive)
-            _TradeNumberField(
-              key: const ValueKey('margin-amount'),
-              label: 'Amount',
-              value: form.marginValue,
-              hint: '1000',
-              onChanged: (value) => notifier.setMarginValue(value ?? 0),
-            )
-          else ...[
-            _SteppedSlider(
-              value: pctValue,
-              min: 1,
-              max: 100,
-              onChanged: notifier.setMarginValue,
-            ),
-            Row(
-              children: [
-                Text(
-                  _compactMoney(notifier.marginAmount),
-                  style: AppTypography.numericSm,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  form.balanceCurrency,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${pctValue.toStringAsFixed(0)}%',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
+          if (form.collateralModeTouched) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              form.collateralMode == CollateralMode.cross
+                  ? 'Shared collateral'
+                  : 'Capped loss',
+              style: AppTypography.bodySm.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ],
@@ -781,27 +649,124 @@ class _LeveragePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final max = _maxLeverage(form).round().clamp(1, 100).toInt();
     final value = form.leverage.clamp(1.0, max.toDouble()).toDouble();
+    final common = _commonLeverages.contains(value.round());
+    final isCustom = form.leverageTouched && !common;
     return _LabeledBlock(
       label: 'Leverage',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SteppedSlider(
-            value: value,
-            min: 1,
-            max: max.toDouble(),
-            onChanged: notifier.setLeverage,
+          _SelectField(
+            value: form.leverageTouched
+                ? (isCustom ? 'Custom' : '${value.toStringAsFixed(0)}x')
+                : 'Choose leverage',
+            placeholder: !form.leverageTouched,
+            onTap: () => _openLeverageSheet(context, notifier, max),
           ),
-          Row(
-            children: [
-              const Spacer(),
-              Text(
-                '${value.toStringAsFixed(0)}x',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+          if (isCustom) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _LeverageValueField(
+              value: value,
+              max: max,
+              onChanged: notifier.setLeverage,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TradeAmountPanel extends StatelessWidget {
+  const _TradeAmountPanel({
+    required this.form,
+    required this.notifier,
+  });
+
+  final TradeFormState form;
+  final TradeForm notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = form.amountInputMode == AmountInputMode.quantity
+        ? form.quantity
+        : form.marginValue;
+    final entry = notifier.entryPrice;
+    final quantity = notifier.quantity;
+    final notional = quantity * entry;
+
+    return _LabeledBlock(
+      label: 'Trade amount',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 146,
+              child: _SegmentedTabs(
+                tabs: [
+                  (
+                    label: 'USD',
+                    active: form.amountInputMode == AmountInputMode.margin,
+                    onTap: () {
+                      notifier.setMarginMode(MarginMode.fixed);
+                      notifier.setAmountInputMode(AmountInputMode.margin);
+                    },
+                  ),
+                  (
+                    label: 'Quantity',
+                    active: form.amountInputMode == AmountInputMode.quantity,
+                    onTap: () =>
+                        notifier.setAmountInputMode(AmountInputMode.quantity),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          _AmountInputField(
+            value: value,
+            mode: form.amountInputMode,
+            onChanged: (next) {
+              if (form.amountInputMode == AmountInputMode.quantity) {
+                notifier.setQuantity(next ?? 0);
+              } else {
+                notifier.setMarginMode(MarginMode.fixed);
+                notifier.setMarginValue(next ?? 0);
+              }
+            },
+          ),
+          if (form.amountTouched && entry > 0 && value > 0) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 13,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: AppRadius.cardRadius,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '~ ${_compactQuantity(quantity)} ${form.symbol?.baseAsset ?? ''}',
+                    style: AppTypography.bodySm.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Notional Value = ${_money(notional)}',
+                    style: AppTypography.bodySm.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -820,83 +785,71 @@ class _TradeTpSlPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final entry = notifier.entryPrice;
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                  child: Text('TP/SL', style: AppTypography.bodyMedium)),
-              TextButton(
-                onPressed: entry <= 0
-                    ? null
-                    : () {
-                        if (form.takeProfit2 == null) {
-                          notifier.setTakeProfit2(
-                            _roundPrice(entry * _tpMultiplier(form.side, 2)),
-                          );
-                        } else {
-                          notifier.setTakeProfit2(null);
-                        }
-                      },
-                child:
-                    Text(form.takeProfit2 == null ? 'Add TP?' : 'Remove TP?'),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _TradeNumberField(
-            key: const ValueKey('stop-loss'),
-            label: 'Stop Loss',
-            prefix: '\$',
-            value: form.slPrice,
-            hint: entry > 0 ? _price(entry * _slMultiplier(form.side)) : '0.00',
-            onChanged: notifier.setSlPrice,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _TradeNumberField(
-            key: const ValueKey('take-profit-1'),
-            label: 'Take Profit',
-            prefix: '\$',
-            value: form.takeProfit1,
-            hint: entry > 0
-                ? _price(entry * _tpMultiplier(form.side, 1))
-                : '0.00',
-            onChanged: notifier.setTakeProfit1,
-          ),
-          if (form.takeProfit2 != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            _TradeNumberField(
-              key: const ValueKey('take-profit-2'),
-              label: 'Take Profit 2',
-              prefix: '\$',
-              value: form.takeProfit2,
-              onChanged: notifier.setTakeProfit2,
-            ),
-          ],
-          const SizedBox(height: AppSpacing.xs),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            value: form.autoStopLossProgression,
-            onChanged: notifier.setAutoStopLossProgression,
-            title: Text(
-              'Automatic Stop Loss progression',
-              style: AppTypography.bodySm.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Take Profit (TP)', style: AppTypography.bodyMedium),
+        const SizedBox(height: AppSpacing.sm),
+        _TpCard(
+          level: 1,
+          value: form.takeProfit1,
+          entry: entry,
+          side: form.side,
+          leverage: form.leverage,
+          margin: notifier.marginAmount,
+          onChanged: notifier.setTakeProfit1,
+        ),
+        if (form.takeProfit2 != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _TpCard(
+            level: 2,
+            value: form.takeProfit2,
+            entry: entry,
+            side: form.side,
+            leverage: form.leverage,
+            margin: notifier.marginAmount,
+            onChanged: notifier.setTakeProfit2,
           ),
         ],
-      ),
+        if (form.takeProfit3 != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _TpCard(
+            level: 3,
+            value: form.takeProfit3,
+            entry: entry,
+            side: form.side,
+            leverage: form.leverage,
+            margin: notifier.marginAmount,
+            onChanged: notifier.setTakeProfit3,
+            roiMode: true,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.sm),
+        _AddTpButton(
+          label: form.takeProfit2 == null ? 'Add TP2' : 'Add TP3',
+          onPressed: entry <= 0
+              ? null
+              : () {
+                  if (form.takeProfit2 == null) {
+                    notifier.setTakeProfit2(
+                      _roundPrice(entry * _tpMultiplier(form.side, 2)),
+                    );
+                  } else if (form.takeProfit3 == null) {
+                    notifier.setTakeProfit3(
+                      _roundPrice(entry * _tpMultiplier(form.side, 3)),
+                    );
+                  }
+                },
+        ),
+        const SizedBox(height: 28),
+        const Text('Stop Loss (SL)', style: AppTypography.bodyMedium),
+        const SizedBox(height: AppSpacing.sm),
+        _SlField(
+          value: form.slPrice,
+          hint: entry > 0 ? _price(entry * _slMultiplier(form.side)) : '0.00',
+          onChanged: notifier.setSlPrice,
+        ),
+      ],
     );
   }
 }
@@ -912,26 +865,34 @@ class _TradeSideRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _TradeSideButton(
-            label: 'Buy/Long',
-            active: form.side == OrderSide.long,
-            color: AppColors.profitGreen,
-            onTap: () => notifier.setSide(OrderSide.long),
+    return _LabeledBlock(
+      label: 'Direction',
+      subtitle: 'Select a direction for your trade',
+      child: Row(
+        children: [
+          Expanded(
+            child: _TradeSideButton(
+              label: 'Long',
+              subtitle: 'You profit if the price increases.',
+              icon: Icons.arrow_upward_rounded,
+              active: form.directionTouched && form.side == OrderSide.long,
+              color: AppColors.profitGreen,
+              onTap: () => notifier.setSide(OrderSide.long),
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _TradeSideButton(
-            label: 'Sell/Short',
-            active: form.side == OrderSide.short,
-            color: AppColors.lossRed,
-            onTap: () => notifier.setSide(OrderSide.short),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _TradeSideButton(
+              label: 'Short',
+              subtitle: 'You profit if the price falls.',
+              icon: Icons.arrow_downward_rounded,
+              active: form.directionTouched && form.side == OrderSide.short,
+              color: AppColors.lossRed,
+              onTap: () => notifier.setSide(OrderSide.short),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -939,12 +900,16 @@ class _TradeSideRow extends StatelessWidget {
 class _TradeSideButton extends StatelessWidget {
   const _TradeSideButton({
     required this.label,
+    required this.subtitle,
+    required this.icon,
     required this.active,
     required this.color,
     required this.onTap,
   });
 
   final String label;
+  final String subtitle;
+  final IconData icon;
   final bool active;
   final Color color;
   final VoidCallback onTap;
@@ -952,27 +917,41 @@ class _TradeSideButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? color : color.withValues(alpha: 0.9),
-      borderRadius: AppRadius.pillRadius,
+      color: active ? color.withValues(alpha: 0.08) : AppColors.bgCard,
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
-        borderRadius: AppRadius.pillRadius,
+        borderRadius: AppRadius.cardRadius,
         onTap: onTap,
-        child: SizedBox(
-          height: 50,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          height: 106,
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(
+              color: active ? color : AppColors.borderLight,
+              width: active ? 1.4 : 1,
+            ),
+          ),
+          child: Column(
             children: [
-              Icon(
-                active
-                    ? Icons.check_box_rounded
-                    : Icons.check_box_outline_blank_rounded,
-                size: 18,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 6),
+              Icon(icon, color: color, size: 20),
+              const SizedBox(height: 4),
               Text(
                 label,
-                style: AppTypography.button.copyWith(color: Colors.white),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.35,
+                ),
               ),
             ],
           ),
@@ -997,32 +976,46 @@ class _TradeReviewBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-      decoration: const BoxDecoration(
-        color: AppColors.bgPrimary,
-        border: Border(top: BorderSide(color: AppColors.borderLight)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (message != null) ...[
-            Text(
-              message!,
-              textAlign: TextAlign.center,
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-          ],
-          PPrimaryButton(
-            label: loading ? 'Reviewing...' : 'Review trade',
-            state: loading ? PButtonState.loading : PButtonState.idle,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: FilledButton.icon(
             onPressed: enabled ? onPressed : null,
+            icon: loading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+            label: Text(loading ? 'Reviewing...' : 'Review trade summary'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0057FF),
+              disabledBackgroundColor: const Color(0xFFF2F4F7),
+              foregroundColor: Colors.white,
+              disabledForegroundColor: AppColors.textDisabled,
+              textStyle: AppTypography.button,
+              shape: const StadiumBorder(),
+            ),
+          ),
+        ),
+        if (message != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            message!,
+            textAlign: TextAlign.center,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -1031,10 +1024,12 @@ class _LabeledBlock extends StatelessWidget {
   const _LabeledBlock({
     required this.label,
     required this.child,
+    this.subtitle,
   });
 
   final String label;
   final Widget child;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -1042,6 +1037,15 @@ class _LabeledBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: AppTypography.bodyMedium),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: AppTypography.bodySm.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
         const SizedBox(height: AppSpacing.sm),
         child,
       ],
@@ -1049,659 +1053,204 @@ class _LabeledBlock extends StatelessWidget {
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip(this.label);
+class _SelectField extends StatelessWidget {
+  const _SelectField({
+    required this.value,
+    required this.onTap,
+    this.placeholder = false,
+  });
 
-  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final bool placeholder;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
-        borderRadius: AppRadius.pillRadius,
-        border: Border.all(color: AppColors.borderLight),
+    return Material(
+      color: AppColors.bgCard,
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        borderRadius: AppRadius.cardRadius,
+        onTap: onTap,
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: const Color(0xFFD0D5DD)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  style: AppTypography.body.copyWith(
+                    color: placeholder
+                        ? AppColors.textDisabled
+                        : AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: AppColors.textSecondary,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Text(label, style: AppTypography.caption),
     );
   }
 }
 
-class _SteppedSlider extends StatelessWidget {
-  const _SteppedSlider({
+class _EntryTypeCard extends StatelessWidget {
+  const _EntryTypeCard({
+    required this.title,
+    required this.description,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String title;
+  final String description;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: active ? const Color(0xFFEAF2FF) : AppColors.bgCard,
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.cardRadius,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          height: 102,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(
+              color: active ? const Color(0xFF0057FF) : AppColors.borderLight,
+              width: active ? 1.4 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(title, style: AppTypography.bodyMedium),
+                  ),
+                  Icon(
+                    active
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 18,
+                    color: active
+                        ? const Color(0xFF0057FF)
+                        : AppColors.textDisabled,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  description,
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AmountInputField extends StatefulWidget {
+  const _AmountInputField({
     required this.value,
-    required this.min,
-    required this.max,
+    required this.mode,
     required this.onChanged,
   });
 
   final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
+  final AmountInputMode mode;
+  final ValueChanged<double?> onChanged;
+
+  @override
+  State<_AmountInputField> createState() => _AmountInputFieldState();
+}
+
+class _AmountInputFieldState extends State<_AmountInputField> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: _amountText(widget.value));
+  }
+
+  @override
+  void didUpdateWidget(covariant _AmountInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value == widget.value && oldWidget.mode == widget.mode) {
+      return;
+    }
+    final next = _amountText(widget.value);
+    if (_ctrl.text == next) return;
+    _ctrl.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final safeMax = max <= min ? min + 1 : max;
-    final safeValue = value.clamp(min, safeMax).toDouble();
-    final progress = (safeValue - min) / (safeMax - min);
-    const tickCount = 5;
-    return SizedBox(
-      height: 36,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            left: 24,
-            right: 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                for (var i = 0; i < tickCount; i++)
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: tickCount <= 1 || i / (tickCount - 1) <= progress
-                          ? AppColors.primary
-                          : AppColors.textDisabled,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.bgPrimary, width: 2),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 3,
-              activeTrackColor: AppColors.primary,
-              inactiveTrackColor: AppColors.borderLight,
-              thumbColor: AppColors.primary,
-              overlayColor: AppColors.primary.withValues(alpha: 0.12),
-              tickMarkShape: SliderTickMarkShape.noTickMark,
-            ),
-            child: Slider(
-              value: safeValue,
-              min: min,
-              max: safeMax,
-              onChanged: onChanged,
-            ),
-          ),
-        ],
+    return TextField(
+      controller: _ctrl,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+      ],
+      style: AppTypography.h2.copyWith(fontWeight: FontWeight.w700),
+      decoration: InputDecoration(
+        hintText: widget.mode == AmountInputMode.margin ? '\$0.00' : '0.00',
+        prefixText: widget.mode == AmountInputMode.margin ? '\$' : null,
+        hintStyle: AppTypography.h2.copyWith(color: AppColors.textDisabled),
+        filled: true,
+        fillColor: AppColors.bgCard,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: AppRadius.cardRadius,
+          borderSide: BorderSide(color: Color(0xFFD0D5DD)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: AppRadius.cardRadius,
+          borderSide: BorderSide(color: Color(0xFF0057FF), width: 1.4),
+        ),
       ),
+      onChanged: (value) => widget.onChanged(double.tryParse(value)),
     );
   }
 }
 
-// ignore: unused_element
-class _MarketSetupSection extends StatelessWidget {
-  const _MarketSetupSection({
-    required this.form,
-    required this.notifier,
-  });
-
-  final TradeFormState form;
-  final TradeForm notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    final symbol = form.symbol;
-    final maxLeverage = _maxLeverage(form).round().clamp(1, 100).toInt();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SymbolPicker(
-          selected: symbol,
-          exchange: form.preflight?.exchange ?? symbol?.exchange ?? 'bybit',
-        ),
-        if (symbol != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          const _InlineNotice(
-            icon: Icons.info_outline_rounded,
-            color: AppColors.accent,
-            message:
-                'Poise will use this exact contract for price and execution.',
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _MetricStrip(
-            items: [
-              (
-                'Current price',
-                _money(symbol.lastPrice),
-                AppColors.textPrimary,
-              ),
-              (
-                '24h move',
-                '${symbol.priceChangePct >= 0 ? '+' : ''}${symbol.priceChangePct.toStringAsFixed(2)}%',
-                AppColors.pnlColor(symbol.priceChangePct),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const _FieldLabel(label: 'Margin type'),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _ChoiceCard(
-                  title: 'Isolated',
-                  subtitle: 'Caps loss to allocated margin',
-                  icon: Icons.lock_outline_rounded,
-                  active: form.collateralMode == CollateralMode.isolated,
-                  color: AppColors.accent,
-                  onTap: () =>
-                      notifier.setCollateralMode(CollateralMode.isolated),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _ChoiceCard(
-                  title: 'Cross',
-                  subtitle: 'Uses balance as collateral',
-                  icon: Icons.all_inclusive_rounded,
-                  active: form.collateralMode == CollateralMode.cross,
-                  color: AppColors.warningAmber,
-                  onTap: () => notifier.setCollateralMode(CollateralMode.cross),
-                ),
-              ),
-            ],
-          ),
-          if (form.collateralModeTouched) ...[
-            const SizedBox(height: AppSpacing.sm),
-            _InlineNotice(
-              icon: form.collateralMode == CollateralMode.isolated
-                  ? Icons.lock_outline_rounded
-                  : Icons.all_inclusive_rounded,
-              color: form.collateralMode == CollateralMode.isolated
-                  ? AppColors.accent
-                  : AppColors.warningAmber,
-              message: form.collateralMode == CollateralMode.isolated
-                  ? 'Isolated keeps the trade contained to the margin you assign.'
-                  : 'Cross can use more account balance to keep the trade open, so risk can extend past the entered margin.',
-            ),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          const _FieldLabel(label: 'Leverage'),
-          const SizedBox(height: AppSpacing.sm),
-          _LeverageDropdown(
-            value: form.leverage,
-            max: maxLeverage,
-            onChanged: notifier.setLeverage,
-          ),
-          if (form.leverageTouched) ...[
-            const SizedBox(height: AppSpacing.sm),
-            _InlineNotice(
-              icon: Icons.speed_rounded,
-              color: _leverageColor(form.leverage),
-              message:
-                  '${form.leverage.toStringAsFixed(0)}x multiplies both profit and loss before fees.',
-            ),
-          ],
-        ],
-      ],
-    );
-  }
-}
-
-// ignore: unused_element
-class _EntryPlanSection extends StatelessWidget {
-  const _EntryPlanSection({
-    required this.form,
-    required this.notifier,
-  });
-
-  final TradeFormState form;
-  final TradeForm notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _ChoiceCard(
-                title: 'Market',
-                subtitle: 'Executes at the best available price',
-                icon: Icons.flash_on_rounded,
-                active: form.orderType == OrderType.market,
-                color: AppColors.accent,
-                onTap: () => notifier.setOrderType(OrderType.market),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _ChoiceCard(
-                title: 'Limit',
-                subtitle: 'Waits for your entry price',
-                icon: Icons.pending_actions_rounded,
-                active: form.orderType == OrderType.limit,
-                color: AppColors.accent,
-                onTap: () => notifier.setOrderType(OrderType.limit),
-              ),
-            ),
-          ],
-        ),
-        if (form.orderTypeTouched) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _InlineNotice(
-            icon: form.orderType == OrderType.market
-                ? Icons.flash_on_rounded
-                : Icons.pending_actions_rounded,
-            color: AppColors.accent,
-            message: form.orderType == OrderType.market
-                ? 'Market entry uses the best available live price.'
-                : 'Limit entry waits for your chosen price before Poise can execute.',
-          ),
-        ],
-        if (form.orderType == OrderType.market && form.symbol != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          _MetricStrip(
-            items: [
-              (
-                'Live entry',
-                _money(form.symbol!.lastPrice),
-                AppColors.textPrimary,
-              ),
-              (
-                '24h move',
-                '${form.symbol!.priceChangePct >= 0 ? '+' : ''}${form.symbol!.priceChangePct.toStringAsFixed(2)}%',
-                AppColors.pnlColor(form.symbol!.priceChangePct),
-              ),
-            ],
-          ),
-        ],
-        if (form.orderType == OrderType.limit) ...[
-          const SizedBox(height: AppSpacing.md),
-          _TradeNumberField(
-            key: const ValueKey('limit-entry-price'),
-            label: 'Limit entry price',
-            prefix: '\$',
-            value: form.limitPrice,
-            hint: form.symbol == null ? '0.00' : _price(form.symbol!.lastPrice),
-            onChanged: notifier.setLimitPrice,
-          ),
-        ],
-        const SizedBox(height: AppSpacing.md),
-        _AmountInputCard(form: form, notifier: notifier),
-      ],
-    );
-  }
-}
-
-class _AmountInputCard extends StatelessWidget {
-  const _AmountInputCard({
-    required this.form,
-    required this.notifier,
-  });
-
-  final TradeFormState form;
-  final TradeForm notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    final fixedActive = form.amountInputMode == AmountInputMode.margin &&
-        form.marginMode == MarginMode.fixed;
-    final pctActive = form.amountInputMode == AmountInputMode.margin &&
-        form.marginMode == MarginMode.percentage;
-    final qtyActive = form.amountInputMode == AmountInputMode.quantity;
-
-    return Container(
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _FieldLabel(label: 'Amount'),
-          const SizedBox(height: AppSpacing.sm),
-          _SegmentedTabs(
-            tabs: [
-              (
-                label: '\$ Margin',
-                active: fixedActive,
-                onTap: () => notifier.setMarginMode(MarginMode.fixed),
-              ),
-              (
-                label: '% Balance',
-                active: pctActive,
-                onTap: () => notifier.setMarginMode(MarginMode.percentage),
-              ),
-              (
-                label: 'Quantity',
-                active: qtyActive,
-                onTap: () =>
-                    notifier.setAmountInputMode(AmountInputMode.quantity),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (fixedActive)
-            _TradeNumberField(
-              key: const ValueKey('margin-amount'),
-              label: 'Margin amount',
-              prefix: '\$',
-              value: form.marginValue,
-              hint: '0.00',
-              onChanged: (value) => notifier.setMarginValue(value ?? 0),
-            )
-          else if (pctActive) ...[
-            Slider(
-              value: form.marginValue.clamp(1, 100),
-              min: 1,
-              max: 100,
-              divisions: 99,
-              label: '${form.marginValue.toStringAsFixed(0)}%',
-              onChanged: notifier.setMarginValue,
-            ),
-            Row(
-              children: [
-                Text(
-                  '${form.marginValue.toStringAsFixed(0)}% of balance',
-                  style: AppTypography.bodyMedium,
-                ),
-                const Spacer(),
-                Text(
-                  _money(notifier.marginAmount),
-                  style: AppTypography.numericSm,
-                ),
-              ],
-            ),
-          ] else
-            _TradeNumberField(
-              key: const ValueKey('quantity'),
-              label: 'Quantity',
-              value: form.quantity,
-              hint: form.symbol == null ? '0.0000' : form.symbol!.baseAsset,
-              onChanged: (value) => notifier.setQuantity(value ?? 0),
-            ),
-          if (form.amountTouched) ...[
-            const SizedBox(height: AppSpacing.sm),
-            _InlineNotice(
-              icon: Icons.calculate_outlined,
-              color: AppColors.accent,
-              message: _amountHelper(form),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _AmountMathPanel(form: form, notifier: notifier),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _AmountMathPanel extends StatelessWidget {
-  const _AmountMathPanel({
-    required this.form,
-    required this.notifier,
-  });
-
-  final TradeFormState form;
-  final TradeForm notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    final entry = notifier.entryPrice;
-    final margin = notifier.marginAmount;
-    final quantity = notifier.quantity;
-    final notional = entry > 0 ? quantity * entry : margin * form.leverage;
-
-    return _MetricStrip(
-      items: [
-        ('Margin used', _money(margin), AppColors.textPrimary),
-        ('Notional', _money(notional), AppColors.textPrimary),
-        (
-          'Quantity',
-          form.symbol == null
-              ? quantity.toStringAsFixed(4)
-              : '${quantity.toStringAsFixed(6)} ${form.symbol!.baseAsset}',
-          AppColors.textPrimary,
-        ),
-      ],
-    );
-  }
-}
-
-// ignore: unused_element
-class _ExitPlanSection extends StatelessWidget {
-  const _ExitPlanSection({
-    required this.form,
-    required this.notifier,
-  });
-
-  final TradeFormState form;
-  final TradeForm notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    final entry = notifier.entryPrice;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _TradeNumberField(
-          key: const ValueKey('take-profit-1'),
-          label: 'Take profit 1',
-          prefix: '\$',
-          value: form.takeProfit1,
-          hint:
-              entry > 0 ? _price(entry * _tpMultiplier(form.side, 1)) : '0.00',
-          borderColor: AppColors.profitGreen.withValues(alpha: 0.45),
-          onChanged: notifier.setTakeProfit1,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (form.takeProfit2 == null)
-          OutlinedButton.icon(
-            onPressed: entry <= 0
-                ? null
-                : () => notifier.setTakeProfit2(
-                      _roundPrice(entry * _tpMultiplier(form.side, 2)),
-                    ),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Add TP 2'),
-          )
-        else
-          _TradeNumberField(
-            key: const ValueKey('take-profit-2'),
-            label: 'Take profit 2',
-            prefix: '\$',
-            value: form.takeProfit2,
-            borderColor: AppColors.profitGreen.withValues(alpha: 0.35),
-            onChanged: notifier.setTakeProfit2,
-            trailing: IconButton(
-              tooltip: 'Remove TP 2',
-              onPressed: () => notifier.setTakeProfit2(null),
-              icon: const Icon(Icons.close_rounded, size: 18),
-            ),
-          ),
-        const SizedBox(height: AppSpacing.sm),
-        SwitchListTile.adaptive(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-          value: form.autoStopLossProgression,
-          onChanged: notifier.setAutoStopLossProgression,
-          title: const Text('Profit trailing', style: AppTypography.bodyMedium),
-          subtitle: Text(
-            'Stop follows price to lock in gains automatically.',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _TradeNumberField(
-          key: const ValueKey('stop-loss'),
-          label: 'Stop loss',
-          prefix: '\$',
-          value: form.slPrice,
-          hint: entry > 0 ? _price(entry * _slMultiplier(form.side)) : '0.00',
-          borderColor: AppColors.lossRed.withValues(alpha: 0.45),
-          onChanged: notifier.setSlPrice,
-        ),
-        if (form.exitPlanTouched) ...[
-          const SizedBox(height: AppSpacing.md),
-          _ExitMathPanel(form: form, notifier: notifier),
-        ],
-      ],
-    );
-  }
-}
-
-class _ExitMathPanel extends StatelessWidget {
-  const _ExitMathPanel({
-    required this.form,
-    required this.notifier,
-  });
-
-  final TradeFormState form;
-  final TradeForm notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    final entry = notifier.entryPrice;
-    final margin = notifier.marginAmount;
-    final tp = form.takeProfit1;
-    final sl = form.slPrice;
-    final tpPnl = tp == null ? null : _pnlAt(form, margin, entry, tp);
-    final slPnl = sl == null ? null : _pnlAt(form, margin, entry, sl);
-    final rr = tpPnl == null || slPnl == null || slPnl >= 0
-        ? null
-        : tpPnl.abs() / slPnl.abs();
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _OutcomeMiniCard(
-                title: 'If stop hits',
-                value: slPnl == null ? '-' : '-${_money(slPnl.abs())}',
-                caption: sl == null
-                    ? 'Add a stop loss'
-                    : '${_roiLabel(form, entry, sl)} ROI',
-                color: AppColors.lossRed,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _OutcomeMiniCard(
-                title: 'If TP1 hits',
-                value: tpPnl == null ? '-' : '+${_money(tpPnl.abs())}',
-                caption: tp == null
-                    ? 'Add a target'
-                    : '${_roiLabel(form, entry, tp)} ROI',
-                color: AppColors.profitGreen,
-              ),
-            ),
-          ],
-        ),
-        if (rr != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _InlineNotice(
-            icon: Icons.balance_rounded,
-            color: rr >= 1.5 ? AppColors.profitGreen : AppColors.warningAmber,
-            message:
-                'Risk : Reward is 1 : ${rr.toStringAsFixed(2)} based on TP1 and stop loss.',
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-// ignore: unused_element
-class _DirectionSection extends StatelessWidget {
-  const _DirectionSection({
-    required this.form,
-    required this.notifier,
-  });
-
-  final TradeFormState form;
-  final TradeForm notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _ChoiceCard(
-                title: 'Long',
-                subtitle: 'Buy. Profit if price rises.',
-                icon: Icons.north_rounded,
-                active: form.side == OrderSide.long,
-                color: AppColors.profitGreen,
-                onTap: () => notifier.setSide(OrderSide.long),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _ChoiceCard(
-                title: 'Short',
-                subtitle: 'Sell. Profit if price falls.',
-                icon: Icons.south_rounded,
-                active: form.side == OrderSide.short,
-                color: AppColors.lossRed,
-                onTap: () => notifier.setSide(OrderSide.short),
-              ),
-            ),
-          ],
-        ),
-        if (form.directionTouched) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _InlineNotice(
-            icon: form.side == OrderSide.long
-                ? Icons.north_rounded
-                : Icons.south_rounded,
-            color: form.side == OrderSide.long
-                ? AppColors.profitGreen
-                : AppColors.lossRed,
-            message: form.side == OrderSide.long
-                ? 'Long setups need a stop below entry and targets above entry.'
-                : 'Short setups need a stop above entry and targets below entry.',
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-// ignore: unused_element
-class _FormBlock extends StatelessWidget {
-  const _FormBlock({
-    required this.child,
-  });
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [child],
-      ),
-    );
-  }
-}
-
-class _LeverageDropdown extends StatelessWidget {
-  const _LeverageDropdown({
+class _LeverageValueField extends StatefulWidget {
+  const _LeverageValueField({
     required this.value,
     required this.max,
     required this.onChanged,
@@ -1712,130 +1261,415 @@ class _LeverageDropdown extends StatelessWidget {
   final ValueChanged<double> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final options = <int>{1, 2, 3, 5, 10, 15, 20, 25, 50, 100}
-        .where((item) => item <= max)
-        .toList();
-    final current = value.round().clamp(1, max);
-    if (!options.contains(current)) options.add(current);
-    options.sort();
+  State<_LeverageValueField> createState() => _LeverageValueFieldState();
+}
 
-    return DropdownButtonFormField<int>(
-      key: ValueKey('leverage-$current-$max'),
-      initialValue: current,
-      borderRadius: BorderRadius.circular(12),
-      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-      decoration: const InputDecoration(
-        labelText: 'Leverage',
+class _LeverageValueFieldState extends State<_LeverageValueField> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.value.toStringAsFixed(0));
+  }
+
+  @override
+  void didUpdateWidget(covariant _LeverageValueField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = widget.value.toStringAsFixed(0);
+    if (_ctrl.text == next) return;
+    _ctrl.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _leverageColor(widget.value);
+    return TextField(
+      controller: _ctrl,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+      ],
+      style: AppTypography.body,
+      decoration: InputDecoration(
+        suffixIcon: Padding(
+          padding: const EdgeInsets.only(right: AppSpacing.sm),
+          child: Center(
+            widthFactor: 1,
+            child: _TinyRiskPill(
+                label: _leverageRiskLabel(widget.value), color: color),
+          ),
+        ),
+        suffixIconConstraints: const BoxConstraints(minWidth: 116),
+        suffixText: 'x',
         filled: true,
         fillColor: AppColors.bgCard,
-        enabledBorder: OutlineInputBorder(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        enabledBorder: const OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: Color(0xFFD0D5DD)),
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: const OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: AppColors.accent, width: 1.4),
+          borderSide: BorderSide(color: Color(0xFF0057FF), width: 1.4),
         ),
       ),
-      items: options
-          .map(
-            (item) => DropdownMenuItem<int>(
-              value: item,
-              child: Text(
-                '${item}x',
-                style: AppTypography.numericSm.copyWith(
-                  color: item == current
-                      ? AppColors.accent
-                      : AppColors.textPrimary,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-      onChanged: (next) {
-        if (next == null) return;
-        HapticFeedback.selectionClick();
-        onChanged(next.toDouble());
+      onChanged: (value) {
+        final parsed = double.tryParse(value);
+        if (parsed == null) return;
+        widget.onChanged(parsed.clamp(1, widget.max).toDouble());
       },
     );
   }
 }
 
-class _ChoiceCard extends StatelessWidget {
-  const _ChoiceCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.active,
-    required this.color,
-    required this.onTap,
-  });
+class _TinyRiskPill extends StatelessWidget {
+  const _TinyRiskPill({required this.label, required this.color});
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool active;
+  final String label;
   final Color color;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: active ? color.withValues(alpha: 0.08) : AppColors.bgCard,
-      borderRadius: AppRadius.cardRadius,
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.bodySm.copyWith(color: color),
+      ),
+    );
+  }
+}
+
+class _TpCard extends StatelessWidget {
+  const _TpCard({
+    required this.level,
+    required this.value,
+    required this.entry,
+    required this.side,
+    required this.leverage,
+    required this.margin,
+    required this.onChanged,
+    this.roiMode = false,
+  });
+
+  final int level;
+  final double? value;
+  final double entry;
+  final OrderSide side;
+  final double leverage;
+  final double margin;
+  final ValueChanged<double?> onChanged;
+  final bool roiMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final profit = value == null || entry <= 0 || margin <= 0
+        ? 0.0
+        : _pnlFor(side, margin, leverage, entry, value!);
+    final roi = margin <= 0 ? 0.0 : profit / margin * 100;
+    final move = entry <= 0 || value == null
+        ? 0.0
+        : ((value! - entry).abs() / entry) * 100;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
         borderRadius: AppRadius.cardRadius,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          constraints: const BoxConstraints(minHeight: 108),
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.cardRadius,
-            border: Border.all(
-              color: active ? color : AppColors.borderLight,
-              width: active ? 1.4 : 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(icon,
-                      size: 20, color: active ? color : AppColors.textTertiary),
-                  const Spacer(),
-                  Icon(
-                    active
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 18,
-                    color: active ? color : AppColors.textDisabled,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.h4.copyWith(
-                  color: active ? color : AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.textSecondary,
+              Text('TP $level', style: AppTypography.bodyMedium),
+              const Spacer(),
+              SizedBox(
+                width: 122,
+                child: _SegmentedTabs(
+                  tabs: [
+                    (label: 'Price', active: !roiMode, onTap: () {}),
+                    (label: '%ROI', active: roiMode, onTap: () {}),
+                  ],
                 ),
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.md),
+          _GreenPriceField(
+            value: value,
+            suffix: roiMode ? '%' : null,
+            onChanged: onChanged,
+          ),
+          if (value != null && entry > 0 && margin > 0) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE9FBEF),
+                borderRadius: AppRadius.cardRadius,
+                border: Border.all(color: const Color(0xFF85E0A3)),
+              ),
+              child: Column(
+                children: [
+                  _CalcRow('ROI on your margin', '+${_formatPct(roi)}'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _CalcRow('Price move needed', '+${_formatPct(move)}'),
+                  const Divider(height: 20, color: Color(0xFFB8EACB)),
+                  _CalcRow('You take home', '+${_money(profit)}', bold: true),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GreenPriceField extends StatelessWidget {
+  const _GreenPriceField({
+    required this.value,
+    required this.onChanged,
+    this.suffix,
+  });
+
+  final double? value;
+  final ValueChanged<double?> onChanged;
+  final String? suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CompactNumberField(
+      value: value,
+      hint: '1,000',
+      prefix: suffix == null ? '\$' : null,
+      suffix: suffix,
+      borderColor: const Color(0xFFC7F1D8),
+      focusedBorderColor: const Color(0xFFABEFC6),
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _SlField extends StatelessWidget {
+  const _SlField({
+    required this.value,
+    required this.hint,
+    required this.onChanged,
+  });
+
+  final double? value;
+  final String hint;
+  final ValueChanged<double?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CompactNumberField(
+      value: value,
+      hint: hint,
+      borderColor: const Color(0xFFFAD1D0),
+      focusedBorderColor: const Color(0xFFFDA29B),
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _CompactNumberField extends StatefulWidget {
+  const _CompactNumberField({
+    required this.value,
+    required this.hint,
+    required this.onChanged,
+    required this.borderColor,
+    required this.focusedBorderColor,
+    this.prefix,
+    this.suffix,
+  });
+
+  final double? value;
+  final String hint;
+  final ValueChanged<double?> onChanged;
+  final Color borderColor;
+  final Color focusedBorderColor;
+  final String? prefix;
+  final String? suffix;
+
+  @override
+  State<_CompactNumberField> createState() => _CompactNumberFieldState();
+}
+
+class _CompactNumberFieldState extends State<_CompactNumberField> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(
+      text: widget.value == null ? '' : _price(widget.value!),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _CompactNumberField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value == widget.value) return;
+    final next = widget.value == null ? '' : _price(widget.value!);
+    if (_ctrl.text == next) return;
+    _ctrl.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _ctrl,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+      ],
+      style: AppTypography.body,
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        prefixText: widget.prefix,
+        suffixText: widget.suffix,
+        hintStyle: AppTypography.body.copyWith(color: AppColors.textDisabled),
+        filled: true,
+        fillColor: AppColors.bgCard,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadius.cardRadius,
+          borderSide: BorderSide(color: widget.borderColor, width: 4),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: AppRadius.cardRadius,
+          borderSide: BorderSide(color: widget.focusedBorderColor, width: 4),
+        ),
+      ),
+      onChanged: (value) => widget.onChanged(double.tryParse(value)),
+    );
+  }
+}
+
+class _AddTpButton extends StatelessWidget {
+  const _AddTpButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF0057FF),
+          side: BorderSide(
+            color: const Color(0xFF0057FF).withValues(alpha: 0.45),
+            style: BorderStyle.solid,
+          ),
+          shape: const StadiumBorder(),
+          textStyle: AppTypography.button,
+        ),
+      ),
+    );
+  }
+}
+
+class _CalcRow extends StatelessWidget {
+  const _CalcRow(this.label, this.value, {this.bold = false});
+
+  final String label;
+  final String value;
+  final bool bold;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: AppTypography.bodySm.copyWith(
+              color: const Color(0xFF027A48),
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: AppTypography.bodySm.copyWith(
+            color: const Color(0xFF027A48),
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TradeAlertBanner extends StatelessWidget {
+  const _TradeAlertBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFFAEB),
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.warningAmber,
+            size: 16,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.bodySm.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1849,16 +1683,12 @@ class _TradeNumberField extends StatefulWidget {
     this.value,
     this.prefix,
     this.hint,
-    this.borderColor,
-    this.trailing,
   });
 
   final String label;
   final double? value;
   final String? prefix;
   final String? hint;
-  final Color? borderColor;
-  final Widget? trailing;
   final ValueChanged<double?> onChanged;
 
   @override
@@ -1894,7 +1724,6 @@ class _TradeNumberFieldState extends State<_TradeNumberField> {
 
   @override
   Widget build(BuildContext context) {
-    final border = widget.borderColor ?? AppColors.borderLight;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1910,20 +1739,19 @@ class _TradeNumberFieldState extends State<_TradeNumberField> {
           decoration: InputDecoration(
             hintText: widget.hint,
             prefixText: widget.prefix,
-            suffixIcon: widget.trailing,
             filled: true,
             fillColor: AppColors.bgCard,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
               vertical: 14,
             ),
-            enabledBorder: OutlineInputBorder(
+            enabledBorder: const OutlineInputBorder(
               borderRadius: AppRadius.cardRadius,
-              borderSide: BorderSide(color: border),
+              borderSide: BorderSide(color: AppColors.borderLight),
             ),
-            focusedBorder: OutlineInputBorder(
+            focusedBorder: const OutlineInputBorder(
               borderRadius: AppRadius.cardRadius,
-              borderSide: BorderSide(color: border, width: 1.5),
+              borderSide: BorderSide(color: AppColors.borderLight, width: 1.5),
             ),
           ),
           onChanged: (value) => widget.onChanged(double.tryParse(value)),
@@ -1990,134 +1818,6 @@ class _SegmentedTabs extends StatelessWidget {
             )
             .toList(),
       ),
-    );
-  }
-}
-
-class _MetricStrip extends StatelessWidget {
-  const _MetricStrip({required this.items});
-
-  final List<(String, String, Color)> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Wrap(
-        spacing: AppSpacing.md,
-        runSpacing: AppSpacing.sm,
-        children: items
-            .map(
-              (item) => ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 92),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.$1,
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.$2,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.numericSm.copyWith(color: item.$3),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _OutcomeMiniCard extends StatelessWidget {
-  const _OutcomeMiniCard({
-    required this.title,
-    required this.value,
-    required this.caption,
-    required this.color,
-  });
-
-  final String title;
-  final String value;
-  final String caption;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTypography.label.copyWith(color: color)),
-          const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: AppTypography.numericLg.copyWith(color: color),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            caption,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({
-    required this.label,
-  });
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label.toUpperCase(),
-                style: AppTypography.label.copyWith(
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -2290,10 +1990,223 @@ double _maxLeverage(TradeFormState form) {
   return symbolMax < ruleMax ? symbolMax : ruleMax;
 }
 
+const List<int> _commonLeverages = [1, 2, 3, 5, 7];
+
+Future<void> _openMarginTypeSheet(
+  BuildContext context,
+  TradeForm notifier,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _PickerSheet(
+      title: 'Margin type',
+      children: [
+        _PickerOption(
+          title: 'Cross Margin',
+          subtitle: 'Your entire balance is collateral',
+          onTap: () {
+            notifier.setCollateralMode(CollateralMode.cross);
+            Navigator.pop(context);
+          },
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _PickerOption(
+          title: 'Isolated Margin',
+          subtitle: 'Only allocated margin is at risk',
+          onTap: () {
+            notifier.setCollateralMode(CollateralMode.isolated);
+            Navigator.pop(context);
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _openLeverageSheet(
+  BuildContext context,
+  TradeForm notifier,
+  int max,
+) {
+  final options = <({String label, double value, String risk})>[
+    (label: 'Custom', value: 17, risk: 'Moderate risk'),
+    for (final item in _commonLeverages.where((item) => item <= max))
+      (label: '${item}x', value: item.toDouble(), risk: 'Low risk'),
+  ];
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _PickerSheet(
+      title: 'Leverage',
+      children: [
+        for (final option in options) ...[
+          _PickerOption(
+            title: option.label,
+            trailing: _TinyRiskPill(
+              label: option.risk,
+              color: _leverageColor(option.value),
+            ),
+            onTap: () {
+              notifier.setLeverage(option.value);
+              Navigator.pop(context);
+            },
+          ),
+          if (option != options.last) const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
+    ),
+  );
+}
+
+class _PickerSheet extends StatelessWidget {
+  const _PickerSheet({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text(title, style: AppTypography.h4)),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textDisabled,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PickerOption extends StatelessWidget {
+  const _PickerOption({
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.bgCard,
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.cardRadius,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTypography.bodyLg),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(subtitle!, style: AppTypography.body),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Color _leverageColor(double leverage) {
   if (leverage <= 5) return AppColors.profitGreen;
   if (leverage <= 15) return AppColors.warningAmber;
   return AppColors.lossRed;
+}
+
+String _leverageRiskLabel(double leverage) {
+  if (leverage <= 7) return 'Low risk';
+  if (leverage <= 20) return 'Moderate risk';
+  return 'High risk';
+}
+
+String _collateralLabel(CollateralMode mode) {
+  return switch (mode) {
+    CollateralMode.cross => 'Cross margin',
+    CollateralMode.isolated => 'Isolated margin',
+  };
+}
+
+String _amountText(double value) {
+  if (value <= 0) return '';
+  if (value % 1 == 0) return value.toStringAsFixed(0);
+  return value.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+}
+
+String? _preflightNotice(TradeFormState form) {
+  final preflight = form.preflight;
+  if (preflight == null || preflight.allowed) return null;
+  final reason = (preflight.blockingReason ?? '').toLowerCase();
+  if (reason.contains('daily') &&
+      reason.contains('loss') &&
+      reason.contains('trade')) {
+    return 'Your daily trade limit and loss limit have both been reached. Proceeding will log this trade as a rule violation.';
+  }
+  if (reason.contains('loss')) {
+    final limit = preflight.dailyLossLimitUsd > 0
+        ? _money(preflight.dailyLossLimitUsd)
+        : 'your daily loss limit';
+    return 'Your daily loss limit of $limit has been reached. Proceeding will log this trade as a rule violation.';
+  }
+  if (reason.contains('trade')) {
+    return 'You\'ve reached your daily trade limit (${preflight.tradesToday}/${preflight.maxTradesPerDay}). Proceeding will log this trade as a rule violation.';
+  }
+  if (reason.contains('exchange') ||
+      reason.contains('api key') ||
+      reason.contains('connection')) {
+    return null;
+  }
+  return preflight.blockingReason;
 }
 
 String _normalizeExchange(String? value) {
@@ -2302,35 +2215,19 @@ String _normalizeExchange(String? value) {
   return 'bybit';
 }
 
-String _amountHelper(TradeFormState form) {
-  if (form.amountInputMode == AmountInputMode.quantity) {
-    return 'Poise estimates required margin from quantity, entry price, and leverage.';
-  }
-  if (form.marginMode == MarginMode.percentage) {
-    return 'This uses the selected percentage of synced available balance.';
-  }
-  return 'Poise converts this margin into position size using entry price and leverage.';
-}
-
-double _pnlAt(TradeFormState form, double margin, double entry, double price) {
-  if (entry <= 0 || margin <= 0) return 0;
-  final move = form.side == OrderSide.long
-      ? (price - entry) / entry
-      : (entry - price) / entry;
-  return margin * move * form.leverage;
-}
-
-String _roiLabel(TradeFormState form, double entry, double price) {
-  if (entry <= 0) return '0.00%';
-  final move = form.side == OrderSide.long
-      ? (price - entry) / entry
-      : (entry - price) / entry;
-  return '${(move * form.leverage * 100).toStringAsFixed(2)}%';
-}
-
 double _tpMultiplier(OrderSide side, int level) {
-  if (side == OrderSide.long) return level == 1 ? 1.04 : 1.08;
-  return level == 1 ? 0.96 : 0.92;
+  if (side == OrderSide.long) {
+    return switch (level) {
+      1 => 1.04,
+      2 => 1.08,
+      _ => 1.12,
+    };
+  }
+  return switch (level) {
+    1 => 0.96,
+    2 => 0.92,
+    _ => 0.88,
+  };
 }
 
 double _slMultiplier(OrderSide side) => side == OrderSide.long ? 0.98 : 1.02;
@@ -2343,30 +2240,10 @@ double _roundPrice(double value) {
 
 String _money(double value) => '\$${value.abs().toStringAsFixed(2)}';
 
-String _compactMoney(double value) {
-  final fixed = value.abs() >= 1000 ? 0 : 2;
-  final raw = value.toStringAsFixed(fixed);
-  final parts = raw.split('.');
-  final head = parts.first.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
-  if (parts.length == 1 || parts.last == '00') return head;
-  return '$head.${parts.last}';
-}
-
 String _price(double value) {
   if (value >= 100) return value.toStringAsFixed(2);
   if (value >= 1) return value.toStringAsFixed(4);
   return value.toStringAsFixed(6);
-}
-
-String _priceMoveLabel(TradingSymbol symbol) {
-  final pct = symbol.priceChangePct;
-  final sign = pct >= 0 ? '+' : '-';
-  final absolute = symbol.lastPrice * (pct.abs() / 100);
-  final absoluteDecimals = absolute >= 10 ? 2 : 3;
-  return '$sign${absolute.toStringAsFixed(absoluteDecimals)}/$sign${pct.abs().toStringAsFixed(2)}%';
 }
 
 String _formatPct(num value) {
@@ -2374,7 +2251,23 @@ String _formatPct(num value) {
   return '${value.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '')}%';
 }
 
-String _formatNumber(num value) {
-  if (value % 1 == 0) return value.toInt().toString();
-  return value.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+String _compactQuantity(double value) {
+  if (value <= 0) return '0';
+  if (value >= 100) return value.toStringAsFixed(0);
+  if (value >= 1) return value.toStringAsFixed(2);
+  return value.toStringAsFixed(4);
+}
+
+double _pnlFor(
+  OrderSide side,
+  double margin,
+  double leverage,
+  double entry,
+  double price,
+) {
+  if (entry <= 0 || margin <= 0) return 0;
+  final move = side == OrderSide.long
+      ? (price - entry) / entry
+      : (entry - price) / entry;
+  return margin * leverage * move;
 }
