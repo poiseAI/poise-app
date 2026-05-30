@@ -48,6 +48,8 @@ class HomeAnalytics {
     required this.compliantTradeStreak,
     required this.opportunityCostTotal,
     required this.opportunityItems,
+    required this.adherence,
+    required this.riskPatterns,
     required this.guardrails,
     required this.disciplineFlags,
     required this.sourceBreakdown,
@@ -80,6 +82,13 @@ class HomeAnalytics {
               const [])
           .whereType<Map<String, dynamic>>()
           .map(OpportunityItem.fromJson)
+          .toList(),
+      adherence: HomeAdherence.fromJson(
+        (json['adherence'] as Map<String, dynamic>?) ?? const {},
+      ),
+      riskPatterns: ((json['risk_patterns'] as List<dynamic>?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(RiskPattern.fromJson)
           .toList(),
       guardrails: ((json['guardrails'] as List<dynamic>?) ?? const [])
           .whereType<Map<String, dynamic>>()
@@ -119,12 +128,53 @@ class HomeAnalytics {
   final CostlyMistake? mostCostlyMistake;
   final double opportunityCostTotal;
   final List<OpportunityItem> opportunityItems;
+  final HomeAdherence adherence;
+  final List<RiskPattern> riskPatterns;
   final List<GuardrailMetric> guardrails;
   final List<DisciplineFlag> disciplineFlags;
   final SourceBreakdown sourceBreakdown;
   final double? totalBalance;
   final bool balanceTentative;
   final int? connectedExchangeCount;
+}
+
+class HomeAdherence {
+  const HomeAdherence({
+    required this.score,
+    required this.label,
+    required this.items,
+  });
+
+  factory HomeAdherence.fromJson(Map<String, dynamic> json) => HomeAdherence(
+        score: (json['score'] as num?)?.toInt() ?? 0,
+        label: json['label'] as String? ?? '',
+        items: ((json['items'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(GuardrailMetric.fromJson)
+            .toList(),
+      );
+
+  final int score;
+  final String label;
+  final List<GuardrailMetric> items;
+}
+
+class RiskPattern {
+  const RiskPattern({
+    required this.label,
+    required this.status,
+    required this.level,
+  });
+
+  factory RiskPattern.fromJson(Map<String, dynamic> json) => RiskPattern(
+        label: json['label'] as String? ?? '',
+        status: json['status'] as String? ?? 'Normal',
+        level: json['level'] as String? ?? 'normal',
+      );
+
+  final String label;
+  final String status;
+  final String level;
 }
 
 double? _readDouble(Map<String, dynamic> json, List<String> keys) {

@@ -40,6 +40,7 @@ class _TradeValidationScreenState extends ConsumerState<TradeValidationScreen> {
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         backgroundColor: AppColors.bgPrimary,
+        centerTitle: false,
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back_rounded),
@@ -420,22 +421,21 @@ class _GuardrailChecks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _guardrailItems(validation);
+    final rows = _guardrailReviewRows(validation);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Review guardrails', style: AppTypography.bodyMedium),
         const SizedBox(height: AppSpacing.md),
-        if (items.isEmpty)
-          const _GuardrailCard.clean(
-            title: 'Leverage limit',
-            message: 'This trade is within your configured leverage limit',
-          )
-        else
-          for (final item in items) ...[
-            _GuardrailCard(item: item, onAskAi: () => onAskAi(item)),
-            const SizedBox(height: AppSpacing.sm),
-          ],
+        for (final row in rows) ...[
+          _GuardrailCard(
+            title: row.title,
+            message: row.message,
+            warning: row.warning != null,
+            onAskAi: row.warning == null ? null : () => onAskAi(row.warning!),
+          ),
+          if (row != rows.last) const SizedBox(height: AppSpacing.sm),
+        ],
       ],
     );
   }
@@ -443,73 +443,79 @@ class _GuardrailChecks extends StatelessWidget {
 
 class _GuardrailCard extends StatelessWidget {
   const _GuardrailCard({
-    required this.item,
+    required this.title,
+    required this.message,
+    required this.warning,
     required this.onAskAi,
-  })  : cleanTitle = null,
-        cleanMessage = null;
+  });
 
-  const _GuardrailCard.clean({
-    required String title,
-    required String message,
-  })  : item = null,
-        onAskAi = null,
-        cleanTitle = title,
-        cleanMessage = message;
-
-  final GuardrailResult? item;
+  final String title;
+  final String message;
+  final bool warning;
   final VoidCallback? onAskAi;
-  final String? cleanTitle;
-  final String? cleanMessage;
 
   @override
   Widget build(BuildContext context) {
-    final isClean = item == null;
-    final color = isClean ? AppColors.profitGreen : AppColors.warningAmber;
-    final title = item?.title ?? cleanTitle ?? 'Guardrail';
-    final message = item?.message ?? cleanMessage ?? '';
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+    final color = warning ? AppColors.warningAmber : AppColors.profitGreen;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        onTap: onAskAi,
         borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            isClean
-                ? Icons.check_circle_outline_rounded
-                : Icons.warning_amber_rounded,
-            color: color,
-            size: 20,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: color.withValues(alpha: 0.45)),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: isClean
-                        ? const Color(0xFF027A48)
-                        : const Color(0xFFB54708),
-                    fontWeight: FontWeight.w700,
-                  ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                warning
+                    ? Icons.warning_amber_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: color,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: warning
+                            ? const Color(0xFFB54708)
+                            : const Color(0xFF027A48),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      message,
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  message,
-                  style: AppTypography.bodySm.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              ),
+              if (onAskAi != null) ...[
+                const SizedBox(width: AppSpacing.xs),
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 18,
+                  color: color,
                 ),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -834,11 +840,66 @@ class _ErrorCard extends StatelessWidget {
   }
 }
 
+List<({String title, String message, GuardrailResult? warning})>
+    _guardrailReviewRows(TradeValidationResult validation) {
+  final warnings = _guardrailItems(validation);
+  final used = <GuardrailResult>{};
+  final baseRows = [
+    (
+      title: 'Risk per trade',
+      message: 'This trade is within your configured risk-per-trade limit.',
+      category: 'risk',
+    ),
+    (
+      title: 'Stop loss distance',
+      message: 'Stop loss distance is within your configured setup rules.',
+      category: 'stop_loss',
+    ),
+    (
+      title: 'Daily trade count',
+      message: 'This trade is within your daily trade limit.',
+      category: 'daily_trade',
+    ),
+    (
+      title: 'Leverage limit',
+      message: 'This trade is within your configured leverage limit.',
+      category: 'leverage',
+    ),
+  ];
+
+  final rows = <({String title, String message, GuardrailResult? warning})>[];
+  for (final base in baseRows) {
+    final warning = warnings
+        .where((item) => _guardrailCategory(item) == base.category)
+        .firstOrNull;
+    if (warning == null) {
+      rows.add((title: base.title, message: base.message, warning: null));
+      continue;
+    }
+    used.add(warning);
+    rows.add((
+      title: base.title,
+      message: warning.message,
+      warning: warning,
+    ));
+  }
+
+  for (final warning in warnings) {
+    if (used.contains(warning)) continue;
+    rows.add((
+      title: warning.title,
+      message: warning.message,
+      warning: warning,
+    ));
+  }
+  return rows;
+}
+
 List<GuardrailResult> _guardrailItems(TradeValidationResult validation) {
   return [
     if (validation.dailyLimitAcknowledgementRequired)
       GuardrailResult(
-        title: 'Daily risk budget',
+        title: 'Daily loss limit',
         message:
             'Projected loss becomes ${_money(validation.projectedDailyLossUsd)} of ${_money(validation.dailyLossLimitUsd)}.',
         severity: 'warning',
@@ -852,6 +913,25 @@ List<GuardrailResult> _guardrailItems(TradeValidationResult validation) {
       ),
     ...validation.guardrailWarnings,
   ];
+}
+
+String _guardrailCategory(GuardrailResult item) {
+  final text = '${item.title} ${item.message}'.toLowerCase();
+  if (text.contains('leverage')) return 'leverage';
+  if (text.contains('stop loss') || text.contains('atr')) return 'stop_loss';
+  if (text.contains('trade count') ||
+      text.contains('trades per day') ||
+      text.contains('maximum trades') ||
+      text.contains('overtrade')) {
+    return 'daily_trade';
+  }
+  if (text.contains('risk per trade') ||
+      text.contains('%risk') ||
+      text.contains('daily loss') ||
+      text.contains('risk budget')) {
+    return 'risk';
+  }
+  return 'other';
 }
 
 String _aiExplanation(GuardrailResult item) {
@@ -904,7 +984,7 @@ List<({String label, double price, double profit, double movePct})>
     form.takeProfit1,
     form.takeProfit2,
     form.takeProfit3,
-  ].whereType<double>().toList();
+  ].whereType<double>().where((value) => value > 0).toList();
   if (entry == null || entry <= 0 || tps.isEmpty) {
     return [
       (

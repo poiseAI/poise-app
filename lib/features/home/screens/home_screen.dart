@@ -787,6 +787,7 @@ class _OpportunityCostCard extends StatelessWidget {
     final items = analytics?.opportunityItems ?? const [];
     final first = items.isNotEmpty ? items[0] : null;
     final second = items.length > 1 ? items[1] : null;
+    final visibleItems = items.take(3).toList();
     if (first == null && second == null) {
       return const _SectionCard(
         child: _NoAnalyticsMessage(
@@ -825,28 +826,23 @@ class _OpportunityCostCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _SmallInsightCard(
-                  title: first?.label ?? 'Early exit',
-                  subtitle:
-                      '${first?.count ?? 0} trade - ${first?.symbol.isNotEmpty == true ? first!.symbol : 'Unknown pair'}',
-                  value: _money(first?.value ?? 0),
-                  color: const Color(0xFFD46A00),
-                ),
+          for (final item in visibleItems) ...[
+            _OpportunityCostRow(item: item),
+            if (item != visibleItems.last)
+              const SizedBox(height: AppSpacing.sm),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => context.go(Routes.orders),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0057FF),
+                textStyle: AppTypography.bodyMedium,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _SmallInsightCard(
-                  title: second?.label ?? 'Outside session',
-                  subtitle:
-                      '${second?.count ?? 0} trade - ${second?.symbol.isNotEmpty == true ? second!.symbol : 'Unknown pair'}',
-                  value: _money(second?.value ?? 0),
-                  color: AppColors.lossRed,
-                ),
-              ),
-            ],
+              label: const Text('View contributing trades'),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.chevron_right_rounded, size: 18),
+            ),
           ),
         ],
       ),
@@ -874,6 +870,7 @@ class _AdherenceDetailCard extends StatelessWidget {
         : score >= 65
             ? AppColors.warningAmber
             : AppColors.lossRed;
+    final disciplineTiles = _disciplineTiles(analytics, score);
 
     return _SectionCard(
       child: Column(
@@ -922,47 +919,13 @@ class _AdherenceDetailCard extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              _AdherenceTile(
-                label: 'Daily loss limit',
-                value: _guardrailProgress(analytics, 'Daily loss limit'),
-                progress:
-                    _guardrail(analytics, 'Daily loss limit')?.progress ?? 0,
-                color: _guardrailColor(
-                    _guardrail(analytics, 'Daily loss limit')?.status),
-              ),
-              _AdherenceTile(
-                label: 'Balance sync',
-                value: _balanceCoverageValue(
-                  _guardrail(analytics, 'Balance snapshot'),
-                  analytics: analytics,
+              for (final tile in disciplineTiles)
+                _DisciplineTile(
+                  label: tile.label,
+                  value: '${tile.value.toStringAsFixed(0)}%',
+                  color: tile.color,
                 ),
-                progress: _balanceCoverageProgress(
-                  _guardrail(analytics, 'Balance snapshot'),
-                  analytics: analytics,
-                ),
-                color: _balanceCoverageColor(
-                  _guardrail(analytics, 'Balance snapshot'),
-                  analytics: analytics,
-                ),
-              ),
-              _AdherenceTile(
-                label: 'Trades today',
-                value: '${analytics?.tradesClosedToday ?? 0}',
-                progress: score / 100.0,
-                color: color,
-              ),
-              _AdherenceTile(
-                label: 'Open positions',
-                value: '$positionCount',
-                progress: (_guardrail(analytics, 'Open positions')?.progress ??
-                    (positionCount / 5).clamp(0, 1).toDouble()),
-                color: AppColors.profitGreen,
-              ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _SnapshotStatusRow(
-            metric: _guardrail(analytics, 'Balance snapshot'),
           ),
         ],
       ),
@@ -977,50 +940,56 @@ class _RiskPatternCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final flags = analytics?.disciplineFlags ?? const <DisciplineFlag>[];
-    final source = analytics?.sourceBreakdown;
+    final patterns = analytics?.riskPatterns ?? const <RiskPattern>[];
+    final visiblePatterns = patterns.take(3).toList();
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Current risk pattern', style: AppTypography.h3),
           const SizedBox(height: AppSpacing.md),
-          _PatternRow(
+          if (visiblePatterns.isNotEmpty)
+            for (final pattern in visiblePatterns) ...[
+              _PatternRow(
+                label: pattern.label,
+                status: pattern.status,
+                color: _patternColor(pattern.level),
+              ),
+              if (pattern != visiblePatterns.last)
+                const SizedBox(height: AppSpacing.sm),
+            ]
+          else ...[
+            _PatternRow(
               label: 'Trade frequency',
               status: flags.any((f) => f.label.contains('Blocked'))
                   ? 'Elevated'
                   : 'Normal',
               color: flags.any((f) => f.label.contains('Blocked'))
                   ? AppColors.lossRed
-                  : AppColors.profitGreen),
-          const SizedBox(height: AppSpacing.sm),
-          _PatternRow(
+                  : AppColors.profitGreen,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _PatternRow(
               label: 'Position size variance',
               status: flags.any((f) => f.label.contains('Position size'))
                   ? 'Elevated'
                   : 'Normal',
               color: flags.any((f) => f.label.contains('Position size'))
                   ? AppColors.lossRed
-                  : AppColors.profitGreen),
-          const SizedBox(height: AppSpacing.sm),
-          _PatternRow(
-            label: 'Behaviour after losses',
-            status: flags.any((f) => f.label.toLowerCase().contains('revenge'))
-                ? 'Moderate'
-                : 'Normal',
-            color: flags.any((f) => f.label.toLowerCase().contains('revenge'))
-                ? AppColors.warningAmber
-                : AppColors.profitGreen,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _PatternRow(
-            label: 'External trade review',
-            status: (source?.externalOpen ?? 0) > 0
-                ? '${source!.externalOpen} open'
-                : 'Clear',
-            color: (source?.externalOpen ?? 0) > 0
-                ? AppColors.warningAmber
-                : AppColors.profitGreen,
-          ),
+                  : AppColors.profitGreen,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _PatternRow(
+              label: 'Behaviour after losses',
+              status:
+                  flags.any((f) => f.label.toLowerCase().contains('revenge'))
+                      ? 'Moderate'
+                      : 'Normal',
+              color: flags.any((f) => f.label.toLowerCase().contains('revenge'))
+                  ? AppColors.warningAmber
+                  : AppColors.profitGreen,
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           if (flags.isEmpty)
             const _NoAnalyticsMessage(
@@ -1123,19 +1092,19 @@ class _GuardrailStatusCard extends StatelessWidget {
                 ),
               ),
               _GuardrailTile(
-                title: 'Balance coverage',
-                subtitle: 'All exchanges',
-                value: _balanceCoverageValue(
-                  _guardrail(analytics, 'Balance snapshot'),
-                  analytics: analytics,
+                title: _guardrail(analytics, 'Weekly loss limit')?.label ??
+                    'Weekly loss limit',
+                subtitle:
+                    _guardrail(analytics, 'Weekly loss limit')?.description ??
+                        'Resets Monday',
+                value: _guardrailValue(
+                  _guardrail(analytics, 'Weekly loss limit'),
+                  fallback: '\$0 / \$0',
                 ),
-                progress: _balanceCoverageProgress(
-                  _guardrail(analytics, 'Balance snapshot'),
-                  analytics: analytics,
-                ),
-                color: _balanceCoverageColor(
-                  _guardrail(analytics, 'Balance snapshot'),
-                  analytics: analytics,
+                progress:
+                    _guardrail(analytics, 'Weekly loss limit')?.progress ?? 0,
+                color: _guardrailColor(
+                  _guardrail(analytics, 'Weekly loss limit')?.status,
                 ),
               ),
               _GuardrailTile(
@@ -1193,71 +1162,99 @@ class _ExploreMoreInsightsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const cards = [
+      (
+        title: 'Discipline Score Trend',
+        subtitle: 'High discipline vs low discipline outcomes',
+      ),
+      (
+        title: 'PnL vs Discipline Mismatch',
+        subtitle: 'High discipline vs low discipline outcomes',
+      ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Explore more insights', style: AppTypography.h3),
         const SizedBox(height: AppSpacing.md),
-        InkWell(
-          onTap: () => context.go(Routes.orders),
-          borderRadius: AppRadius.cardRadiusLg,
-          child: Container(
-            width: double.infinity,
-            padding: AppSpacing.cardPadding,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F7FF),
-              borderRadius: AppRadius.cardRadiusLg,
-              border: Border.all(color: AppColors.borderLight),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: AppRadius.cardRadius,
-                    border: Border.all(color: AppColors.borderLight),
-                  ),
-                  child: const Icon(
-                    Icons.auto_graph_rounded,
-                    color: Color(0xFF0057FF),
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Discipline Score Trend',
-                        style: AppTypography.bodyMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'High discipline vs low discipline outcomes',
-                        style: AppTypography.bodySm.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      const _StatusPill(
-                        label: 'Active',
-                        color: AppColors.profitGreen,
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.textSecondary,
-                ),
-              ],
+        SizedBox(
+          height: 112,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: cards.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+            itemBuilder: (context, index) => _InsightPreviewCard(
+              title: cards[index].title,
+              subtitle: cards[index].subtitle,
+              onTap: () => context.go(Routes.orders),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _InsightPreviewCard extends StatelessWidget {
+  const _InsightPreviewCard({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width - 72;
+    return SizedBox(
+      width: width.clamp(260.0, 320.0).toDouble(),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.cardRadiusLg,
+        child: Container(
+          padding: AppSpacing.cardPadding,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F7FF),
+            borderRadius: AppRadius.cardRadiusLg,
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(title, style: AppTypography.bodyMedium),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const _StatusPill(
+                      label: 'Active',
+                      color: AppColors.profitGreen,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1427,58 +1424,16 @@ class _NoAnalyticsMessage extends StatelessWidget {
   }
 }
 
-class _SmallInsightCard extends StatelessWidget {
-  const _SmallInsightCard({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.color,
-  });
-
-  final String title;
-  final String subtitle;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: AppSpacing.cardPadding,
-      decoration: const BoxDecoration(
-        color: AppColors.bgPrimary,
-        borderRadius: AppRadius.cardRadius,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTypography.bodyMedium),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            subtitle,
-            style: AppTypography.bodySm.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(value, style: AppTypography.numericMd.copyWith(color: color)),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdherenceTile extends StatelessWidget {
-  const _AdherenceTile({
+class _DisciplineTile extends StatelessWidget {
+  const _DisciplineTile({
     required this.label,
     required this.value,
     required this.color,
-    required this.progress,
   });
 
   final String label;
   final String value;
   final Color color;
-  final double progress;
 
   @override
   Widget build(BuildContext context) {
@@ -1490,20 +1445,71 @@ class _AdherenceTile extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text(label, style: AppTypography.bodyMedium)),
-              Text(value, style: AppTypography.numericSm),
-            ],
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
-          LinearProgressIndicator(
-            value: progress.clamp(0.0, 1.0),
-            minHeight: 4,
-            borderRadius: AppRadius.pillRadius,
-            color: color,
-            backgroundColor: AppColors.borderLight,
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.numericSm.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpportunityCostRow extends StatelessWidget {
+  const _OpportunityCostRow({required this.item});
+
+  final OpportunityItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final symbol = item.symbol.isNotEmpty ? ' - ${item.symbol}' : '';
+    final color = item.value < 0 ? AppColors.lossRed : AppColors.profitGreen;
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardPadding,
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.label, style: AppTypography.bodyMedium),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${item.count} trade${item.count == 1 ? '' : 's'}$symbol',
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            _money(item.value),
+            style: AppTypography.numericSm.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -1539,34 +1545,6 @@ class _PatternRow extends StatelessWidget {
           _StatusPill(label: status, color: color),
         ],
       ),
-    );
-  }
-}
-
-class _SnapshotStatusRow extends StatelessWidget {
-  const _SnapshotStatusRow({required this.metric});
-
-  final GuardrailMetric? metric;
-
-  @override
-  Widget build(BuildContext context) {
-    final complete = metric?.status == 'normal';
-    final color = complete ? AppColors.textTertiary : AppColors.warningAmber;
-    return Row(
-      children: [
-        Icon(
-          complete ? Icons.check_circle_outline_rounded : Icons.sync_rounded,
-          size: 16,
-          color: color,
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: Text(
-            metric?.description ?? 'UTC all-exchange baseline syncing',
-            style: AppTypography.caption.copyWith(color: color),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1794,6 +1772,65 @@ String _money(double value, {bool signed = false}) {
   return '$sign\$${value.abs().toStringAsFixed(0)}';
 }
 
+List<({String label, double value, Color color})> _disciplineTiles(
+  HomeAnalytics? analytics,
+  int fallbackScore,
+) {
+  const labels = [
+    'Risk Discipline',
+    'Stop Loss Discipline',
+    'Take Profit Discipline',
+    'Behavioural Discipline',
+  ];
+  final fallbackValues = <String, double>{
+    'Risk Discipline': fallbackScore.toDouble(),
+    'Stop Loss Discipline': 100,
+    'Take Profit Discipline': fallbackScore.toDouble(),
+    'Behavioural Discipline':
+        (100 - ((analytics?.disciplineFlags.length ?? 0) * 12))
+            .clamp(0, 100)
+            .toDouble(),
+  };
+
+  return [
+    for (final label in labels)
+      (
+        label: label,
+        value: _disciplineMetricValue(analytics, label) ??
+            fallbackValues[label] ??
+            fallbackScore.toDouble(),
+        color: _disciplineMetricColor(
+          _disciplineMetricValue(analytics, label) ??
+              fallbackValues[label] ??
+              fallbackScore.toDouble(),
+        ),
+      ),
+  ];
+}
+
+double? _disciplineMetricValue(HomeAnalytics? analytics, String label) {
+  final item = analytics?.adherence.items
+      .where((metric) => metric.label == label)
+      .firstOrNull;
+  if (item == null) return null;
+  if (item.unit == 'percent') return item.value;
+  return item.progress * 100;
+}
+
+Color _disciplineMetricColor(double value) {
+  if (value >= 80) return AppColors.profitGreen;
+  if (value >= 60) return AppColors.warningAmber;
+  return AppColors.lossRed;
+}
+
+Color _patternColor(String level) {
+  return switch (level.toLowerCase()) {
+    'elevated' => AppColors.lossRed,
+    'moderate' => AppColors.warningAmber,
+    _ => AppColors.profitGreen,
+  };
+}
+
 GuardrailMetric? _guardrail(HomeAnalytics? analytics, String label) {
   final guardrails = analytics?.guardrails ?? const [];
   for (final item in guardrails) {
@@ -1811,41 +1848,6 @@ String _guardrailValue(GuardrailMetric? metric, {String? fallback}) {
     return '${_money(metric.value)} / ${_money(metric.limit)}';
   }
   return '${metric.value.toStringAsFixed(0)} / ${metric.limit.toStringAsFixed(0)}';
-}
-
-String _balanceCoverageValue(
-  GuardrailMetric? metric, {
-  HomeAnalytics? analytics,
-}) {
-  if (metric != null) return _guardrailValue(metric, fallback: 'Syncing');
-  final count = analytics?.connectedExchangeCount;
-  if (count != null && count > 0) return '$count synced';
-  return 'Syncing';
-}
-
-double _balanceCoverageProgress(
-  GuardrailMetric? metric, {
-  HomeAnalytics? analytics,
-}) {
-  if (metric != null) return metric.progress.clamp(0.0, 1.0);
-  if (analytics?.totalBalance != null) return 1;
-  return 0.35;
-}
-
-Color _balanceCoverageColor(
-  GuardrailMetric? metric, {
-  HomeAnalytics? analytics,
-}) {
-  if (metric != null) return _guardrailColor(metric.status);
-  return analytics?.totalBalance == null
-      ? AppColors.warningAmber
-      : AppColors.profitGreen;
-}
-
-String _guardrailProgress(HomeAnalytics? analytics, String label) {
-  final g = _guardrail(analytics, label);
-  if (g == null) return '—';
-  return '${(g.progress * 100).toStringAsFixed(0)}%';
 }
 
 Color _guardrailColor(String? status) {
