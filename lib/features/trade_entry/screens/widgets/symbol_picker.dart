@@ -25,7 +25,7 @@ class SymbolPicker extends ConsumerWidget {
     final selected = this.selected;
 
     return Material(
-      color: AppColors.bgCard,
+      color: AppColors.bgPrimary,
       borderRadius: AppRadius.cardRadius,
       child: InkWell(
         borderRadius: AppRadius.cardRadius,
@@ -45,24 +45,27 @@ class SymbolPicker extends ConsumerWidget {
           );
         },
         child: Container(
-          padding: AppSpacing.cardPadding,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
             borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: AppColors.transparent),
           ),
           child: Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.1),
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: AppColors.warningAmber,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.currency_bitcoin_rounded,
-                  color: AppColors.accent,
-                  size: 20,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -73,7 +76,7 @@ class SymbolPicker extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               const Icon(
-                Icons.keyboard_arrow_right_rounded,
+                Icons.keyboard_arrow_down_rounded,
                 size: 22,
                 color: AppColors.textSecondary,
               ),
@@ -100,8 +103,6 @@ class _SymbolChooserSheet extends ConsumerStatefulWidget {
 }
 
 class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
-  final _ctrl = TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -110,12 +111,6 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
           .read(symbolSearchProvider.notifier)
           .loadPopular(exchange: widget.exchange),
     );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
   }
 
   void _select(TradingSymbol symbol) {
@@ -131,19 +126,10 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
     Navigator.pop(context);
   }
 
-  void _search(String value) {
-    setState(() {});
-    ref.read(symbolSearchProvider.notifier).search(
-          value,
-          exchange: widget.exchange,
-        );
-  }
-
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(symbolSearchProvider);
     final viewInsets = MediaQuery.viewInsetsOf(context);
-    final searching = _ctrl.text.trim().isNotEmpty;
 
     return SafeArea(
       child: Padding(
@@ -174,7 +160,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Choose trading pair',
+                      'Select trading pair',
                       style: AppTypography.h2.copyWith(letterSpacing: 0),
                     ),
                   ),
@@ -185,61 +171,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xs),
-              TextField(
-                controller: _ctrl,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-                  TextInputFormatter.withFunction(
-                    (oldValue, newValue) => newValue.copyWith(
-                      text: newValue.text.toUpperCase(),
-                      selection: newValue.selection,
-                    ),
-                  ),
-                ],
-                style: AppTypography.body,
-                decoration: InputDecoration(
-                  hintText: 'Search coin or pair',
-                  hintStyle: AppTypography.body.copyWith(
-                    color: AppColors.textDisabled,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    size: 18,
-                    color: AppColors.textSecondary,
-                  ),
-                  suffixIcon: _ctrl.text.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Clear search',
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                          onPressed: () {
-                            _ctrl.clear();
-                            _search('');
-                          },
-                        ),
-                  filled: true,
-                  fillColor: AppColors.bgCard,
-                  border: const OutlineInputBorder(
-                    borderRadius: AppRadius.chipRadius,
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                ),
-                onChanged: _search,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                searching ? 'Best matches' : 'Recent & popular',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
+              const Divider(height: 1, color: AppColors.borderLight),
               Flexible(
                 child: searchState.when(
                   loading: () => const _SymbolLoadingList(),
@@ -259,10 +191,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
                     return ListView.separated(
                       shrinkWrap: true,
                       itemCount: symbols.length,
-                      separatorBuilder: (_, __) => const Divider(
-                        height: 1,
-                        color: AppColors.borderLight,
-                      ),
+                      separatorBuilder: (_, __) => const SizedBox.shrink(),
                       itemBuilder: (context, index) {
                         final symbol = symbols[index];
                         return _SymbolResultTile(
@@ -294,7 +223,7 @@ class _SymbolPrompt extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Trading pair', style: AppTypography.bodyMedium),
+        const Text('Select trading pair', style: AppTypography.bodyMedium),
         const SizedBox(height: 2),
         Text(
           'Tap to pick BTC, ETH, SOL or a recent ${exchange.toUpperCase()} pair',
@@ -323,19 +252,17 @@ class _SelectedSymbol extends StatelessWidget {
           children: [
             Flexible(
               child: Text(
-                symbol.symbol,
-                style: AppTypography.h4,
+                _displayPair(symbol),
+                style: AppTypography.h3,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
-            _ExchangePill(symbol.exchange),
           ],
         ),
         const SizedBox(height: 2),
         Text(
-          _symbolMeta(symbol),
-          style: AppTypography.caption.copyWith(
+          'Futures',
+          style: AppTypography.bodySm.copyWith(
             color: AppColors.textSecondary,
           ),
           overflow: TextOverflow.ellipsis,
@@ -360,63 +287,48 @@ class _SymbolResultTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct = symbol.priceChangePct;
-    final hasPct = pct != 0;
-    final pctColor = pct >= 0 ? AppColors.profitGreen : AppColors.lossRed;
-
     return Material(
-      color: selected ? AppColors.accent.withValues(alpha: 0.08) : null,
+      color: Colors.transparent,
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm,
+            horizontal: 0,
+            vertical: 13,
           ),
           child: Row(
             children: [
-              Expanded(
-                child: _SelectedSymbol(symbol: symbol),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              if (!enabled)
-                Text(
-                  'Loading price',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                )
-              else if (hasPct)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
-                      style: AppTypography.numericSm.copyWith(color: pctColor),
-                    ),
-                    Text(
-                      '24h',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Text(
-                  'Popular',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
+              Container(
+                width: 22,
+                height: 22,
+                decoration: const BoxDecoration(
+                  color: AppColors.warningAmber,
+                  shape: BoxShape.circle,
                 ),
-              const SizedBox(width: AppSpacing.sm),
-              Icon(
-                selected
-                    ? Icons.check_circle_rounded
-                    : Icons.add_circle_outline_rounded,
-                color: selected ? AppColors.accent : AppColors.textTertiary,
-                size: 20,
+                child: const Icon(
+                  Icons.currency_bitcoin_rounded,
+                  color: Colors.white,
+                  size: 15,
+                ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  _displayPair(symbol),
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: enabled
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (selected)
+                const Icon(
+                  Icons.check_rounded,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
             ],
           ),
         ),
@@ -433,27 +345,6 @@ class _SymbolLoadingList extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.all(AppSpacing.lg),
       child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-    );
-  }
-}
-
-class _ExchangePill extends StatelessWidget {
-  const _ExchangePill(this.exchange);
-
-  final String exchange;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.profitGreen.withValues(alpha: 0.1),
-        borderRadius: AppRadius.pillRadius,
-      ),
-      child: Text(
-        exchange.toUpperCase(),
-        style: AppTypography.caption.copyWith(color: AppColors.profitGreen),
-      ),
     );
   }
 }
@@ -496,14 +387,9 @@ String _normalizeExchange(String value) {
   return normalized.isEmpty ? 'bybit' : normalized;
 }
 
-String _symbolMeta(TradingSymbol symbol) {
-  final pair = '${symbol.baseAsset}/${symbol.quoteAsset}';
-  if (symbol.lastPrice <= 0) return pair;
-  return '$pair - \$${symbol.lastPrice.toStringAsFixed(_priceDecimals(symbol.lastPrice))}';
-}
-
-int _priceDecimals(double price) {
-  if (price >= 100) return 2;
-  if (price >= 1) return 4;
-  return 6;
+String _displayPair(TradingSymbol symbol) {
+  if (symbol.baseAsset.isNotEmpty && symbol.quoteAsset.isNotEmpty) {
+    return '${symbol.baseAsset}/${symbol.quoteAsset}';
+  }
+  return symbol.symbol;
 }

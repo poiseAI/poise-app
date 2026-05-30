@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../orders/data/models/order.dart';
@@ -22,6 +23,8 @@ enum MarginMode { percentage, fixed }
 enum AmountInputMode { margin, quantity }
 
 enum CollateralMode { isolated, cross }
+
+final selectedTradeExchangeProvider = StateProvider<String>((ref) => 'bybit');
 
 @freezed
 abstract class TradeFormState with _$TradeFormState {
@@ -70,14 +73,18 @@ abstract class TradeFormState with _$TradeFormState {
 class TradeForm extends _$TradeForm {
   @override
   TradeFormState build() {
-    Future.microtask(loadPreflight);
+    final exchange = ref.watch(selectedTradeExchangeProvider);
+    Future.microtask(() => loadPreflight(exchange: exchange));
     return const TradeFormState();
   }
 
-  Future<void> loadPreflight() async {
+  Future<void> loadPreflight({String? exchange}) async {
+    final requestedExchange = _normalizeExchange(
+      exchange ?? ref.read(selectedTradeExchangeProvider),
+    );
     state = state.copyWith(isLoadingPreflight: true, preflightError: null);
     final api = ref.read(tradeApiProvider);
-    final preflightResult = await api.preflight();
+    final preflightResult = await api.preflight(exchange: requestedExchange);
     if (preflightResult.isErr) {
       state = state.copyWith(
         isLoadingPreflight: false,
@@ -87,18 +94,21 @@ class TradeForm extends _$TradeForm {
     }
 
     final preflight = preflightResult.value;
-    final balanceResult = await api.balance(preflight.exchange);
-    final balance = balanceResult.valueOrNull ??
-        ExchangeBalance(available: state.availableBalance, currency: 'USD');
+    final needsExchangeConnection = _requiresExchangeConnection(preflight);
+    final balance = needsExchangeConnection
+        ? const ExchangeBalance(available: 0, currency: 'USD')
+        : (await api.balance(preflight.exchange)).valueOrNull ??
+            const ExchangeBalance(available: 0, currency: 'USD');
     state = state.copyWith(
       isLoadingPreflight: false,
       preflight: preflight,
       availableBalance: balance.available,
       balanceCurrency: balance.currency,
-      leverage: state.leverage.clamp(1.0, _maxSymbolLeverage(state.symbol)),
-      marginMode: _requiresExchangeConnection(preflight)
-          ? MarginMode.fixed
-          : state.marginMode,
+      leverage: state.leverage.clamp(
+        1.0,
+        _maxAllowedLeverage(state.symbol, preflight),
+      ),
+      marginMode: needsExchangeConnection ? MarginMode.fixed : state.marginMode,
     );
   }
 
@@ -108,7 +118,10 @@ class TradeForm extends _$TradeForm {
     state = state.copyWith(
       symbol: symbol,
       riskScore: null,
-      leverage: state.leverage.clamp(1.0, symbol.maxLeverage.toDouble()),
+      leverage: state.leverage.clamp(
+        1.0,
+        _maxAllowedLeverage(symbol, state.preflight),
+      ),
       slPrice: state.slPrice ?? defaults.stopLoss,
       takeProfit1: state.takeProfit1 ?? defaults.takeProfit,
       symbolTouched: true,
@@ -186,7 +199,8 @@ class TradeForm extends _$TradeForm {
 
   void setLeverage(double lev) {
     state = state.copyWith(
-      leverage: lev.clamp(1.0, _maxSymbolLeverage(state.symbol)),
+      leverage:
+          lev.clamp(1.0, _maxAllowedLeverage(state.symbol, state.preflight)),
       leverageTouched: true,
       validation: null,
     );
@@ -226,7 +240,10 @@ class TradeForm extends _$TradeForm {
       balanceCurrency: state.balanceCurrency,
       leverage: preflight == null
           ? _defaultLeverage
-          : _defaultLeverage.clamp(1.0, _maxSymbolLeverage(state.symbol)),
+          : _defaultLeverage.clamp(
+              1.0,
+              _maxAllowedLeverage(state.symbol, preflight),
+            ),
     );
     if (preflight == null) {
       Future.microtask(loadPreflight);
@@ -288,8 +305,7 @@ class TradeForm extends _$TradeForm {
         ? parsed.takeProfits[1]
         : state.takeProfit2;
     final maxLev =
-        (resolvedSymbol?.maxLeverage ?? state.symbol?.maxLeverage ?? 100)
-            .toDouble();
+        _maxAllowedLeverage(resolvedSymbol ?? state.symbol, state.preflight);
     final nextLeverage = parsed.leverage == null
         ? state.leverage
         : parsed.leverage!.clamp(1.0, maxLev).toDouble();
@@ -655,10 +671,23 @@ class TradeForm extends _$TradeForm {
 
 double _entryFor(TradingSymbol? symbol) => symbol?.lastPrice ?? 0;
 
+String _normalizeExchange(String value) {
+  final normalized = value.trim().toLowerCase();
+  if (normalized == 'binance') return 'binance';
+  return 'bybit';
+}
+
 const double _defaultLeverage = 5.0;
 
 double _maxSymbolLeverage(TradingSymbol? symbol) =>
     (symbol?.maxLeverage ?? 100).toDouble();
+
+double _maxAllowedLeverage(TradingSymbol? symbol, TradePreflight? preflight) {
+  final symbolMax = _maxSymbolLeverage(symbol);
+  final ruleMax = preflight?.maxLeverage;
+  if (ruleMax == null || ruleMax <= 0) return symbolMax;
+  return symbolMax < ruleMax ? symbolMax : ruleMax;
+}
 
 bool _requiresExchangeConnection(TradePreflight? preflight) {
   if (preflight == null || preflight.allowed) return false;

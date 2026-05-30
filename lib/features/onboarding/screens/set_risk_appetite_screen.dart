@@ -396,7 +396,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
                     const TextSpan(
                         text: 'Please review your risk settings for a '),
                     TextSpan(
-                      text: '${preset.label} Appetite',
+                      text: '${_riskLabel(preset)} Appetite',
                       style: const TextStyle(color: AppColors.primary),
                     ),
                     const TextSpan(text: ' below.'),
@@ -526,7 +526,7 @@ List<(String, String)> _rowsForRequest(CreateStrategyRequest request) {
           ? '${_formatNumber(request.maxDailyLossPercent ?? 0)}% of balance'
           : '\$${_formatNumber(request.maxDailyLossUsd)}',
     ),
-    ('Weekly Maximum loss', '\$${_formatNumber(request.maxWeeklyLossUsd)}'),
+    ('Weekly maximum loss', '\$${_formatNumber(request.maxWeeklyLossUsd)}'),
     ('Max concurrent open positions', request.maxOpenPositions.toString()),
     (
       'Max consecutive losses in a day',
@@ -663,7 +663,7 @@ class _RiskSummaryCard extends StatelessWidget {
     'Max leverage per asset',
     'Max trades per day',
     'Daily maximum loss',
-    'Weekly Maximum loss',
+    'Weekly maximum loss',
     'Max concurrent open positions',
     'Max consecutive losses in a day',
   };
@@ -711,7 +711,7 @@ class _RiskSelectCard extends StatelessWidget {
             crossAxisAlignment:
                 selected ? CrossAxisAlignment.start : CrossAxisAlignment.center,
             children: [
-              Text(preset.label, style: AppTypography.h4),
+              Text(_riskLabel(preset), style: AppTypography.h4),
               if (selected) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -863,7 +863,7 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
           },
         ),
         _RiskInputField(
-          label: 'Weekly Maximum loss',
+          label: 'Weekly maximum loss',
           controller: _weeklyLossCtrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           prefix: '\$',
@@ -968,7 +968,7 @@ class _RiskConfirmCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(preset.label, style: AppTypography.h4),
+          Text(_riskLabel(preset), style: AppTypography.h4),
           const SizedBox(height: AppSpacing.xs),
           Text(
             preset.reviewDesc,

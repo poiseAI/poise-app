@@ -15,10 +15,22 @@ class TradeApi {
   TradeApi(this._dio);
   final Dio _dio;
 
-  Future<Result<TradePreflight, AppError>> preflight() async {
+  Future<Result<TradePreflight, AppError>> preflight({
+    String exchange = 'bybit',
+  }) async {
     try {
-      final resp = await _dio.get<Map<String, dynamic>>('/trade/preflight');
-      return Ok(TradePreflight.fromJson(resp.data ?? const {}));
+      final normalizedExchange = exchange.trim().toLowerCase();
+      final resp = await _dio.get<Map<String, dynamic>>(
+        '/trade/preflight',
+        queryParameters: {'exchange': normalizedExchange},
+      );
+      return Ok(
+        TradePreflight.fromJson(
+          resp.data ?? const {},
+          fallbackExchange:
+              normalizedExchange.isEmpty ? 'bybit' : normalizedExchange,
+        ),
+      );
     } on DioException catch (e) {
       return Err(_err(e));
     }
@@ -97,13 +109,16 @@ class TradePreflight {
     required this.unknownRiskPositions,
   });
 
-  factory TradePreflight.fromJson(Map<String, dynamic> json) {
+  factory TradePreflight.fromJson(
+    Map<String, dynamic> json, {
+    String fallbackExchange = 'bybit',
+  }) {
     final rules = (json['rules'] as Map<String, dynamic>?) ?? json;
     return TradePreflight(
       allowed: json['allowed'] as bool? ?? true,
       blockingReason: json['blocking_reason'] as String?,
       dailyResetAt: json['daily_reset_at'] as String?,
-      exchange: json['exchange'] as String? ?? 'bybit',
+      exchange: json['exchange'] as String? ?? fallbackExchange,
       riskPerTradePct: ((rules['risk_per_trade_pct'] ??
               rules['riskPerTradePct'] ??
               2) as num)
@@ -174,6 +189,7 @@ class GuardrailResult {
     required this.title,
     required this.message,
     required this.severity,
+    this.category,
     this.aiPrompt,
   });
 
@@ -185,12 +201,14 @@ class GuardrailResult {
             json['reason'] as String? ??
             'Review this trade before continuing.',
         severity: json['severity'] as String? ?? 'warning',
+        category: json['category'] as String?,
         aiPrompt: json['ai_prompt'] as String?,
       );
 
   final String title;
   final String message;
   final String severity;
+  final String? category;
   final String? aiPrompt;
 }
 

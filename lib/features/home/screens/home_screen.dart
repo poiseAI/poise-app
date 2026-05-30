@@ -18,10 +18,10 @@ import '../../auth/providers/auth_state.dart';
 import '../../notifications/providers/notifications_provider.dart';
 import '../../positions/data/models/position.dart';
 import '../../profile/widgets/exchange_setup_sheet.dart';
+import '../../trade_entry/providers/trade_form_provider.dart';
 import '../data/home_analytics_api.dart';
 import '../providers/home_provider.dart';
 import '../providers/home_state.dart';
-import 'widgets/position_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -29,14 +29,9 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeProvider);
-    final showNewTrade = homeState is HomeEmpty || homeState is HomeData;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: showNewTrade
-          ? _NewTradeButton(onPressed: () => context.go(Routes.trade))
-          : null,
       body: SafeArea(
         child: switch (homeState) {
           HomeLoading() => const _LoadingBody(),
@@ -95,7 +90,9 @@ class _LoadingBody extends StatelessWidget {
                 SizedBox(height: AppSpacing.md),
                 PShimmerBox(width: double.infinity, height: 168),
                 SizedBox(height: AppSpacing.md),
-                PPositionListShimmer(count: 2),
+                PShimmerBox(width: double.infinity, height: 220),
+                SizedBox(height: AppSpacing.md),
+                PShimmerBox(width: double.infinity, height: 132),
               ],
             ),
           ),
@@ -112,35 +109,27 @@ class _NoExchangeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverPadding(
-          padding: AppSpacing.screenPadding,
-          sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSpacing.lg),
-                const _HomeHeader(),
-                const SizedBox(height: AppSpacing.xl),
-                _ConnectExchangeCard(
-                  onConnect: () => showExchangeSetupSheet(
-                    context,
-                    ref,
-                    onManualSetup: () => context.go(Routes.exchangeConnections),
-                  ),
+    return Padding(
+      padding: AppSpacing.screenPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: AppSpacing.lg),
+          const _HomeHeader(),
+          Expanded(
+            child: Center(
+              child: _ConnectExchangeEmptyState(
+                onConnect: () => showExchangeSetupSheet(
+                  context,
+                  ref,
+                  onManualSetup: () => context.go(Routes.exchangeConnections),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                const _PreConnectionBalanceCard(),
-                const SizedBox(height: AppSpacing.md),
-                const _PreConnectionGuardrailCard(),
-              ],
+              ),
             ),
           ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 116)),
-      ],
+          const SizedBox(height: AppSpacing.xxl),
+        ],
+      ),
     );
   }
 }
@@ -225,17 +214,13 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
                     onChanged: (period) => setState(() => _period = period),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _BalanceStrip(
-                    summary: widget.summary,
-                    positions: widget.positions,
-                    analytics: analytics,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
                   _AdherenceHero(
                     summary: widget.summary,
                     positions: widget.positions,
                     analytics: analytics,
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  _NewTradeButton(onPressed: _openNewTrade),
                   const SizedBox(height: AppSpacing.md),
                   _CostlyMistakeCard(
                     summary: widget.summary,
@@ -259,47 +244,26 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
                     analytics: analytics,
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  const Text('Recent Activity', style: AppTypography.h3),
-                  const SizedBox(height: AppSpacing.sm),
+                  const _ExploreMoreInsightsSection(),
                 ],
               ),
             ),
           ),
-          if (widget.positions.isEmpty)
-            SliverPadding(
-              padding: AppSpacing.screenPadding.copyWith(top: 0),
-              sliver: const SliverToBoxAdapter(
-                child: _EmptyCurrentTrades(),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: AppSpacing.screenPadding.copyWith(top: 0),
-              sliver: SliverList.separated(
-                itemCount: widget.positions.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, i) {
-                  final position = widget.positions[i];
-                  return PositionCard(
-                    position: position,
-                    onLockToggle: () =>
-                        ref.read(homeProvider.notifier).toggleLock(position.id),
-                    onExitTap: () => context.go(
-                      Routes.positionExitPath(position.id),
-                    ),
-                  ).animate(delay: (i * 35).ms).fadeIn(duration: 280.ms).slideY(
-                        begin: 0.08,
-                        end: 0,
-                        curve: Curves.easeOutCubic,
-                      );
-                },
-              ),
-            ),
           const SliverToBoxAdapter(child: SizedBox(height: 116)),
         ],
       ),
     );
+  }
+
+  Future<void> _openNewTrade() async {
+    final exchange = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _ChooseExchangeSheet(),
+    );
+    if (!mounted || exchange == null) return;
+    ref.read(selectedTradeExchangeProvider.notifier).state = exchange;
+    context.go(Routes.trade, extra: exchange);
   }
 }
 
@@ -452,208 +416,47 @@ class _PeriodTabs extends StatelessWidget {
   }
 }
 
-class _ConnectExchangeCard extends StatelessWidget {
-  const _ConnectExchangeCard({required this.onConnect});
+class _ConnectExchangeEmptyState extends StatelessWidget {
+  const _ConnectExchangeEmptyState({required this.onConnect});
+
   final VoidCallback onConnect;
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      backgroundColor: const Color(0xFFF8FBFF),
-      borderColor: AppColors.primary.withValues(alpha: 0.16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.add_link_rounded,
-              color: AppColors.primary,
-              size: 22,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset(
+          'assets/images/success_rocket.png',
+          width: 148,
+          height: 148,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        const Text(
+          'Connect Your Exchange',
+          style: AppTypography.h3,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Start tracking your trades automatically',
+          style: AppTypography.bodySm.copyWith(
+            color: AppColors.textSecondary,
           ),
-          const SizedBox(height: AppSpacing.md),
-          const Text('Connect your first exchange', style: AppTypography.h2),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Poise will combine balance, open positions, and guardrail usage across every exchange you connect.',
-            style: AppTypography.body.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        TextButton.icon(
+          onPressed: onConnect,
+          icon: const Icon(Icons.add_rounded, size: 16),
+          label: const Text('Connect Exchange'),
+          style: TextButton.styleFrom(
+            foregroundColor: const Color(0xFF0057FF),
+            textStyle: AppTypography.bodyMedium,
           ),
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onConnect,
-              icon: const Icon(Icons.link_rounded, size: 18),
-              label: const Text('Connect exchange'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreConnectionBalanceCard extends StatelessWidget {
-  const _PreConnectionBalanceCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _SectionCard(
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('All-exchange balance', style: AppTypography.h3),
-                SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Waiting for a secure exchange connection',
-                  style: AppTypography.body,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: AppSpacing.md),
-          _StatusPill(label: 'Not synced', color: AppColors.textTertiary),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreConnectionGuardrailCard extends StatelessWidget {
-  const _PreConnectionGuardrailCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Guardrails will activate after sync',
-              style: AppTypography.h3),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Daily loss limit, trade frequency, open-position limits, and behavior checks stay inactive until Poise can read your account state.',
-            style: AppTypography.body.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.45,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BalanceStrip extends StatelessWidget {
-  const _BalanceStrip({
-    required this.summary,
-    required this.positions,
-    this.analytics,
-  });
-
-  final PnlSummary summary;
-  final List<Position> positions;
-  final HomeAnalytics? analytics;
-
-  @override
-  Widget build(BuildContext context) {
-    final syncedBalance = analytics?.totalBalance;
-    final estimate = summary.totalMarginUsed > 0
-        ? summary.totalMarginUsed + summary.totalUnrealizedPnl
-        : null;
-    final amount = syncedBalance ?? estimate;
-    final tentative =
-        syncedBalance == null || (analytics?.balanceTentative ?? false);
-    final exchangeCount =
-        analytics?.connectedExchangeCount ?? _exchangeCount(positions);
-    final pnl = analytics?.todayPnl ?? summary.dayPnl;
-
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: AppRadius.cardRadiusLg,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        tentative
-                            ? 'Tentative all-exchange balance'
-                            : 'All-exchange balance',
-                        style: AppTypography.bodyMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Icon(
-                      tentative ? Icons.sync_rounded : Icons.verified_rounded,
-                      size: 15,
-                      color: tentative
-                          ? AppColors.warningAmber
-                          : AppColors.profitGreen,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  amount == null ? 'Syncing balance' : _money(amount),
-                  style: AppTypography.numericLg,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  tentative
-                      ? 'Refines as exchange balances finish syncing'
-                      : '$exchangeCount ${exchangeCount == 1 ? 'exchange' : 'exchanges'} connected',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'Today',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.textTertiary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                _money(pnl, signed: true),
-                style: AppTypography.numericMd.copyWith(
-                  color: AppColors.pnlColor(pnl),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1379,6 +1182,205 @@ class _GuardrailStatusCard extends StatelessWidget {
   }
 }
 
+class _ExploreMoreInsightsSection extends StatelessWidget {
+  const _ExploreMoreInsightsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Explore more insights', style: AppTypography.h3),
+        const SizedBox(height: AppSpacing.md),
+        InkWell(
+          onTap: () => context.go(Routes.orders),
+          borderRadius: AppRadius.cardRadiusLg,
+          child: Container(
+            width: double.infinity,
+            padding: AppSpacing.cardPadding,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F7FF),
+              borderRadius: AppRadius.cardRadiusLg,
+              border: Border.all(color: AppColors.borderLight),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: AppRadius.cardRadius,
+                    border: Border.all(color: AppColors.borderLight),
+                  ),
+                  child: const Icon(
+                    Icons.auto_graph_rounded,
+                    color: Color(0xFF0057FF),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Discipline Score Trend',
+                        style: AppTypography.bodyMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'High discipline vs low discipline outcomes',
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      const _StatusPill(
+                        label: 'Active',
+                        color: AppColors.profitGreen,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChooseExchangeSheet extends StatelessWidget {
+  const _ChooseExchangeSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 34,
+                  height: 3,
+                  decoration: const BoxDecoration(
+                    color: AppColors.borderLight,
+                    borderRadius: AppRadius.pillRadius,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Choose an exchange', style: AppTypography.h3),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              Text(
+                'Choose your preferred exchange to start trading.',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const Text('Select an option', style: AppTypography.bodyMedium),
+              const SizedBox(height: AppSpacing.sm),
+              _ExchangeChoiceRow(
+                exchange: 'bybit',
+                label: 'Bybit',
+                onTap: () => Navigator.pop(context, 'bybit'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ExchangeChoiceRow(
+                exchange: 'binance',
+                label: 'Binance',
+                onTap: () => Navigator.pop(context, 'binance'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExchangeChoiceRow extends StatelessWidget {
+  const _ExchangeChoiceRow({
+    required this.exchange,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String exchange;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isBinance = exchange == 'binance';
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.cardRadius,
+      child: Container(
+        padding: AppSpacing.cardPadding,
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: AppRadius.cardRadius,
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color:
+                    isBinance ? const Color(0xFFF3BA2F) : AppColors.textPrimary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isBinance
+                    ? Icons.auto_awesome_rounded
+                    : Icons.trending_up_rounded,
+                color: isBinance ? AppColors.textPrimary : Colors.white,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Text(label, style: AppTypography.bodyMedium)),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.child,
@@ -1723,60 +1725,24 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _EmptyCurrentTrades extends StatelessWidget {
-  const _EmptyCurrentTrades();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.cardPaddingLg,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: AppRadius.cardRadiusLg,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.inventory_2_outlined,
-            size: 42,
-            color: AppColors.textDisabled,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'No activity yet',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _NewTradeButton extends StatelessWidget {
   const _NewTradeButton({required this.onPressed});
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: AppSpacing.screenH,
-      child: SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: FilledButton.icon(
-          onPressed: onPressed,
-          icon: const Icon(Icons.add_rounded, size: 20),
-          label: const Text('New Trade'),
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF0057FF),
-            foregroundColor: Colors.white,
-            textStyle: AppTypography.buttonLg,
-            shape: const StadiumBorder(),
-          ),
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: const Text('New Trade'),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF0057FF),
+          foregroundColor: Colors.white,
+          textStyle: AppTypography.buttonLg,
+          shape: const StadiumBorder(),
         ),
       ),
     );
@@ -1894,12 +1860,4 @@ Color _guardrailColor(String? status) {
     'moderate' => AppColors.warningAmber,
     _ => AppColors.profitGreen,
   };
-}
-
-int _exchangeCount(List<Position> positions) {
-  final exchanges = positions
-      .map((position) => position.exchange.trim().toLowerCase())
-      .where((exchange) => exchange.isNotEmpty)
-      .toSet();
-  return exchanges.isEmpty ? 1 : exchanges.length;
 }

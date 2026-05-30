@@ -64,7 +64,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 title: 'No trades yet',
                 subtitle:
                     'Validated Poise trades and synced exchange trades will appear here.',
-                ctaLabel: 'New Trade',
+                ctaLabel: 'New trade',
                 onCtaTap: () => context.go(Routes.trade),
               );
             }
@@ -88,27 +88,24 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       sliver: SliverToBoxAdapter(
                         child: PEmptyState(
                           title: _tab == _OrdersTab.open
-                              ? 'No open trades'
+                              ? 'No active trades'
                               : 'No trade history yet',
                           subtitle: _tab == _OrdersTab.open
-                              ? 'Pending and partially filled trades will appear here.'
-                              : 'Filled, cancelled, and rejected trades will appear here.',
+                              ? 'Open, submitted, and pending trades will appear here.'
+                              : 'Partial, closed, cancelled, and rejected trades will appear here.',
                         ),
                       ),
                     )
                   else
                     SliverPadding(
                       padding: AppSpacing.screenPadding.copyWith(top: 0),
-                      sliver: SliverList.separated(
-                        itemCount: visible.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, index) => _OrderCard(
-                          order: visible[index],
-                          onTap: () => Navigator.of(context).push(
+                      sliver: SliverToBoxAdapter(
+                        child: _OrdersList(
+                          tab: _tab,
+                          orders: visible,
+                          onTap: (order) => Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  _OrderDetailsScreen(order: visible[index]),
+                              builder: (_) => _OrderDetailsScreen(order: order),
                             ),
                           ),
                         ),
@@ -131,8 +128,12 @@ enum _OrdersTab {
 
   bool matches(Order order) {
     final status = order.status.toLowerCase();
-    final isOpen =
-        status == 'pending' || status == 'submitted' || status == 'partial';
+    final isOpen = status == 'open' ||
+        status == 'pending' ||
+        status == 'submitted' ||
+        status == 'new' ||
+        status == 'accepted' ||
+        status == 'working';
     return this == _OrdersTab.open ? isOpen : !isOpen;
   }
 }
@@ -152,7 +153,7 @@ class _OrdersHeader extends StatelessWidget {
         children: [
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Open trades, fills, and exchange-synced history',
+            'Track active positions and review closed trades across Poise and synced exchanges.',
             style:
                 AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
           ),
@@ -161,7 +162,7 @@ class _OrdersHeader extends StatelessWidget {
             segments: const [
               ButtonSegment(
                 value: _OrdersTab.open,
-                label: Text('Open'),
+                label: Text('Active Trades'),
               ),
               ButtonSegment(
                 value: _OrdersTab.history,
@@ -172,8 +173,65 @@ class _OrdersHeader extends StatelessWidget {
             onSelectionChanged: (selection) => onTabChanged(selection.first),
           ),
           const SizedBox(height: AppSpacing.md),
+          Text(
+            tab == _OrdersTab.open ? 'Active positions' : 'History',
+            style: AppTypography.h3,
+          ),
+          const SizedBox(height: AppSpacing.md),
         ],
       ),
+    );
+  }
+}
+
+class _OrdersList extends StatelessWidget {
+  const _OrdersList({
+    required this.tab,
+    required this.orders,
+    required this.onTap,
+  });
+
+  final _OrdersTab tab;
+  final List<Order> orders;
+  final ValueChanged<Order> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tab == _OrdersTab.open) {
+      return Column(
+        children: [
+          for (final order in orders) ...[
+            _OrderCard(order: order, onTap: () => onTap(order)),
+            if (order != orders.last) const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      );
+    }
+
+    final grouped = <String, List<Order>>{};
+    for (final order in orders) {
+      grouped
+          .putIfAbsent(_historyDateLabel(order.createdAt), () => [])
+          .add(order);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final entry in grouped.entries) ...[
+          Padding(
+            padding: const EdgeInsets.only(
+              top: AppSpacing.xs,
+              bottom: AppSpacing.sm,
+            ),
+            child: Text(entry.key, style: AppTypography.label),
+          ),
+          for (final order in entry.value) ...[
+            _OrderCard(order: order, onTap: () => onTap(order)),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      ],
     );
   }
 }
@@ -185,12 +243,11 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sideColor = order.side.toLowerCase() == 'buy'
-        ? AppColors.profitGreen
-        : AppColors.lossRed;
+    final sideLabel = _sideLabel(order.side);
+    final sideColor =
+        sideLabel == 'Long' ? AppColors.profitGreen : AppColors.lossRed;
     final statusColor = _statusColor(order.status);
-    final price =
-        order.price == null ? 'Market' : '\$${order.price!.toStringAsFixed(2)}';
+    final pnl = _orderPnl(order);
 
     return InkWell(
       onTap: onTap,
@@ -208,66 +265,63 @@ class _OrderCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    order.symbol,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.h4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sideLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.label.copyWith(color: sideColor),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        order.symbol,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                _Pill(label: order.status.toUpperCase(), color: statusColor),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                _Pill(label: order.side.toUpperCase(), color: sideColor),
-                const SizedBox(width: AppSpacing.xs),
-                _Pill(
-                  label: order.exchange.toUpperCase(),
-                  color: AppColors.textSecondary,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                _Pill(
-                  label: order.source == 'external' ? 'EXTERNAL' : 'POISE',
-                  color: AppColors.accent,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  order.orderType.toUpperCase(),
-                  style: AppTypography.bodySm.copyWith(
-                    color: AppColors.textSecondary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PnL',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        pnl == null ? '-' : _money(pnl, signed: true),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.label.copyWith(
+                          color: pnl == null
+                              ? AppColors.textSecondary
+                              : AppColors.pnlColor(pnl),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                    child: _Metric(
-                        label: 'Qty',
-                        value: order.quantity.toStringAsFixed(4))),
-                Expanded(child: _Metric(label: 'Price', value: price)),
-                Expanded(
-                    child: _Metric(
-                        label:
-                            order.source == 'external' ? 'Exchange SL' : 'SL',
-                        value: order.source == 'external'
-                            ? order.slPrice?.toStringAsFixed(2) ??
-                                'Pending sync'
-                            : order.slPrice?.toStringAsFixed(2) ?? '-')),
-              ],
-            ),
-            if (order.source == 'external') ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Opened on ${order.exchange.toUpperCase()} and monitored by Poise.',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.textSecondary,
+                _Pill(
+                  label: _statusLabel(order.status),
+                  color: statusColor,
                 ),
-              ),
-            ],
+                const SizedBox(width: AppSpacing.xs),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textTertiary,
+                  size: 20,
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -567,6 +621,8 @@ class _InsightsContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+        const Text('Behavioral insights', style: AppTypography.bodyLg),
+        const SizedBox(height: AppSpacing.md),
         GridView.count(
           crossAxisCount: 2,
           childAspectRatio: 2.2,
@@ -620,6 +676,31 @@ class _AiSummaryCard extends StatelessWidget {
               color: AppColors.textSecondary,
               height: 1.45,
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.go(
+                  Routes.ai,
+                  extra:
+                      'Explain this trade insight in plain language and tell me what I should improve next: ${insights.aiSummary}',
+                ),
+                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                label: const Text('Chat with Poise AI'),
+              ),
+              TextButton.icon(
+                onPressed: () => context.go(
+                  Routes.ai,
+                  extra:
+                      'Explain this better with concrete trading discipline actions: ${insights.aiSummary}',
+                ),
+                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                label: const Text('Explain better'),
+              ),
+            ],
           ),
         ],
       ),
@@ -775,31 +856,6 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 2),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(value, maxLines: 1, style: AppTypography.numericSm),
-        ),
-      ],
-    );
-  }
-}
-
 class _Pill extends StatelessWidget {
   const _Pill({required this.label, required this.color});
   final String label;
@@ -878,7 +934,7 @@ class _NewTradeButton extends StatelessWidget {
         child: FilledButton.icon(
           onPressed: onPressed,
           icon: const Icon(Icons.add_rounded, size: 26),
-          label: const Text('New Trade'),
+          label: const Text('New trade'),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF0057FF),
             foregroundColor: Colors.white,
@@ -904,7 +960,9 @@ Color _statusColor(String status) {
   if (normalized.contains('filled') || normalized.contains('open')) {
     return AppColors.profitGreen;
   }
-  if (normalized.contains('pending') || normalized.contains('new')) {
+  if (normalized.contains('partial') ||
+      normalized.contains('pending') ||
+      normalized.contains('new')) {
     return AppColors.warningAmber;
   }
   if (normalized.contains('cancel')) return AppColors.statusCancelled;
@@ -912,4 +970,34 @@ Color _statusColor(String status) {
     return AppColors.lossRed;
   }
   return AppColors.textSecondary;
+}
+
+String _statusLabel(String status) {
+  final normalized = status.toLowerCase();
+  if (normalized.contains('partial')) return 'Partial';
+  if (normalized.contains('closed') || normalized.contains('filled')) {
+    return 'Closed';
+  }
+  if (normalized.contains('cancel')) return 'Cancelled';
+  if (normalized.contains('reject')) return 'Rejected';
+  return 'Open';
+}
+
+String _sideLabel(String side) {
+  final normalized = side.toLowerCase();
+  return normalized == 'buy' || normalized == 'long' ? 'Long' : 'Short';
+}
+
+double? _orderPnl(Order order) => order.unrealizedPnl ?? order.realizedPnl;
+
+String _historyDateLabel(String raw) {
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return raw;
+  final date = DateTime(parsed.year, parsed.month, parsed.day);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  if (date == today) return 'Today';
+  if (date == yesterday) return 'Yesterday';
+  return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }

@@ -95,16 +95,6 @@ GoRouter appRouter(Ref ref) {
                 _fadeTransition(state, const HomeScreen()),
           ),
           GoRoute(
-            path: Routes.trade,
-            pageBuilder: (context, state) =>
-                _fadeTransition(state, const TradeEntryScreen()),
-          ),
-          GoRoute(
-            path: Routes.tradeValidation,
-            pageBuilder: (context, state) =>
-                _slideTransition(state, const TradeValidationScreen()),
-          ),
-          GoRoute(
             path: Routes.ai,
             pageBuilder: (context, state) => _fadeTransition(
               state,
@@ -127,6 +117,22 @@ GoRouter appRouter(Ref ref) {
                 _slideTransition(state, const ProfileScreen()),
           ),
         ],
+      ),
+
+      GoRoute(
+        path: Routes.trade,
+        pageBuilder: (context, state) => _slideTransition(
+          state,
+          TradeEntryScreen(
+            initialExchange:
+                state.extra is String ? state.extra as String : null,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: Routes.tradeValidation,
+        pageBuilder: (context, state) =>
+            _slideTransition(state, const TradeValidationScreen()),
       ),
 
       GoRoute(

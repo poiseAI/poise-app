@@ -772,13 +772,15 @@ class ExchangeConnectionsScreen extends StatelessWidget {
         ),
         centerTitle: false,
         title: Text(fromOnboarding ? 'Connect exchange' : ''),
-        actions: [
-          TextButton(
-            onPressed: () =>
-                context.canPop() ? context.pop() : context.go(exitRoute),
-            child: const Text('Skip'),
-          ),
-        ],
+        actions: fromOnboarding
+            ? [
+                TextButton(
+                  onPressed: () =>
+                      context.canPop() ? context.pop() : context.go(exitRoute),
+                  child: const Text('Skip'),
+                ),
+              ]
+            : null,
       ),
       body: SafeArea(
         top: false,
@@ -844,7 +846,7 @@ class _ExchangeConnectionsSectionState
         return ListView(
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
           children: [
-            const Text('Exchange connections', style: AppTypography.h2),
+            const Text('Connect your exchange', style: AppTypography.h2),
             const SizedBox(height: AppSpacing.xs),
             Text(
               activeConnections == 0
