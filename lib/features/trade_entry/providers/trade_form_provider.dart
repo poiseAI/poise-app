@@ -205,13 +205,13 @@ class TradeForm extends _$TradeForm {
       );
 
   void setTakeProfit2(double? price) => state = state.copyWith(
-        takeProfit2: price,
+        takeProfit2: price ?? (state.takeProfit2 == null ? null : 0),
         exitPlanTouched: true,
         validation: null,
       );
 
   void setTakeProfit3(double? price) => state = state.copyWith(
-        takeProfit3: price,
+        takeProfit3: price ?? (state.takeProfit3 == null ? null : 0),
         exitPlanTouched: true,
         validation: null,
       );
@@ -467,8 +467,8 @@ class TradeForm extends _$TradeForm {
     final sl = state.slPrice;
     if (sl == null || sl <= 0) return 'Stop loss is required.';
     final tp1 = state.takeProfit1;
-    final tp2 = state.takeProfit2;
-    final tp3 = state.takeProfit3;
+    final tp2 = _positiveOrNull(state.takeProfit2);
+    final tp3 = _positiveOrNull(state.takeProfit3);
     if (state.side == OrderSide.long) {
       if (sl >= entryPrice) {
         return 'For a long trade, stop loss must be below entry.';
@@ -523,8 +523,8 @@ class TradeForm extends _$TradeForm {
       'quantity': quantity,
       'stop_loss': state.slPrice,
       'take_profit_1': state.takeProfit1,
-      'take_profit_2': state.takeProfit2,
-      'take_profit_3': state.takeProfit3,
+      'take_profit_2': _positiveOrNull(state.takeProfit2),
+      'take_profit_3': _positiveOrNull(state.takeProfit3),
       'auto_stop_loss_progression': state.autoStopLossProgression,
     };
   }
@@ -597,8 +597,8 @@ class TradeForm extends _$TradeForm {
     final entry = entryPrice;
     final tps = [
       state.takeProfit1,
-      state.takeProfit2,
-      state.takeProfit3,
+      _positiveOrNull(state.takeProfit2),
+      _positiveOrNull(state.takeProfit3),
     ].whereType<double>();
     final sl = state.slPrice;
     final possibleLoss =
@@ -711,6 +711,11 @@ double _maxAllowedLeverage(TradingSymbol? symbol, TradePreflight? preflight) {
   final ruleMax = preflight?.maxLeverage;
   if (ruleMax == null || ruleMax <= 0) return symbolMax;
   return symbolMax < ruleMax ? symbolMax : ruleMax;
+}
+
+double? _positiveOrNull(double? value) {
+  if (value == null || value <= 0) return null;
+  return value;
 }
 
 bool _requiresExchangeConnection(TradePreflight? preflight) {

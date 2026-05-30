@@ -69,6 +69,7 @@ class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         backgroundColor: AppColors.bgPrimary,
+        centerTitle: false,
         leading: IconButton(
           onPressed: () => context.go(Routes.home),
           icon: const Icon(Icons.arrow_back_rounded),
@@ -790,59 +791,91 @@ class _TradeTpSlPanel extends StatelessWidget {
       children: [
         const Text('Take Profit (TP)', style: AppTypography.bodyMedium),
         const SizedBox(height: AppSpacing.sm),
-        _TpCard(
-          level: 1,
-          value: form.takeProfit1,
-          entry: entry,
-          side: form.side,
-          leverage: form.leverage,
-          margin: notifier.marginAmount,
-          onChanged: notifier.setTakeProfit1,
-        ),
-        if (form.takeProfit2 != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          _TpCard(
-            level: 2,
-            value: form.takeProfit2,
-            entry: entry,
-            side: form.side,
-            leverage: form.leverage,
-            margin: notifier.marginAmount,
-            onChanged: notifier.setTakeProfit2,
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: AppColors.borderLight),
           ),
-        ],
-        if (form.takeProfit3 != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          _TpCard(
-            level: 3,
-            value: form.takeProfit3,
-            entry: entry,
-            side: form.side,
-            leverage: form.leverage,
-            margin: notifier.marginAmount,
-            onChanged: notifier.setTakeProfit3,
-            roiMode: true,
+          child: Column(
+            children: [
+              _TpCard(
+                level: 1,
+                value: form.takeProfit1,
+                entry: entry,
+                side: form.side,
+                leverage: form.leverage,
+                margin: notifier.marginAmount,
+                onChanged: notifier.setTakeProfit1,
+              ),
+              if (form.takeProfit2 != null) ...[
+                const SizedBox(height: 28),
+                _TpCard(
+                  level: 2,
+                  value: form.takeProfit2,
+                  entry: entry,
+                  side: form.side,
+                  leverage: form.leverage,
+                  margin: notifier.marginAmount,
+                  onChanged: notifier.setTakeProfit2,
+                ),
+              ],
+              if (form.takeProfit3 != null) ...[
+                const SizedBox(height: 28),
+                _TpCard(
+                  level: 3,
+                  value: form.takeProfit3,
+                  entry: entry,
+                  side: form.side,
+                  leverage: form.leverage,
+                  margin: notifier.marginAmount,
+                  onChanged: notifier.setTakeProfit3,
+                  roiMode: true,
+                ),
+              ],
+              if (form.takeProfit3 == null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _AddTpButton(
+                  label: form.takeProfit2 == null ? 'Add TP2' : 'Add TP3',
+                  onPressed: () {
+                    final defaultPrice = entry <= 0
+                        ? 0.0
+                        : _roundPrice(
+                            entry *
+                                _tpMultiplier(
+                                  form.side,
+                                  form.takeProfit2 == null ? 2 : 3,
+                                ),
+                          );
+                    if (form.takeProfit2 == null) {
+                      notifier.setTakeProfit2(defaultPrice);
+                    } else {
+                      notifier.setTakeProfit3(defaultPrice);
+                    }
+                  },
+                ),
+              ],
+            ],
           ),
-        ],
-        const SizedBox(height: AppSpacing.sm),
-        _AddTpButton(
-          label: form.takeProfit2 == null ? 'Add TP2' : 'Add TP3',
-          onPressed: entry <= 0
-              ? null
-              : () {
-                  if (form.takeProfit2 == null) {
-                    notifier.setTakeProfit2(
-                      _roundPrice(entry * _tpMultiplier(form.side, 2)),
-                    );
-                  } else if (form.takeProfit3 == null) {
-                    notifier.setTakeProfit3(
-                      _roundPrice(entry * _tpMultiplier(form.side, 3)),
-                    );
-                  }
-                },
         ),
         const SizedBox(height: 28),
-        const Text('Stop Loss (SL)', style: AppTypography.bodyMedium),
+        Row(
+          children: [
+            const Expanded(
+              child: Text('Stop Loss (SL)', style: AppTypography.bodyMedium),
+            ),
+            SizedBox(
+              width: 122,
+              child: _SegmentedTabs(
+                tabs: [
+                  (label: 'Price', active: true, onTap: () {}),
+                  (label: '%Loss', active: false, onTap: () {}),
+                ],
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.sm),
         _SlField(
           value: form.slPrice,
@@ -1387,58 +1420,50 @@ class _TpCard extends StatelessWidget {
         ? 0.0
         : ((value! - entry).abs() / entry) * 100;
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Text('TP $level', style: AppTypography.bodyMedium),
-              const Spacer(),
-              SizedBox(
-                width: 122,
-                child: _SegmentedTabs(
-                  tabs: [
-                    (label: 'Price', active: !roiMode, onTap: () {}),
-                    (label: '%ROI', active: roiMode, onTap: () {}),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _GreenPriceField(
-            value: value,
-            suffix: roiMode ? '%' : null,
-            onChanged: onChanged,
-          ),
-          if (value != null && entry > 0 && margin > 0) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE9FBEF),
-                borderRadius: AppRadius.cardRadius,
-                border: Border.all(color: const Color(0xFF85E0A3)),
-              ),
-              child: Column(
-                children: [
-                  _CalcRow('ROI on your margin', '+${_formatPct(roi)}'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _CalcRow('Price move needed', '+${_formatPct(move)}'),
-                  const Divider(height: 20, color: Color(0xFFB8EACB)),
-                  _CalcRow('You take home', '+${_money(profit)}', bold: true),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text('TP $level', style: AppTypography.bodyMedium),
+            const Spacer(),
+            SizedBox(
+              width: 122,
+              child: _SegmentedTabs(
+                tabs: [
+                  (label: 'Price', active: !roiMode, onTap: () {}),
+                  (label: '%ROI', active: roiMode, onTap: () {}),
                 ],
               ),
             ),
           ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _GreenPriceField(
+          value: value,
+          suffix: roiMode ? '%' : null,
+          onChanged: onChanged,
+        ),
+        if (value != null && value! > 0 && entry > 0 && margin > 0) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE9FBEF),
+              borderRadius: AppRadius.cardRadius,
+              border: Border.all(color: const Color(0xFF85E0A3)),
+            ),
+            child: Column(
+              children: [
+                _CalcRow('ROI on your margin', '+${_formatPct(roi)}'),
+                const SizedBox(height: AppSpacing.sm),
+                _CalcRow('Price move needed', '+${_formatPct(move)}'),
+                const Divider(height: 20, color: Color(0xFFB8EACB)),
+                _CalcRow('You take home', '+${_money(profit)}', bold: true),
+              ],
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -1521,7 +1546,9 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
   void initState() {
     super.initState();
     _ctrl = TextEditingController(
-      text: widget.value == null ? '' : _price(widget.value!),
+      text: widget.value == null || widget.value! <= 0
+          ? ''
+          : _price(widget.value!),
     );
   }
 
@@ -1529,7 +1556,8 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
   void didUpdateWidget(covariant _CompactNumberField oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value == widget.value) return;
-    final next = widget.value == null ? '' : _price(widget.value!);
+    final next =
+        widget.value == null || widget.value! <= 0 ? '' : _price(widget.value!);
     if (_ctrl.text == next) return;
     _ctrl.value = TextEditingValue(
       text: next,
@@ -1545,6 +1573,7 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
 
   @override
   Widget build(BuildContext context) {
+    final isEmpty = widget.value == null || widget.value! <= 0;
     return TextField(
       controller: _ctrl,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1553,8 +1582,10 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
       ],
       style: AppTypography.body,
       decoration: InputDecoration(
-        hintText: widget.hint,
-        prefixText: widget.prefix,
+        hintText: isEmpty && widget.prefix != null
+            ? '${widget.prefix}${widget.hint}'
+            : widget.hint,
+        prefixText: isEmpty ? null : widget.prefix,
         suffixText: widget.suffix,
         hintStyle: AppTypography.body.copyWith(color: AppColors.textDisabled),
         filled: true,
@@ -1586,24 +1617,85 @@ class _AddTpButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const color = Color(0xFF0057FF);
+    final enabled = onPressed != null;
     return SizedBox(
       width: double.infinity,
       height: 44,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: const Icon(Icons.add_rounded, size: 20),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFF0057FF),
-          side: BorderSide(
-            color: const Color(0xFF0057FF).withValues(alpha: 0.45),
-            style: BorderStyle.solid,
+      child: CustomPaint(
+        painter: _DashedRoundedBorderPainter(
+          color: color.withValues(alpha: enabled ? 0.45 : 0.18),
+          radius: 22,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: AppRadius.pillRadius,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: AppRadius.pillRadius,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_rounded,
+                  size: 20,
+                  color: color.withValues(alpha: enabled ? 1 : 0.35),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  label,
+                  style: AppTypography.button.copyWith(
+                    color: color.withValues(alpha: enabled ? 1 : 0.35),
+                  ),
+                ),
+              ],
+            ),
           ),
-          shape: const StadiumBorder(),
-          textStyle: AppTypography.button,
         ),
       ),
     );
+  }
+}
+
+class _DashedRoundedBorderPainter extends CustomPainter {
+  const _DashedRoundedBorderPainter({
+    required this.color,
+    required this.radius,
+  });
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(0.8),
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      const dash = 4.0;
+      const gap = 5.0;
+      while (distance < metric.length) {
+        canvas.drawPath(
+          metric.extractPath(distance, distance + dash),
+          paint,
+        );
+        distance += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRoundedBorderPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }
 
@@ -2187,26 +2279,33 @@ String? _preflightNotice(TradeFormState form) {
   final preflight = form.preflight;
   if (preflight == null || preflight.allowed) return null;
   final reason = (preflight.blockingReason ?? '').toLowerCase();
-  if (reason.contains('daily') &&
-      reason.contains('loss') &&
-      reason.contains('trade')) {
+
+  if (_isExchangeConnectionBlock(reason)) return null;
+
+  final tradeLimitReached = preflight.maxTradesPerDay > 0 &&
+      preflight.tradesToday >= preflight.maxTradesPerDay;
+  final lossLimitReached = preflight.dailyLossLimitUsd > 0 &&
+      preflight.dailyAvailableBalanceUsd <= 0 &&
+      reason.contains('daily') &&
+      reason.contains('loss');
+
+  if (tradeLimitReached && lossLimitReached) {
     return 'Your daily trade limit and loss limit have both been reached. Proceeding will log this trade as a rule violation.';
   }
-  if (reason.contains('loss')) {
-    final limit = preflight.dailyLossLimitUsd > 0
-        ? _money(preflight.dailyLossLimitUsd)
-        : 'your daily loss limit';
-    return 'Your daily loss limit of $limit has been reached. Proceeding will log this trade as a rule violation.';
-  }
-  if (reason.contains('trade')) {
+  if (tradeLimitReached &&
+      (reason.contains('trade') || reason.contains('trades per day'))) {
     return 'You\'ve reached your daily trade limit (${preflight.tradesToday}/${preflight.maxTradesPerDay}). Proceeding will log this trade as a rule violation.';
   }
-  if (reason.contains('exchange') ||
-      reason.contains('api key') ||
-      reason.contains('connection')) {
-    return null;
+  if (lossLimitReached) {
+    return 'Your daily loss limit of ${_money(preflight.dailyLossLimitUsd)} has been reached. Proceeding will log this trade as a rule violation.';
   }
   return preflight.blockingReason;
+}
+
+bool _isExchangeConnectionBlock(String reason) {
+  return reason.contains('exchange') ||
+      reason.contains('api key') ||
+      reason.contains('connection');
 }
 
 String _normalizeExchange(String? value) {
