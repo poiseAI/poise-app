@@ -49,7 +49,7 @@ class SymbolPicker extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: const Color(0xFFD0D5DD)),
+            border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(
             children: [
@@ -161,7 +161,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
+            borderRadius: AppRadius.cardRadiusLg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -185,7 +185,7 @@ class _SymbolChooserSheetState extends ConsumerState<_SymbolChooserSheet> {
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 decoration: const InputDecoration(
-                  hintText: 'Search pairs..',
+                  hintText: 'Search pairs...',
                   prefixIcon: Icon(Icons.search_rounded),
                   filled: true,
                   fillColor: AppColors.bgCard,

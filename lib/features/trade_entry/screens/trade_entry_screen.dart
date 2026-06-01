@@ -152,7 +152,7 @@ class _TradeEntryScreenState extends ConsumerState<TradeEntryScreen> {
                 enabled: canReview,
                 loading: form.isValidating,
                 message: canReview
-                    ? 'Complete all fields above to review trade'
+                    ? null
                     : formError ?? 'Complete all fields above to review trade',
                 onPressed: () async {
                   HapticFeedback.mediumImpact();
@@ -257,7 +257,7 @@ class _SignalImporterSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           decoration: const BoxDecoration(
             color: AppColors.bgSecondary,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: AppRadius.sheetRadius,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -265,9 +265,9 @@ class _SignalImporterSheet extends StatelessWidget {
               Container(
                 width: 42,
                 height: 4,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.borderLight,
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: AppRadius.pillRadius,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -693,8 +693,14 @@ class _TradeAmountPanel extends StatelessWidget {
         ? form.quantity
         : form.marginValue;
     final entry = notifier.entryPrice;
-    final quantity = notifier.quantity;
-    final notional = quantity * entry;
+    final estimatedQuantity = entry <= 0
+        ? 0.0
+        : form.amountInputMode == AmountInputMode.quantity
+            ? form.quantity
+            : (notifier.marginAmount * form.leverage) / entry;
+    final notional = form.amountInputMode == AmountInputMode.quantity
+        ? form.quantity * entry
+        : notifier.marginAmount * form.leverage;
 
     return _LabeledBlock(
       label: 'Trade amount',
@@ -752,7 +758,7 @@ class _TradeAmountPanel extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    '~ ${_compactQuantity(quantity)} ${form.symbol?.baseAsset ?? ''}',
+                    '~ ${_compactQuantity(estimatedQuantity)} ${form.symbol?.baseAsset ?? ''}',
                     style: AppTypography.bodySm.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -1029,8 +1035,8 @@ class _TradeReviewBar extends StatelessWidget {
                 : const SizedBox.shrink(),
             label: Text(loading ? 'Reviewing...' : 'Review trade summary'),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF0057FF),
-              disabledBackgroundColor: const Color(0xFFF2F4F7),
+              backgroundColor: AppColors.primary,
+              disabledBackgroundColor: AppColors.bgCardElevated,
               foregroundColor: Colors.white,
               disabledForegroundColor: AppColors.textDisabled,
               textStyle: AppTypography.button,
@@ -1110,7 +1116,7 @@ class _SelectField extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: const Color(0xFFD0D5DD)),
+            border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(
             children: [
@@ -1154,7 +1160,8 @@ class _EntryTypeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? const Color(0xFFEAF2FF) : AppColors.bgCard,
+      color:
+          active ? AppColors.primary.withValues(alpha: 0.08) : AppColors.bgCard,
       borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: onTap,
@@ -1166,7 +1173,7 @@ class _EntryTypeCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: AppRadius.cardRadius,
             border: Border.all(
-              color: active ? const Color(0xFF0057FF) : AppColors.borderLight,
+              color: active ? AppColors.primary : AppColors.borderLight,
               width: active ? 1.4 : 1,
             ),
           ),
@@ -1183,9 +1190,7 @@ class _EntryTypeCard extends StatelessWidget {
                         ? Icons.radio_button_checked_rounded
                         : Icons.radio_button_unchecked_rounded,
                     size: 18,
-                    color: active
-                        ? const Color(0xFF0057FF)
-                        : AppColors.textDisabled,
+                    color: active ? AppColors.primary : AppColors.textDisabled,
                   ),
                 ],
               ),
@@ -1224,16 +1229,19 @@ class _AmountInputField extends StatefulWidget {
 
 class _AmountInputFieldState extends State<_AmountInputField> {
   late final TextEditingController _ctrl;
+  late final FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: _amountText(widget.value));
+    _focusNode = FocusNode();
   }
 
   @override
   void didUpdateWidget(covariant _AmountInputField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_focusNode.hasFocus && oldWidget.mode == widget.mode) return;
     if (oldWidget.value == widget.value && oldWidget.mode == widget.mode) {
       return;
     }
@@ -1247,6 +1255,7 @@ class _AmountInputFieldState extends State<_AmountInputField> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _ctrl.dispose();
     super.dispose();
   }
@@ -1255,13 +1264,14 @@ class _AmountInputFieldState extends State<_AmountInputField> {
   Widget build(BuildContext context) {
     return TextField(
       controller: _ctrl,
+      focusNode: _focusNode,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
       ],
       style: AppTypography.h2.copyWith(fontWeight: FontWeight.w700),
       decoration: InputDecoration(
-        hintText: widget.mode == AmountInputMode.margin ? '\$0.00' : '0.00',
+        hintText: '0.00',
         prefixText: widget.mode == AmountInputMode.margin ? '\$' : null,
         hintStyle: AppTypography.h2.copyWith(color: AppColors.textDisabled),
         filled: true,
@@ -1270,11 +1280,11 @@ class _AmountInputFieldState extends State<_AmountInputField> {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         enabledBorder: const OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: Color(0xFFD0D5DD)),
+          borderSide: BorderSide(color: AppColors.borderLight),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: Color(0xFF0057FF), width: 1.4),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.4),
         ),
       ),
       onChanged: (value) => widget.onChanged(double.tryParse(value)),
@@ -1350,11 +1360,11 @@ class _LeverageValueFieldState extends State<_LeverageValueField> {
             const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         enabledBorder: const OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: Color(0xFFD0D5DD)),
+          borderSide: BorderSide(color: AppColors.borderLight),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: Color(0xFF0057FF), width: 1.4),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.4),
         ),
       ),
       onChanged: (value) {
@@ -1448,16 +1458,21 @@ class _TpCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFE9FBEF),
+              color: AppColors.profitGreen.withValues(alpha: 0.08),
               borderRadius: AppRadius.cardRadius,
-              border: Border.all(color: const Color(0xFF85E0A3)),
+              border: Border.all(
+                color: AppColors.profitGreen.withValues(alpha: 0.35),
+              ),
             ),
             child: Column(
               children: [
                 _CalcRow('ROI on your margin', '+${_formatPct(roi)}'),
                 const SizedBox(height: AppSpacing.sm),
                 _CalcRow('Price move needed', '+${_formatPct(move)}'),
-                const Divider(height: 20, color: Color(0xFFB8EACB)),
+                Divider(
+                  height: 20,
+                  color: AppColors.profitGreen.withValues(alpha: 0.22),
+                ),
                 _CalcRow('You take home', '+${_money(profit)}', bold: true),
               ],
             ),
@@ -1486,8 +1501,8 @@ class _GreenPriceField extends StatelessWidget {
       hint: '1,000',
       prefix: suffix == null ? '\$' : null,
       suffix: suffix,
-      borderColor: const Color(0xFFC7F1D8),
-      focusedBorderColor: const Color(0xFFABEFC6),
+      borderColor: AppColors.profitGreen.withValues(alpha: 0.35),
+      focusedBorderColor: AppColors.profitGreen.withValues(alpha: 0.55),
       onChanged: onChanged,
     );
   }
@@ -1509,8 +1524,9 @@ class _SlField extends StatelessWidget {
     return _CompactNumberField(
       value: value,
       hint: hint,
-      borderColor: const Color(0xFFFAD1D0),
-      focusedBorderColor: const Color(0xFFFDA29B),
+      prefix: '\$',
+      borderColor: AppColors.lossRed.withValues(alpha: 0.35),
+      focusedBorderColor: AppColors.lossRed.withValues(alpha: 0.55),
       onChanged: onChanged,
     );
   }
@@ -1541,10 +1557,12 @@ class _CompactNumberField extends StatefulWidget {
 
 class _CompactNumberFieldState extends State<_CompactNumberField> {
   late final TextEditingController _ctrl;
+  late final FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     _ctrl = TextEditingController(
       text: widget.value == null || widget.value! <= 0
           ? ''
@@ -1555,6 +1573,7 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
   @override
   void didUpdateWidget(covariant _CompactNumberField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_focusNode.hasFocus) return;
     if (oldWidget.value == widget.value) return;
     final next =
         widget.value == null || widget.value! <= 0 ? '' : _price(widget.value!);
@@ -1567,6 +1586,7 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _ctrl.dispose();
     super.dispose();
   }
@@ -1576,6 +1596,7 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
     final isEmpty = widget.value == null || widget.value! <= 0;
     return TextField(
       controller: _ctrl,
+      focusNode: _focusNode,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
@@ -1594,11 +1615,11 @@ class _CompactNumberFieldState extends State<_CompactNumberField> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: widget.borderColor, width: 4),
+          borderSide: BorderSide(color: widget.borderColor, width: 1.2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.cardRadius,
-          borderSide: BorderSide(color: widget.focusedBorderColor, width: 4),
+          borderSide: BorderSide(color: widget.focusedBorderColor, width: 1.5),
         ),
       ),
       onChanged: (value) => widget.onChanged(double.tryParse(value)),
@@ -1617,7 +1638,7 @@ class _AddTpButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF0057FF);
+    const color = AppColors.primary;
     final enabled = onPressed != null;
     return SizedBox(
       width: double.infinity,
@@ -1714,14 +1735,14 @@ class _CalcRow extends StatelessWidget {
           child: Text(
             label,
             style: AppTypography.bodySm.copyWith(
-              color: const Color(0xFF027A48),
+              color: AppColors.profitGreen,
             ),
           ),
         ),
         Text(
           value,
           style: AppTypography.bodySm.copyWith(
-            color: const Color(0xFF027A48),
+            color: AppColors.profitGreen,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
@@ -1739,8 +1760,8 @@ class _TradeAlertBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFFAEB),
+      decoration: BoxDecoration(
+        color: AppColors.warningAmber.withValues(alpha: 0.08),
         borderRadius: AppRadius.cardRadius,
       ),
       child: Row(
@@ -1789,16 +1810,19 @@ class _TradeNumberField extends StatefulWidget {
 
 class _TradeNumberFieldState extends State<_TradeNumberField> {
   late final TextEditingController _ctrl;
+  late final FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: _format(widget.value));
+    _focusNode = FocusNode();
   }
 
   @override
   void didUpdateWidget(covariant _TradeNumberField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_focusNode.hasFocus) return;
     if (oldWidget.value == widget.value) return;
     final nextText = _format(widget.value);
     if (_ctrl.text == nextText) return;
@@ -1810,6 +1834,7 @@ class _TradeNumberFieldState extends State<_TradeNumberField> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _ctrl.dispose();
     super.dispose();
   }
@@ -1823,6 +1848,7 @@ class _TradeNumberFieldState extends State<_TradeNumberField> {
         const SizedBox(height: AppSpacing.xs),
         TextField(
           controller: _ctrl,
+          focusNode: _focusNode,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
@@ -2170,7 +2196,7 @@ class _PickerSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
+            borderRadius: AppRadius.cardRadiusLg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2341,8 +2367,8 @@ String _money(double value) => '\$${value.abs().toStringAsFixed(2)}';
 
 String _price(double value) {
   if (value >= 100) return value.toStringAsFixed(2);
-  if (value >= 1) return value.toStringAsFixed(4);
-  return value.toStringAsFixed(6);
+  if (value >= 1) return _trimFixed(value, 4);
+  return _trimFixed(value, 6);
 }
 
 String _formatPct(num value) {
@@ -2353,8 +2379,15 @@ String _formatPct(num value) {
 String _compactQuantity(double value) {
   if (value <= 0) return '0';
   if (value >= 100) return value.toStringAsFixed(0);
-  if (value >= 1) return value.toStringAsFixed(2);
-  return value.toStringAsFixed(4);
+  if (value >= 1) return _trimFixed(value, 4);
+  if (value >= 0.01) return _trimFixed(value, 6);
+  return _trimFixed(value, 8);
+}
+
+String _trimFixed(double value, int fractionDigits) {
+  final text = value.toStringAsFixed(fractionDigits);
+  final trimmed = text.replaceFirst(RegExp(r'\.?0+$'), '');
+  return trimmed.isEmpty ? '0' : trimmed;
 }
 
 double _pnlFor(

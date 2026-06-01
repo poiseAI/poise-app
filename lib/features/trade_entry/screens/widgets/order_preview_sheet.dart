@@ -38,7 +38,7 @@ class _OrderPreviewSheetState extends ConsumerState<OrderPreviewSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: AppRadius.sheetRadius,
       ),
       child: SafeArea(
         child: Padding(
@@ -100,9 +100,8 @@ class _PreviewBody extends StatelessWidget {
         ('Stop loss', '\$${form.slPrice!.toStringAsFixed(2)}'),
     ];
 
-    final sideColor = form.side == OrderSide.long
-        ? AppColors.profitGreen
-        : AppColors.lossRed;
+    final sideColor =
+        form.side == OrderSide.long ? AppColors.profitGreen : AppColors.lossRed;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -113,9 +112,9 @@ class _PreviewBody extends StatelessWidget {
           child: Container(
             width: 36,
             height: 4,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.borderLight,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: AppRadius.pillRadius,
             ),
           ),
         ),
@@ -184,8 +183,8 @@ class _PreviewBody extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.lossRed.withValues(alpha: 0.08),
               borderRadius: AppRadius.chipRadius,
-              border: Border.all(
-                  color: AppColors.lossRed.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: AppColors.lossRed.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -201,10 +200,7 @@ class _PreviewBody extends StatelessWidget {
                 ),
               ],
             ),
-          )
-              .animate()
-              .slideY(begin: -0.3, end: 0)
-              .fadeIn(duration: 200.ms),
+          ).animate().slideY(begin: -0.3, end: 0).fadeIn(duration: 200.ms),
           const SizedBox(height: AppSpacing.sm),
         ],
         const SizedBox(height: AppSpacing.md),

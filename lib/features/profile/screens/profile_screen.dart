@@ -135,7 +135,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           _SettingsTile(
             icon: Icons.notifications_none_rounded,
-            label: 'Notification',
+            label: 'Notifications',
             onTap: () => context.push(Routes.notificationSettings),
           ),
           _SettingsTile(
@@ -208,10 +208,10 @@ class _SettingsTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Material(
         color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.cardRadius,
           child: Container(
             constraints: const BoxConstraints(minHeight: 60),
             padding: const EdgeInsets.symmetric(
@@ -219,12 +219,12 @@ class _SettingsTile extends StatelessWidget {
               vertical: 14,
             ),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AppRadius.cardRadius,
               border: Border.all(color: AppColors.borderLight),
             ),
             child: Row(
               children: [
-                Icon(icon, color: AppColors.textPrimary, size: 20),
+                Icon(icon, color: AppColors.textSecondary, size: 20),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -233,6 +233,8 @@ class _SettingsTile extends StatelessWidget {
                     children: [
                       Text(
                         label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: AppTypography.bodyLg.copyWith(
                           color: AppColors.textPrimary,
                         ),
@@ -250,6 +252,11 @@ class _SettingsTile extends StatelessWidget {
                       ],
                     ],
                   ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textDisabled,
                 ),
               ],
             ),
@@ -277,15 +284,15 @@ class _ProfileActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.bgPrimary,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         child: Container(
           constraints: const BoxConstraints(minHeight: 58),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.cardRadius,
             border: Border.all(
               color: color == AppColors.lossRed
                   ? AppColors.lossRed.withValues(alpha: 0.28)
@@ -296,9 +303,13 @@ class _ProfileActionTile extends StatelessWidget {
             children: [
               Icon(icon, size: 20, color: color),
               const SizedBox(width: 14),
-              Text(
-                label,
-                style: AppTypography.bodyLg.copyWith(color: color),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyLg.copyWith(color: color),
+                ),
               ),
             ],
           ),
@@ -316,7 +327,7 @@ String? _riskAppetiteSubtitle(WidgetRef ref) {
     final pct = active.maxDailyLossPercent;
     final risk = pct == null
         ? ''
-        : ' • ${pct.toStringAsFixed(pct % 1 == 0 ? 0 : 1)}% risk';
+        : ' - ${pct.toStringAsFixed(pct % 1 == 0 ? 0 : 1)}% risk';
     return '${active.name}$risk';
   }
   if (state is StrategiesError) return 'Could not load current setting';
@@ -1084,16 +1095,16 @@ class _ExchangeConnectionTileState
     final label = _label(widget.exchange);
     return Material(
       color: AppColors.bgSurface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: _loading ? null : widget.onToggle,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.cardRadius,
             border: Border.all(color: AppColors.borderLight),
           ),
           child: Column(
@@ -1133,7 +1144,7 @@ class _ExchangeConnectionTileState
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   else if (_connected) ...[
-                    _ConnectedPill(active: _connected),
+                    Flexible(child: _ConnectedPill(active: _connected)),
                     const SizedBox(width: AppSpacing.xs),
                     Icon(
                       widget.expanded
@@ -1285,6 +1296,8 @@ class _ConnectedPill extends StatelessWidget {
       ),
       child: Text(
         active ? 'Connected' : 'Inactive',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTypography.labelSm.copyWith(color: color),
       ),
     );
@@ -1486,15 +1499,15 @@ class _SettingsActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.bgSurface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         child: Container(
           constraints: const BoxConstraints(minHeight: 58),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.cardRadius,
             border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(
@@ -1575,7 +1588,7 @@ class _TotpTileState extends ConsumerState<_TotpTile> {
       ),
       decoration: BoxDecoration(
         color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Row(
@@ -1928,7 +1941,8 @@ class _PreferenceSwitch extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         decoration: BoxDecoration(
           color: AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.cardRadius,
+          border: Border.all(color: AppColors.borderLight),
         ),
         child: Row(
           children: [
@@ -2081,15 +2095,15 @@ class _PolicyRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.bgSurface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         child: Container(
           constraints: const BoxConstraints(minHeight: 52),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.cardRadius,
             border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(
@@ -2146,7 +2160,7 @@ class _SheetFrame extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(28)),
+            borderRadius: AppRadius.cardRadiusLg,
           ),
           child: SingleChildScrollView(
             child: Column(

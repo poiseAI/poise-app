@@ -24,5 +24,38 @@ void main() {
     expect(position.unrealizedPnl, 312.62);
     expect(position.unrealizedPnlPct, 1.25);
     expect(position.isLocked, isTrue);
+    expect(position.isOpenPosition, isTrue);
+  });
+
+  test('position lifecycle excludes filled or closed exchange rows', () {
+    final filled = Position.fromJson({
+      'id': 'pos-2',
+      'symbol': 'ETHUSDT',
+      'side': 'Buy',
+      'qty': '0',
+      'avgPrice': '3500',
+      'markPrice': '3500',
+      'unrealizedPnl': '0',
+      'status': 'Filled',
+      'closedAt': '2026-05-31T07:02:09Z',
+      'createdAt': '2026-05-31T07:02:09Z',
+    });
+
+    expect(filled.side, 'long');
+    expect(filled.isOpenPosition, isFalse);
+
+    final zeroOpen = Position.fromJson({
+      'id': 'pos-3',
+      'symbol': 'BTCUSDT',
+      'side': 'long',
+      'quantity': 0,
+      'entry_price': 70000,
+      'current_price': 70000,
+      'unrealized_pnl': 0,
+      'status': 'open',
+      'created_at': '2026-05-31T07:02:09Z',
+    });
+
+    expect(zeroOpen.isOpenPosition, isFalse);
   });
 }

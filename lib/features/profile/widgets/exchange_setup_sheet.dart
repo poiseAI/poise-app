@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
@@ -70,7 +71,7 @@ class _ExchangeSetupSheetState extends ConsumerState<_ExchangeSetupSheet> {
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(28)),
+            borderRadius: AppRadius.cardRadiusLg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -162,14 +163,14 @@ class _SetupOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.bgSurface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.cardRadius,
             border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(

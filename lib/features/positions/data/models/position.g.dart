@@ -7,38 +7,46 @@ part of 'position.dart';
 // **************************************************************************
 
 _Position _$PositionFromJson(Map<String, dynamic> json) => _Position(
-      id: json['id'] as String,
-      symbol: json['symbol'] as String,
-      side: json['side'] as String,
-      entryPrice: (_readEntryPrice(json, 'entry_price') as num).toDouble(),
+      id: _readId(json, 'id') as String? ?? '',
+      symbol: _readSymbol(json, 'symbol') as String? ?? '',
+      side: _readSide(json, 'side') as String? ?? 'long',
+      entryPrice:
+          (_readEntryPrice(json, 'entry_price') as num?)?.toDouble() ?? 0.0,
       currentPrice:
-          (_readCurrentPrice(json, 'current_price') as num).toDouble(),
-      quantity: (_readQuantity(json, 'quantity') as num).toDouble(),
+          (_readCurrentPrice(json, 'current_price') as num?)?.toDouble() ?? 0.0,
+      quantity: (_readQuantity(json, 'quantity') as num?)?.toDouble() ?? 0.0,
       source: json['source'] as String? ?? 'external',
-      exchangeOrderId: json['exchange_order_id'] as String?,
+      exchangeOrderId:
+          _readExchangeOrderId(json, 'exchange_order_id') as String?,
       leverage: (json['leverage'] as num?)?.toDouble() ?? 1.0,
       unrealizedPnl:
-          (_readUnrealizedPnl(json, 'unrealized_pnl') as num).toDouble(),
+          (_readUnrealizedPnl(json, 'unrealized_pnl') as num?)?.toDouble() ??
+              0.0,
       unrealizedPnlPct:
           (_readUnrealizedPnlPct(json, 'unrealized_pnl_pct') as num?)
                   ?.toDouble() ??
               0.0,
-      realizedPnl: (json['realized_pnl'] as num?)?.toDouble() ?? 0.0,
-      liquidationPrice: (json['liquidation_price'] as num?)?.toDouble(),
-      marginUsed: (json['margin_used'] as num?)?.toDouble(),
-      remainingQuantity: (json['remaining_quantity'] as num?)?.toDouble(),
-      syncStatus: json['sync_status'] as String? ?? 'synced',
-      lastSyncedAt: json['last_synced_at'] as String?,
-      closedAt: json['closed_at'] as String?,
-      status: json['status'] as String,
+      realizedPnl:
+          (_readRealizedPnl(json, 'realized_pnl') as num?)?.toDouble() ?? 0.0,
+      liquidationPrice:
+          (_readLiquidationPrice(json, 'liquidation_price') as num?)
+              ?.toDouble(),
+      marginUsed: (_readMarginUsed(json, 'margin_used') as num?)?.toDouble(),
+      remainingQuantity:
+          (_readRemainingQuantity(json, 'remaining_quantity') as num?)
+              ?.toDouble(),
+      syncStatus: _readSyncStatus(json, 'sync_status') as String? ?? 'synced',
+      lastSyncedAt: _readLastSyncedAt(json, 'last_synced_at') as String?,
+      closedAt: _readClosedAt(json, 'closed_at') as String?,
+      status: _readStatus(json, 'status') as String? ?? 'open',
       isLocked: _readIsLocked(json, 'is_locked') as bool? ?? false,
-      tpLevels: (json['tp_levels'] as List<dynamic>?)
+      tpLevels: (_readTpLevels(json, 'tp_levels') as List<dynamic>?)
               ?.map((e) => (e as num).toDouble())
               .toList() ??
           const [],
-      slPrice: (json['sl_price'] as num?)?.toDouble(),
+      slPrice: (_readSlPrice(json, 'sl_price') as num?)?.toDouble(),
       exchange: json['exchange'] as String? ?? 'bybit',
-      createdAt: json['created_at'] as String,
+      createdAt: _readCreatedAt(json, 'created_at') as String? ?? '',
     );
 
 Map<String, dynamic> _$PositionToJson(_Position instance) => <String, dynamic>{

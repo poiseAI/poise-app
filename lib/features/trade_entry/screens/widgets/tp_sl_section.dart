@@ -101,10 +101,12 @@ class _PriceField extends StatefulWidget {
 
 class _PriceFieldState extends State<_PriceField> {
   late final TextEditingController _ctrl;
+  late final FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     _ctrl = TextEditingController(
       text: _format(widget.initialValue),
     );
@@ -113,6 +115,7 @@ class _PriceFieldState extends State<_PriceField> {
   @override
   void didUpdateWidget(covariant _PriceField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_focusNode.hasFocus) return;
     if (oldWidget.initialValue == widget.initialValue) return;
     final nextText = _format(widget.initialValue);
     if (_ctrl.text == nextText) return;
@@ -124,6 +127,7 @@ class _PriceFieldState extends State<_PriceField> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _ctrl.dispose();
     super.dispose();
   }
@@ -132,11 +136,12 @@ class _PriceFieldState extends State<_PriceField> {
   Widget build(BuildContext context) {
     return TextField(
       controller: _ctrl,
+      focusNode: _focusNode,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       style: AppTypography.numericSm,
       decoration: InputDecoration(
         labelText: widget.label,
-        hintText: widget.hint ?? '\$1,000',
+        hintText: widget.hint ?? '1,000',
         prefixText: '\$',
         filled: true,
         fillColor: AppColors.bgPrimary,
@@ -156,7 +161,13 @@ class _PriceFieldState extends State<_PriceField> {
   String _format(double? value) {
     if (value == null) return '';
     if (value >= 100) return value.toStringAsFixed(2);
-    if (value >= 1) return value.toStringAsFixed(4);
-    return value.toStringAsFixed(6);
+    if (value >= 1) return _trimFixed(value, 4);
+    return _trimFixed(value, 6);
+  }
+
+  String _trimFixed(double value, int fractionDigits) {
+    final text = value.toStringAsFixed(fractionDigits);
+    final trimmed = text.replaceFirst(RegExp(r'\.?0+$'), '');
+    return trimmed.isEmpty ? '0' : trimmed;
   }
 }

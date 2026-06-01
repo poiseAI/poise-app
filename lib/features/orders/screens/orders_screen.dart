@@ -127,14 +127,7 @@ enum _OrdersTab {
   history;
 
   bool matches(Order order) {
-    final status = order.status.toLowerCase();
-    final isOpen = status == 'open' ||
-        status == 'pending' ||
-        status == 'submitted' ||
-        status == 'new' ||
-        status == 'accepted' ||
-        status == 'working';
-    return this == _OrdersTab.open ? isOpen : !isOpen;
+    return this == _OrdersTab.open ? order.isActiveTrade : !order.isActiveTrade;
   }
 }
 
@@ -159,6 +152,14 @@ class _OrdersHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           SegmentedButton<_OrdersTab>(
+            style: SegmentedButton.styleFrom(
+              backgroundColor: AppColors.bgSurface,
+              selectedBackgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              foregroundColor: AppColors.textSecondary,
+              selectedForegroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.borderLight),
+              textStyle: AppTypography.label,
+            ),
             segments: const [
               ButtonSegment(
                 value: _OrdersTab.open,
@@ -311,7 +312,7 @@ class _OrderCard extends StatelessWidget {
                   ),
                 ),
                 _Pill(
-                  label: _statusLabel(order.status),
+                  label: order.statusLabel,
                   color: statusColor,
                 ),
                 const SizedBox(width: AppSpacing.xs),
@@ -373,6 +374,15 @@ class _OrderDetailsScreenState extends ConsumerState<_OrderDetailsScreen> {
           children: [
             const SizedBox(height: AppSpacing.md),
             SegmentedButton<_OrderDetailTab>(
+              style: SegmentedButton.styleFrom(
+                backgroundColor: AppColors.bgSurface,
+                selectedBackgroundColor:
+                    AppColors.primary.withValues(alpha: 0.1),
+                foregroundColor: AppColors.textSecondary,
+                selectedForegroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.borderLight),
+                textStyle: AppTypography.label,
+              ),
               segments: const [
                 ButtonSegment(
                   value: _OrderDetailTab.info,
@@ -408,7 +418,10 @@ class _TradeInfoTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pnl = order.realizedPnl ?? order.unrealizedPnl;
+    final sideLabel = _sideLabel(order.side);
+    final sideColor =
+        sideLabel == 'Long' ? AppColors.profitGreen : AppColors.lossRed;
+    final pnl = _orderPnl(order);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -416,10 +429,10 @@ class _TradeInfoTab extends StatelessWidget {
           width: double.infinity,
           padding: AppSpacing.cardPadding,
           decoration: BoxDecoration(
-            color: AppColors.profitGreen.withValues(alpha: 0.08),
+            color: sideColor.withValues(alpha: 0.08),
             borderRadius: AppRadius.cardRadius,
             border: Border.all(
-              color: AppColors.profitGreen.withValues(alpha: 0.18),
+              color: sideColor.withValues(alpha: 0.18),
             ),
           ),
           child: Row(
@@ -429,16 +442,14 @@ class _TradeInfoTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Pill(
-                      label: order.side.toUpperCase(),
-                      color: order.side.toLowerCase() == 'buy'
-                          ? AppColors.profitGreen
-                          : AppColors.lossRed,
+                      label: sideLabel.toUpperCase(),
+                      color: sideColor,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(order.symbol, style: AppTypography.h3),
                     const SizedBox(height: AppSpacing.xs),
                     _Pill(
-                      label: order.status.toUpperCase(),
+                      label: order.statusLabel.toUpperCase(),
                       color: _statusColor(order.status),
                     ),
                   ],
@@ -468,7 +479,7 @@ class _TradeInfoTab extends StatelessWidget {
             ),
             _DetailRow(
               label: 'Quantity',
-              value: order.quantity.toStringAsFixed(4),
+              value: _quantity(order.quantity),
             ),
             _DetailRow(
               label: 'Leverage',
@@ -650,16 +661,16 @@ class _AiSummaryCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: AppSpacing.cardPadding,
-      decoration: const BoxDecoration(
-        color: Color(0xFFEFF6FF),
-        borderRadius: AppRadius.cardRadiusLg,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: AppRadius.cardRadius,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome_rounded, color: Color(0xFF0057FF)),
+              const Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 'AI Summary',
@@ -875,6 +886,8 @@ class _Pill extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTypography.label.copyWith(color: color),
       ),
     );
@@ -936,7 +949,7 @@ class _NewTradeButton extends StatelessWidget {
           icon: const Icon(Icons.add_rounded, size: 26),
           label: const Text('New trade'),
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF0057FF),
+            backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             textStyle: AppTypography.buttonLg,
             shape: const StadiumBorder(),
@@ -956,31 +969,33 @@ String _money(double value, {bool signed = false}) {
 }
 
 Color _statusColor(String status) {
-  final normalized = status.toLowerCase();
-  if (normalized.contains('filled') || normalized.contains('open')) {
-    return AppColors.profitGreen;
-  }
+  final normalized = normalizeOrderStatus(status);
   if (normalized.contains('partial') ||
       normalized.contains('pending') ||
-      normalized.contains('new')) {
-    return AppColors.warningAmber;
+      normalized == 'new' ||
+      normalized == 'submitted' ||
+      normalized == 'accepted' ||
+      normalized == 'working' ||
+      normalized == 'created' ||
+      normalized == 'untriggered' ||
+      normalized == 'triggered') {
+    return AppColors.statusPending;
   }
-  if (normalized.contains('cancel')) return AppColors.statusCancelled;
+  if (normalized.contains('filled') || normalized.contains('closed')) {
+    return AppColors.statusFilled;
+  }
+  if (normalized.contains('open') ||
+      normalized == 'active' ||
+      normalized == 'live') {
+    return AppColors.statusOpen;
+  }
+  if (normalized.contains('cancel') || normalized.contains('expire')) {
+    return AppColors.statusCancelled;
+  }
   if (normalized.contains('reject') || normalized.contains('fail')) {
-    return AppColors.lossRed;
+    return AppColors.statusRejected;
   }
   return AppColors.textSecondary;
-}
-
-String _statusLabel(String status) {
-  final normalized = status.toLowerCase();
-  if (normalized.contains('partial')) return 'Partial';
-  if (normalized.contains('closed') || normalized.contains('filled')) {
-    return 'Closed';
-  }
-  if (normalized.contains('cancel')) return 'Cancelled';
-  if (normalized.contains('reject')) return 'Rejected';
-  return 'Open';
 }
 
 String _sideLabel(String side) {
@@ -988,7 +1003,22 @@ String _sideLabel(String side) {
   return normalized == 'buy' || normalized == 'long' ? 'Long' : 'Short';
 }
 
-double? _orderPnl(Order order) => order.unrealizedPnl ?? order.realizedPnl;
+double? _orderPnl(Order order) => order.isActiveTrade
+    ? order.unrealizedPnl ?? order.realizedPnl
+    : order.realizedPnl ?? order.unrealizedPnl;
+
+String _quantity(double value) {
+  if (value <= 0) return '-';
+  if (value >= 100) return value.toStringAsFixed(0);
+  if (value >= 1) return _trimFixed(value, 4);
+  return _trimFixed(value, 8);
+}
+
+String _trimFixed(double value, int fractionDigits) {
+  final text = value.toStringAsFixed(fractionDigits);
+  final trimmed = text.replaceFirst(RegExp(r'\.?0+$'), '');
+  return trimmed.isEmpty ? '0' : trimmed;
+}
 
 String _historyDateLabel(String raw) {
   final parsed = DateTime.tryParse(raw);

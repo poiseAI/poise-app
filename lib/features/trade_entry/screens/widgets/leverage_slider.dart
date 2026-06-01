@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 
@@ -48,19 +49,21 @@ class _LeverageSliderState extends State<LeverageSlider> {
         Row(
           children: [
             Text('Leverage',
-                style:
-                    AppTypography.label.copyWith(color: AppColors.textSecondary)),
+                style: AppTypography.label
+                    .copyWith(color: AppColors.textSecondary)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm, vertical: 2),
               decoration: BoxDecoration(
                 color: AppColors.accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius:
+                    const BorderRadius.all(Radius.circular(AppRadius.sm)),
               ),
               child: Text(
                 '${widget.value.toStringAsFixed(0)}x',
-                style: AppTypography.numericSm.copyWith(color: AppColors.accent),
+                style:
+                    AppTypography.numericSm.copyWith(color: AppColors.accent),
               ),
             ),
           ],
@@ -101,7 +104,8 @@ class _LeverageSliderState extends State<LeverageSlider> {
                       color: widget.value == p
                           ? AppColors.accent.withValues(alpha: 0.12)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(AppRadius.sm)),
                       border: Border.all(
                         color: widget.value == p
                             ? AppColors.accent

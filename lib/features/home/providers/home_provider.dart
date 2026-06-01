@@ -38,11 +38,14 @@ class Home extends _$Home {
 
   void _loadFromCache() {
     final cache = ref.read(localCacheProvider);
-    final positions = cache.getList<Position>(
-      CacheBoxNames.positions,
-      _posKey,
-      Position.fromJson,
-    );
+    final positions = cache
+        .getList<Position>(
+          CacheBoxNames.positions,
+          _posKey,
+          Position.fromJson,
+        )
+        .where((position) => position.isOpenPosition)
+        .toList();
     if (positions.isEmpty) return;
     state = HomeState.data(
       positions: positions,
@@ -134,9 +137,9 @@ class Home extends _$Home {
 
     final next = [...positions];
     if (idx == -1) {
-      if (updated.status != 'open') return;
+      if (!updated.isOpenPosition) return;
       next.insert(0, updated);
-    } else if (updated.status == 'closed') {
+    } else if (!updated.isOpenPosition) {
       next.removeAt(idx);
     } else {
       next[idx] = updated;
@@ -207,7 +210,18 @@ Position _mergePositionUpdate(Position current, Map<String, dynamic> data) {
       data['unrealized_pnl_pct'] ?? data['unrealizedPnlPct'],
       fallback: current.unrealizedPnlPct,
     ),
-    status: data['status'] as String? ?? current.status,
+    quantity:
+        _nullableNum(data['quantity'] ?? data['size']) ?? current.quantity,
+    remainingQuantity:
+        _nullableNum(data['remaining_quantity'] ?? data['remainingQuantity']) ??
+            current.remainingQuantity,
+    status: data['status'] as String? ??
+        data['position_status'] as String? ??
+        data['positionStatus'] as String? ??
+        current.status,
+    closedAt: data['closed_at'] as String? ??
+        data['closedAt'] as String? ??
+        current.closedAt,
     isLocked: data['is_locked'] as bool? ??
         data['isLocked'] as bool? ??
         current.isLocked,
@@ -234,7 +248,7 @@ Position? _positionFromWs(WsPositionUpdate msg) {
   return Position(
     id: id,
     symbol: symbol,
-    side: (data['side'] as String? ?? 'long').toLowerCase(),
+    side: _side(data['side'] as String? ?? data['positionSide'] as String?),
     entryPrice: entry,
     currentPrice: current > 0 ? current : entry,
     quantity: _num(data['quantity'] ?? data['size']),
@@ -249,11 +263,15 @@ Position? _positionFromWs(WsPositionUpdate msg) {
     realizedPnl: _num(data['realized_pnl']),
     liquidationPrice: _nullableNum(data['liquidation_price']),
     marginUsed: _nullableNum(data['margin_used']),
-    remainingQuantity: _nullableNum(data['remaining_quantity']),
+    remainingQuantity:
+        _nullableNum(data['remaining_quantity'] ?? data['remainingQuantity']),
     syncStatus: data['sync_status'] as String? ?? 'synced',
     lastSyncedAt: data['last_synced_at'] as String?,
-    closedAt: data['closed_at'] as String?,
-    status: data['status'] as String? ?? 'open',
+    closedAt: data['closed_at'] as String? ?? data['closedAt'] as String?,
+    status: data['status'] as String? ??
+        data['position_status'] as String? ??
+        data['positionStatus'] as String? ??
+        'open',
     isLocked: data['is_locked'] as bool? ?? data['isLocked'] as bool? ?? false,
     tpLevels: _tpLevels(data['tp_levels']),
     slPrice: _nullableNum(data['sl_price'] ?? data['stop_loss']),
@@ -284,4 +302,11 @@ double? _nullableNum(Object? value) {
 List<double> _tpLevels(Object? raw) {
   if (raw is! List) return const [];
   return raw.map(_nullableNum).whereType<double>().toList();
+}
+
+String _side(String? value) {
+  final normalized = (value ?? 'long').toLowerCase();
+  if (normalized == 'buy') return 'long';
+  if (normalized == 'sell') return 'short';
+  return normalized;
 }

@@ -397,13 +397,13 @@ class _PeriodTabs extends StatelessWidget {
           showCheckmark: false,
           label: Text(entry.value),
           labelStyle: AppTypography.bodyMedium.copyWith(
-            color: selected ? const Color(0xFF0057FF) : AppColors.textSecondary,
+            color: selected ? AppColors.primary : AppColors.textSecondary,
           ),
           side: BorderSide(
-            color: selected ? const Color(0xFF0057FF) : AppColors.borderLight,
+            color: selected ? AppColors.primary : AppColors.borderLight,
             width: 1.5,
           ),
-          selectedColor: const Color(0xFFEAF2FF),
+          selectedColor: AppColors.primary.withValues(alpha: 0.08),
           backgroundColor: AppColors.bgCard,
           shape: const StadiumBorder(),
           onSelected: (_) {
@@ -450,7 +450,7 @@ class _ConnectExchangeEmptyState extends StatelessWidget {
         TextButton(
           onPressed: onConnect,
           style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF0057FF),
+            foregroundColor: AppColors.primary,
             textStyle: AppTypography.bodyMedium,
           ),
           child: const Row(
@@ -489,11 +489,11 @@ class _AdherenceHero extends StatelessWidget {
       width: double.infinity,
       padding: AppSpacing.cardPaddingLg,
       decoration: BoxDecoration(
-        color: const Color(0xFF004CE6),
+        color: AppColors.primary,
         borderRadius: AppRadius.cardRadiusLg,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0057FF).withValues(alpha: 0.12),
+            color: AppColors.primary.withValues(alpha: 0.12),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -607,7 +607,7 @@ class _HeroPattern extends StatelessWidget {
               width: 56,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.035),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: AppRadius.cardRadiusLg,
               ),
             ),
           ),
@@ -716,7 +716,7 @@ class _CostlyMistakeCard extends StatelessWidget {
                 TextSpan(
                   text: _money(missed, signed: true),
                   style: const TextStyle(
-                    color: Color(0xFF0057FF),
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -756,7 +756,7 @@ class _CostlyMistakeCard extends StatelessWidget {
                       Text(
                         'Tap to view trade',
                         style: AppTypography.bodyMedium.copyWith(
-                          color: const Color(0xFF0057FF),
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -836,7 +836,7 @@ class _OpportunityCostCard extends StatelessWidget {
             child: TextButton.icon(
               onPressed: () => context.go(Routes.orders),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0057FF),
+                foregroundColor: AppColors.primary,
                 textStyle: AppTypography.bodyMedium,
               ),
               label: const Text('View contributing trades'),
@@ -1218,7 +1218,7 @@ class _InsightPreviewCard extends StatelessWidget {
         child: Container(
           padding: AppSpacing.cardPadding,
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F7FF),
+            color: AppColors.primary.withValues(alpha: 0.06),
             borderRadius: AppRadius.cardRadiusLg,
             border: Border.all(color: AppColors.borderLight),
           ),
@@ -1272,7 +1272,7 @@ class _ChooseExchangeSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(10)),
+            borderRadius: AppRadius.cardRadiusLg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1712,7 +1712,7 @@ class _NewTradeButton extends StatelessWidget {
         icon: const Icon(Icons.add_rounded, size: 20),
         label: const Text('New Trade'),
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF0057FF),
+          backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           textStyle: AppTypography.buttonLg,
           shape: const StadiumBorder(),

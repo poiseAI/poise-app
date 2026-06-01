@@ -18,8 +18,10 @@ class PositionsApi {
   Future<Result<List<Position>, AppError>> getOpenPositions() async {
     try {
       final resp = await _dio.get<Map<String, dynamic>>('/positions/open');
-      final list =
-          _extractList(resp.data, 'positions').map(Position.fromJson).toList();
+      final list = _extractList(resp.data, 'positions')
+          .map(Position.fromJson)
+          .where((position) => position.isOpenPosition)
+          .toList();
       return Ok(list);
     } on DioException catch (e) {
       return Err(e.error is AppError

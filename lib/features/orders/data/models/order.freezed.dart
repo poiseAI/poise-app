@@ -14,44 +14,53 @@ T _$identity<T>(T value) => value;
 
 /// @nodoc
 mixin _$Order {
+  @JsonKey(readValue: _readId)
   String get id;
+  @JsonKey(readValue: _readSymbol)
   String get symbol;
+  @JsonKey(readValue: _readSide)
   String get side;
+  @JsonKey(readValue: _readStatus)
   String get status;
-  @JsonKey(name: 'order_type')
+  @JsonKey(name: 'order_type', readValue: _readOrderType)
   String get orderType;
+  @JsonKey(readValue: _readQuantity)
   double get quantity;
+  @JsonKey(readValue: _readSource)
   String get source;
+  @JsonKey(readValue: _readExchange)
   String get exchange;
-  @JsonKey(name: 'exchange_order_id')
+  @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
   String? get exchangeOrderId;
-  @JsonKey(name: 'entry_price')
+  @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
   double? get entryPrice;
-  @JsonKey(name: 'mark_price')
+  @JsonKey(name: 'mark_price', readValue: _readMarkPrice)
   double? get markPrice;
-  @JsonKey(name: 'liquidation_price')
+  @JsonKey(name: 'liquidation_price', readValue: _readLiquidationPrice)
   double? get liquidationPrice;
-  @JsonKey(name: 'margin_used')
+  @JsonKey(name: 'margin_used', readValue: _readMarginUsed)
   double? get marginUsed;
-  @JsonKey(name: 'realized_pnl')
+  @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
   double? get realizedPnl;
-  @JsonKey(name: 'unrealized_pnl')
+  @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
   double? get unrealizedPnl;
-  @JsonKey(name: 'remaining_quantity')
+  @JsonKey(name: 'remaining_quantity', readValue: _readRemainingQuantity)
   double? get remainingQuantity;
-  @JsonKey(name: 'sync_status')
+  @JsonKey(name: 'sync_status', readValue: _readSyncStatus)
   String? get syncStatus;
-  @JsonKey(name: 'last_synced_at')
+  @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
   String? get lastSyncedAt;
-  @JsonKey(name: 'closed_at')
+  @JsonKey(name: 'closed_at', readValue: _readClosedAt)
   String? get closedAt;
+  @JsonKey(readValue: _readPrice)
   double? get price;
+  @JsonKey(readValue: _readLeverage)
   double get leverage;
-  @JsonKey(name: 'tp_levels')
+  @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
   List<double> get tpLevels;
   @JsonKey(name: 'sl_price', readValue: _readSlPrice)
   double? get slPrice;
-  @JsonKey(name: 'created_at')
+  @JsonKey(name: 'created_at', readValue: _readCreatedAt)
   String get createdAt;
 
   /// Create a copy of Order
@@ -153,30 +162,41 @@ abstract mixin class $OrderCopyWith<$Res> {
       _$OrderCopyWithImpl;
   @useResult
   $Res call(
-      {String id,
-      String symbol,
-      String side,
-      String status,
-      @JsonKey(name: 'order_type') String orderType,
-      double quantity,
-      String source,
-      String exchange,
-      @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
-      @JsonKey(name: 'entry_price') double? entryPrice,
-      @JsonKey(name: 'mark_price') double? markPrice,
-      @JsonKey(name: 'liquidation_price') double? liquidationPrice,
-      @JsonKey(name: 'margin_used') double? marginUsed,
-      @JsonKey(name: 'realized_pnl') double? realizedPnl,
-      @JsonKey(name: 'unrealized_pnl') double? unrealizedPnl,
-      @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
-      @JsonKey(name: 'sync_status') String? syncStatus,
-      @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
-      @JsonKey(name: 'closed_at') String? closedAt,
-      double? price,
-      double leverage,
-      @JsonKey(name: 'tp_levels') List<double> tpLevels,
+      {@JsonKey(readValue: _readId) String id,
+      @JsonKey(readValue: _readSymbol) String symbol,
+      @JsonKey(readValue: _readSide) String side,
+      @JsonKey(readValue: _readStatus) String status,
+      @JsonKey(name: 'order_type', readValue: _readOrderType) String orderType,
+      @JsonKey(readValue: _readQuantity) double quantity,
+      @JsonKey(readValue: _readSource) String source,
+      @JsonKey(readValue: _readExchange) String exchange,
+      @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
+      String? exchangeOrderId,
+      @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
+      double? entryPrice,
+      @JsonKey(name: 'mark_price', readValue: _readMarkPrice) double? markPrice,
+      @JsonKey(name: 'liquidation_price', readValue: _readLiquidationPrice)
+      double? liquidationPrice,
+      @JsonKey(name: 'margin_used', readValue: _readMarginUsed)
+      double? marginUsed,
+      @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
+      double? realizedPnl,
+      @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
+      double? unrealizedPnl,
+      @JsonKey(name: 'remaining_quantity', readValue: _readRemainingQuantity)
+      double? remainingQuantity,
+      @JsonKey(name: 'sync_status', readValue: _readSyncStatus)
+      String? syncStatus,
+      @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
+      String? lastSyncedAt,
+      @JsonKey(name: 'closed_at', readValue: _readClosedAt) String? closedAt,
+      @JsonKey(readValue: _readPrice) double? price,
+      @JsonKey(readValue: _readLeverage) double leverage,
+      @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
+      List<double> tpLevels,
       @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
-      @JsonKey(name: 'created_at') String createdAt});
+      @JsonKey(name: 'created_at', readValue: _readCreatedAt)
+      String createdAt});
 }
 
 /// @nodoc
@@ -411,30 +431,46 @@ extension OrderPatterns on Order {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(
-            String id,
-            String symbol,
-            String side,
-            String status,
-            @JsonKey(name: 'order_type') String orderType,
-            double quantity,
-            String source,
-            String exchange,
-            @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
-            @JsonKey(name: 'entry_price') double? entryPrice,
-            @JsonKey(name: 'mark_price') double? markPrice,
-            @JsonKey(name: 'liquidation_price') double? liquidationPrice,
-            @JsonKey(name: 'margin_used') double? marginUsed,
-            @JsonKey(name: 'realized_pnl') double? realizedPnl,
-            @JsonKey(name: 'unrealized_pnl') double? unrealizedPnl,
-            @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
-            @JsonKey(name: 'sync_status') String? syncStatus,
-            @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
-            @JsonKey(name: 'closed_at') String? closedAt,
-            double? price,
-            double leverage,
-            @JsonKey(name: 'tp_levels') List<double> tpLevels,
+            @JsonKey(readValue: _readId) String id,
+            @JsonKey(readValue: _readSymbol) String symbol,
+            @JsonKey(readValue: _readSide) String side,
+            @JsonKey(readValue: _readStatus) String status,
+            @JsonKey(name: 'order_type', readValue: _readOrderType)
+            String orderType,
+            @JsonKey(readValue: _readQuantity) double quantity,
+            @JsonKey(readValue: _readSource) String source,
+            @JsonKey(readValue: _readExchange) String exchange,
+            @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
+            String? exchangeOrderId,
+            @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
+            double? entryPrice,
+            @JsonKey(name: 'mark_price', readValue: _readMarkPrice)
+            double? markPrice,
+            @JsonKey(
+                name: 'liquidation_price', readValue: _readLiquidationPrice)
+            double? liquidationPrice,
+            @JsonKey(name: 'margin_used', readValue: _readMarginUsed)
+            double? marginUsed,
+            @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
+            double? realizedPnl,
+            @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
+            double? unrealizedPnl,
+            @JsonKey(
+                name: 'remaining_quantity', readValue: _readRemainingQuantity)
+            double? remainingQuantity,
+            @JsonKey(name: 'sync_status', readValue: _readSyncStatus)
+            String? syncStatus,
+            @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
+            String? lastSyncedAt,
+            @JsonKey(name: 'closed_at', readValue: _readClosedAt)
+            String? closedAt,
+            @JsonKey(readValue: _readPrice) double? price,
+            @JsonKey(readValue: _readLeverage) double leverage,
+            @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
+            List<double> tpLevels,
             @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
-            @JsonKey(name: 'created_at') String createdAt)?
+            @JsonKey(name: 'created_at', readValue: _readCreatedAt)
+            String createdAt)?
         $default, {
     required TResult orElse(),
   }) {
@@ -487,30 +523,46 @@ extension OrderPatterns on Order {
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
     TResult Function(
-            String id,
-            String symbol,
-            String side,
-            String status,
-            @JsonKey(name: 'order_type') String orderType,
-            double quantity,
-            String source,
-            String exchange,
-            @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
-            @JsonKey(name: 'entry_price') double? entryPrice,
-            @JsonKey(name: 'mark_price') double? markPrice,
-            @JsonKey(name: 'liquidation_price') double? liquidationPrice,
-            @JsonKey(name: 'margin_used') double? marginUsed,
-            @JsonKey(name: 'realized_pnl') double? realizedPnl,
-            @JsonKey(name: 'unrealized_pnl') double? unrealizedPnl,
-            @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
-            @JsonKey(name: 'sync_status') String? syncStatus,
-            @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
-            @JsonKey(name: 'closed_at') String? closedAt,
-            double? price,
-            double leverage,
-            @JsonKey(name: 'tp_levels') List<double> tpLevels,
+            @JsonKey(readValue: _readId) String id,
+            @JsonKey(readValue: _readSymbol) String symbol,
+            @JsonKey(readValue: _readSide) String side,
+            @JsonKey(readValue: _readStatus) String status,
+            @JsonKey(name: 'order_type', readValue: _readOrderType)
+            String orderType,
+            @JsonKey(readValue: _readQuantity) double quantity,
+            @JsonKey(readValue: _readSource) String source,
+            @JsonKey(readValue: _readExchange) String exchange,
+            @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
+            String? exchangeOrderId,
+            @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
+            double? entryPrice,
+            @JsonKey(name: 'mark_price', readValue: _readMarkPrice)
+            double? markPrice,
+            @JsonKey(
+                name: 'liquidation_price', readValue: _readLiquidationPrice)
+            double? liquidationPrice,
+            @JsonKey(name: 'margin_used', readValue: _readMarginUsed)
+            double? marginUsed,
+            @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
+            double? realizedPnl,
+            @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
+            double? unrealizedPnl,
+            @JsonKey(
+                name: 'remaining_quantity', readValue: _readRemainingQuantity)
+            double? remainingQuantity,
+            @JsonKey(name: 'sync_status', readValue: _readSyncStatus)
+            String? syncStatus,
+            @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
+            String? lastSyncedAt,
+            @JsonKey(name: 'closed_at', readValue: _readClosedAt)
+            String? closedAt,
+            @JsonKey(readValue: _readPrice) double? price,
+            @JsonKey(readValue: _readLeverage) double leverage,
+            @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
+            List<double> tpLevels,
             @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
-            @JsonKey(name: 'created_at') String createdAt)
+            @JsonKey(name: 'created_at', readValue: _readCreatedAt)
+            String createdAt)
         $default,
   ) {
     final _that = this;
@@ -561,30 +613,46 @@ extension OrderPatterns on Order {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(
-            String id,
-            String symbol,
-            String side,
-            String status,
-            @JsonKey(name: 'order_type') String orderType,
-            double quantity,
-            String source,
-            String exchange,
-            @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
-            @JsonKey(name: 'entry_price') double? entryPrice,
-            @JsonKey(name: 'mark_price') double? markPrice,
-            @JsonKey(name: 'liquidation_price') double? liquidationPrice,
-            @JsonKey(name: 'margin_used') double? marginUsed,
-            @JsonKey(name: 'realized_pnl') double? realizedPnl,
-            @JsonKey(name: 'unrealized_pnl') double? unrealizedPnl,
-            @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
-            @JsonKey(name: 'sync_status') String? syncStatus,
-            @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
-            @JsonKey(name: 'closed_at') String? closedAt,
-            double? price,
-            double leverage,
-            @JsonKey(name: 'tp_levels') List<double> tpLevels,
+            @JsonKey(readValue: _readId) String id,
+            @JsonKey(readValue: _readSymbol) String symbol,
+            @JsonKey(readValue: _readSide) String side,
+            @JsonKey(readValue: _readStatus) String status,
+            @JsonKey(name: 'order_type', readValue: _readOrderType)
+            String orderType,
+            @JsonKey(readValue: _readQuantity) double quantity,
+            @JsonKey(readValue: _readSource) String source,
+            @JsonKey(readValue: _readExchange) String exchange,
+            @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
+            String? exchangeOrderId,
+            @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
+            double? entryPrice,
+            @JsonKey(name: 'mark_price', readValue: _readMarkPrice)
+            double? markPrice,
+            @JsonKey(
+                name: 'liquidation_price', readValue: _readLiquidationPrice)
+            double? liquidationPrice,
+            @JsonKey(name: 'margin_used', readValue: _readMarginUsed)
+            double? marginUsed,
+            @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
+            double? realizedPnl,
+            @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
+            double? unrealizedPnl,
+            @JsonKey(
+                name: 'remaining_quantity', readValue: _readRemainingQuantity)
+            double? remainingQuantity,
+            @JsonKey(name: 'sync_status', readValue: _readSyncStatus)
+            String? syncStatus,
+            @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
+            String? lastSyncedAt,
+            @JsonKey(name: 'closed_at', readValue: _readClosedAt)
+            String? closedAt,
+            @JsonKey(readValue: _readPrice) double? price,
+            @JsonKey(readValue: _readLeverage) double leverage,
+            @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
+            List<double> tpLevels,
             @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
-            @JsonKey(name: 'created_at') String createdAt)?
+            @JsonKey(name: 'created_at', readValue: _readCreatedAt)
+            String createdAt)?
         $default,
   ) {
     final _that = this;
@@ -625,93 +693,108 @@ extension OrderPatterns on Order {
 @JsonSerializable()
 class _Order implements Order {
   const _Order(
-      {required this.id,
-      required this.symbol,
-      required this.side,
-      required this.status,
-      @JsonKey(name: 'order_type') required this.orderType,
-      required this.quantity,
-      this.source = 'poise',
-      this.exchange = 'bybit',
-      @JsonKey(name: 'exchange_order_id') this.exchangeOrderId,
-      @JsonKey(name: 'entry_price') this.entryPrice,
-      @JsonKey(name: 'mark_price') this.markPrice,
-      @JsonKey(name: 'liquidation_price') this.liquidationPrice,
-      @JsonKey(name: 'margin_used') this.marginUsed,
-      @JsonKey(name: 'realized_pnl') this.realizedPnl,
-      @JsonKey(name: 'unrealized_pnl') this.unrealizedPnl,
-      @JsonKey(name: 'remaining_quantity') this.remainingQuantity,
-      @JsonKey(name: 'sync_status') this.syncStatus,
-      @JsonKey(name: 'last_synced_at') this.lastSyncedAt,
-      @JsonKey(name: 'closed_at') this.closedAt,
-      this.price,
-      this.leverage = 1.0,
-      @JsonKey(name: 'tp_levels') final List<double> tpLevels = const [],
+      {@JsonKey(readValue: _readId) this.id = '',
+      @JsonKey(readValue: _readSymbol) this.symbol = '',
+      @JsonKey(readValue: _readSide) this.side = 'buy',
+      @JsonKey(readValue: _readStatus) this.status = 'unknown',
+      @JsonKey(name: 'order_type', readValue: _readOrderType)
+      this.orderType = 'market',
+      @JsonKey(readValue: _readQuantity) this.quantity = 0.0,
+      @JsonKey(readValue: _readSource) this.source = 'poise',
+      @JsonKey(readValue: _readExchange) this.exchange = 'bybit',
+      @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
+      this.exchangeOrderId,
+      @JsonKey(name: 'entry_price', readValue: _readEntryPrice) this.entryPrice,
+      @JsonKey(name: 'mark_price', readValue: _readMarkPrice) this.markPrice,
+      @JsonKey(name: 'liquidation_price', readValue: _readLiquidationPrice)
+      this.liquidationPrice,
+      @JsonKey(name: 'margin_used', readValue: _readMarginUsed) this.marginUsed,
+      @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
+      this.realizedPnl,
+      @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
+      this.unrealizedPnl,
+      @JsonKey(name: 'remaining_quantity', readValue: _readRemainingQuantity)
+      this.remainingQuantity,
+      @JsonKey(name: 'sync_status', readValue: _readSyncStatus) this.syncStatus,
+      @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
+      this.lastSyncedAt,
+      @JsonKey(name: 'closed_at', readValue: _readClosedAt) this.closedAt,
+      @JsonKey(readValue: _readPrice) this.price,
+      @JsonKey(readValue: _readLeverage) this.leverage = 1.0,
+      @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
+      final List<double> tpLevels = const [],
       @JsonKey(name: 'sl_price', readValue: _readSlPrice) this.slPrice,
-      @JsonKey(name: 'created_at') required this.createdAt})
+      @JsonKey(name: 'created_at', readValue: _readCreatedAt)
+      this.createdAt = ''})
       : _tpLevels = tpLevels;
   factory _Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 
   @override
+  @JsonKey(readValue: _readId)
   final String id;
   @override
+  @JsonKey(readValue: _readSymbol)
   final String symbol;
   @override
+  @JsonKey(readValue: _readSide)
   final String side;
   @override
+  @JsonKey(readValue: _readStatus)
   final String status;
   @override
-  @JsonKey(name: 'order_type')
+  @JsonKey(name: 'order_type', readValue: _readOrderType)
   final String orderType;
   @override
+  @JsonKey(readValue: _readQuantity)
   final double quantity;
   @override
-  @JsonKey()
+  @JsonKey(readValue: _readSource)
   final String source;
   @override
-  @JsonKey()
+  @JsonKey(readValue: _readExchange)
   final String exchange;
   @override
-  @JsonKey(name: 'exchange_order_id')
+  @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
   final String? exchangeOrderId;
   @override
-  @JsonKey(name: 'entry_price')
+  @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
   final double? entryPrice;
   @override
-  @JsonKey(name: 'mark_price')
+  @JsonKey(name: 'mark_price', readValue: _readMarkPrice)
   final double? markPrice;
   @override
-  @JsonKey(name: 'liquidation_price')
+  @JsonKey(name: 'liquidation_price', readValue: _readLiquidationPrice)
   final double? liquidationPrice;
   @override
-  @JsonKey(name: 'margin_used')
+  @JsonKey(name: 'margin_used', readValue: _readMarginUsed)
   final double? marginUsed;
   @override
-  @JsonKey(name: 'realized_pnl')
+  @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
   final double? realizedPnl;
   @override
-  @JsonKey(name: 'unrealized_pnl')
+  @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
   final double? unrealizedPnl;
   @override
-  @JsonKey(name: 'remaining_quantity')
+  @JsonKey(name: 'remaining_quantity', readValue: _readRemainingQuantity)
   final double? remainingQuantity;
   @override
-  @JsonKey(name: 'sync_status')
+  @JsonKey(name: 'sync_status', readValue: _readSyncStatus)
   final String? syncStatus;
   @override
-  @JsonKey(name: 'last_synced_at')
+  @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
   final String? lastSyncedAt;
   @override
-  @JsonKey(name: 'closed_at')
+  @JsonKey(name: 'closed_at', readValue: _readClosedAt)
   final String? closedAt;
   @override
+  @JsonKey(readValue: _readPrice)
   final double? price;
   @override
-  @JsonKey()
+  @JsonKey(readValue: _readLeverage)
   final double leverage;
   final List<double> _tpLevels;
   @override
-  @JsonKey(name: 'tp_levels')
+  @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
   List<double> get tpLevels {
     if (_tpLevels is EqualUnmodifiableListView) return _tpLevels;
     // ignore: implicit_dynamic_type
@@ -722,7 +805,7 @@ class _Order implements Order {
   @JsonKey(name: 'sl_price', readValue: _readSlPrice)
   final double? slPrice;
   @override
-  @JsonKey(name: 'created_at')
+  @JsonKey(name: 'created_at', readValue: _readCreatedAt)
   final String createdAt;
 
   /// Create a copy of Order
@@ -830,30 +913,41 @@ abstract mixin class _$OrderCopyWith<$Res> implements $OrderCopyWith<$Res> {
   @override
   @useResult
   $Res call(
-      {String id,
-      String symbol,
-      String side,
-      String status,
-      @JsonKey(name: 'order_type') String orderType,
-      double quantity,
-      String source,
-      String exchange,
-      @JsonKey(name: 'exchange_order_id') String? exchangeOrderId,
-      @JsonKey(name: 'entry_price') double? entryPrice,
-      @JsonKey(name: 'mark_price') double? markPrice,
-      @JsonKey(name: 'liquidation_price') double? liquidationPrice,
-      @JsonKey(name: 'margin_used') double? marginUsed,
-      @JsonKey(name: 'realized_pnl') double? realizedPnl,
-      @JsonKey(name: 'unrealized_pnl') double? unrealizedPnl,
-      @JsonKey(name: 'remaining_quantity') double? remainingQuantity,
-      @JsonKey(name: 'sync_status') String? syncStatus,
-      @JsonKey(name: 'last_synced_at') String? lastSyncedAt,
-      @JsonKey(name: 'closed_at') String? closedAt,
-      double? price,
-      double leverage,
-      @JsonKey(name: 'tp_levels') List<double> tpLevels,
+      {@JsonKey(readValue: _readId) String id,
+      @JsonKey(readValue: _readSymbol) String symbol,
+      @JsonKey(readValue: _readSide) String side,
+      @JsonKey(readValue: _readStatus) String status,
+      @JsonKey(name: 'order_type', readValue: _readOrderType) String orderType,
+      @JsonKey(readValue: _readQuantity) double quantity,
+      @JsonKey(readValue: _readSource) String source,
+      @JsonKey(readValue: _readExchange) String exchange,
+      @JsonKey(name: 'exchange_order_id', readValue: _readExchangeOrderId)
+      String? exchangeOrderId,
+      @JsonKey(name: 'entry_price', readValue: _readEntryPrice)
+      double? entryPrice,
+      @JsonKey(name: 'mark_price', readValue: _readMarkPrice) double? markPrice,
+      @JsonKey(name: 'liquidation_price', readValue: _readLiquidationPrice)
+      double? liquidationPrice,
+      @JsonKey(name: 'margin_used', readValue: _readMarginUsed)
+      double? marginUsed,
+      @JsonKey(name: 'realized_pnl', readValue: _readRealizedPnl)
+      double? realizedPnl,
+      @JsonKey(name: 'unrealized_pnl', readValue: _readUnrealizedPnl)
+      double? unrealizedPnl,
+      @JsonKey(name: 'remaining_quantity', readValue: _readRemainingQuantity)
+      double? remainingQuantity,
+      @JsonKey(name: 'sync_status', readValue: _readSyncStatus)
+      String? syncStatus,
+      @JsonKey(name: 'last_synced_at', readValue: _readLastSyncedAt)
+      String? lastSyncedAt,
+      @JsonKey(name: 'closed_at', readValue: _readClosedAt) String? closedAt,
+      @JsonKey(readValue: _readPrice) double? price,
+      @JsonKey(readValue: _readLeverage) double leverage,
+      @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
+      List<double> tpLevels,
       @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
-      @JsonKey(name: 'created_at') String createdAt});
+      @JsonKey(name: 'created_at', readValue: _readCreatedAt)
+      String createdAt});
 }
 
 /// @nodoc

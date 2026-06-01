@@ -492,9 +492,7 @@ class _GuardrailCard extends StatelessWidget {
                     Text(
                       title,
                       style: AppTypography.bodyMedium.copyWith(
-                        color: warning
-                            ? const Color(0xFFB54708)
-                            : const Color(0xFF027A48),
+                        color: color,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -609,7 +607,7 @@ class _ContextualPoiseSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           decoration: const BoxDecoration(
             color: AppColors.bgPrimary,
-            borderRadius: BorderRadius.all(Radius.circular(16)),
+            borderRadius: AppRadius.cardRadiusLg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -723,8 +721,8 @@ class _AiMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: AppSpacing.cardPadding,
-      decoration: const BoxDecoration(
-        color: Color(0xFFEFF6FF),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: AppRadius.cardRadius,
       ),
       child: Text(

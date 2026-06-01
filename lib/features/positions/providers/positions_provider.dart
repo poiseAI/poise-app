@@ -31,11 +31,15 @@ class PositionsNotifier extends _$PositionsNotifier {
   }
 
   void _loadCache() {
-    final positions = ref.read(localCacheProvider).getList<Position>(
+    final positions = ref
+        .read(localCacheProvider)
+        .getList<Position>(
           CacheBoxNames.positions,
           _cacheKey,
           Position.fromJson,
-        );
+        )
+        .where((position) => position.isOpenPosition)
+        .toList();
     if (positions.isNotEmpty) {
       state = AsyncData(positions);
     }
@@ -71,7 +75,7 @@ class PositionsNotifier extends _$PositionsNotifier {
     final current = state.valueOrNull;
     if (current == null) {
       final inserted = _fromWs(msg);
-      if (inserted != null && inserted.status == 'open') {
+      if (inserted != null && inserted.isOpenPosition) {
         state = AsyncData([inserted]);
         _persist([inserted]);
       }
@@ -80,7 +84,7 @@ class PositionsNotifier extends _$PositionsNotifier {
     final idx = current.indexWhere((p) => p.id == msg.positionId);
     if (idx == -1) {
       final inserted = _fromWs(msg);
-      if (inserted == null || inserted.status != 'open') return;
+      if (inserted == null || !inserted.isOpenPosition) return;
       final next = [inserted, ...current];
       state = AsyncData(next);
       _persist(next);
@@ -94,7 +98,19 @@ class PositionsNotifier extends _$PositionsNotifier {
           current[idx].unrealizedPnl,
       unrealizedPnlPct: (data['unrealized_pnl_pct'] as num?)?.toDouble() ??
           current[idx].unrealizedPnlPct,
-      status: data['status'] as String? ?? current[idx].status,
+      quantity: _nullableNum(data['quantity'] ?? data['size']) ??
+          current[idx].quantity,
+      remainingQuantity: _nullableNum(
+            data['remaining_quantity'] ?? data['remainingQuantity'],
+          ) ??
+          current[idx].remainingQuantity,
+      status: data['status'] as String? ??
+          data['position_status'] as String? ??
+          data['positionStatus'] as String? ??
+          current[idx].status,
+      closedAt: data['closed_at'] as String? ??
+          data['closedAt'] as String? ??
+          current[idx].closedAt,
       isLocked: data['is_locked'] as bool? ?? current[idx].isLocked,
       syncStatus: data['sync_status'] as String? ?? current[idx].syncStatus,
       lastSyncedAt:
@@ -103,7 +119,7 @@ class PositionsNotifier extends _$PositionsNotifier {
       slPrice: (data['sl_price'] as num?)?.toDouble() ?? current[idx].slPrice,
     );
     final next = [...current];
-    if (updated.status == 'closed') {
+    if (!updated.isOpenPosition) {
       next.removeAt(idx);
     } else {
       next[idx] = updated;
@@ -128,7 +144,7 @@ class PositionsNotifier extends _$PositionsNotifier {
     return Position(
       id: id,
       symbol: symbol,
-      side: (data['side'] as String? ?? 'long').toLowerCase(),
+      side: _side(data['side'] as String? ?? data['positionSide'] as String?),
       entryPrice: entry,
       currentPrice: current > 0 ? current : entry,
       quantity: _num(data['quantity'] ?? data['size']),
@@ -140,11 +156,15 @@ class PositionsNotifier extends _$PositionsNotifier {
       realizedPnl: _num(data['realized_pnl']),
       liquidationPrice: _nullableNum(data['liquidation_price']),
       marginUsed: _nullableNum(data['margin_used']),
-      remainingQuantity: _nullableNum(data['remaining_quantity']),
+      remainingQuantity:
+          _nullableNum(data['remaining_quantity'] ?? data['remainingQuantity']),
       syncStatus: data['sync_status'] as String? ?? 'synced',
       lastSyncedAt: data['last_synced_at'] as String?,
-      closedAt: data['closed_at'] as String?,
-      status: data['status'] as String? ?? 'open',
+      closedAt: data['closed_at'] as String? ?? data['closedAt'] as String?,
+      status: data['status'] as String? ??
+          data['position_status'] as String? ??
+          data['positionStatus'] as String? ??
+          'open',
       isLocked: data['is_locked'] as bool? ?? false,
       tpLevels: _tpLevels(data['tp_levels']),
       slPrice: _nullableNum(data['sl_price'] ?? data['stop_loss']),
@@ -192,4 +212,11 @@ double? _nullableNum(Object? value) {
 List<double> _tpLevels(Object? raw) {
   if (raw is! List) return const [];
   return raw.map(_nullableNum).whereType<double>().toList();
+}
+
+String _side(String? value) {
+  final normalized = (value ?? 'long').toLowerCase();
+  if (normalized == 'buy') return 'long';
+  if (normalized == 'sell') return 'short';
+  return normalized;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../providers/trade_form_provider.dart';
 
@@ -23,7 +24,7 @@ class OrderTypeToggle extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.cardRadius,
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Row(
@@ -37,7 +38,7 @@ class OrderTypeToggle extends StatelessWidget {
                 curve: Curves.easeOut,
                 decoration: BoxDecoration(
                   color: active ? AppColors.bgPrimary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.cardRadius,
                   border: Border.all(
                     color: active ? AppColors.borderLight : Colors.transparent,
                   ),
