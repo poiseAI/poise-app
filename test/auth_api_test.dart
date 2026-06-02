@@ -24,11 +24,13 @@ void main() {
         statusCode: 200,
         data: {
           'token': 'jwt',
+          'session_id': 'server-session',
           'user': {
             'id': 'user-1',
             'email': 'user@example.com',
             'full_name': 'Test User',
             'email_verified': true,
+            'has_exchange_connection': true,
           },
         },
       );
@@ -41,6 +43,8 @@ void main() {
     );
 
     expect(result.isOk, isTrue);
+    expect(result.value.sessionId, 'server-session');
+    expect(result.value.user.hasExchangeConnection, isTrue);
     expect(capturedOptions?.headers?['X-Poise-Session-Id'], 'session-1');
     expect(
       capturedOptions?.headers?['X-Poise-Session-Policy'],

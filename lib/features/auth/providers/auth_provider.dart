@@ -255,8 +255,9 @@ class Auth extends _$Auth {
     await ref
         .read(secureStorageProvider)
         .saveSessionExpiresAt(_sessionExpiresAtFrom(DateTime.now()));
-    if (sessionId != null) {
-      await ref.read(secureStorageProvider).saveSessionId(sessionId);
+    final activeSessionId = resp.sessionId ?? sessionId;
+    if (activeSessionId != null) {
+      await ref.read(secureStorageProvider).saveSessionId(activeSessionId);
     }
     await ref.read(secureStorageProvider).saveUserId(resp.user.id);
     _connectWs(resp.token);
@@ -283,6 +284,7 @@ class Auth extends _$Auth {
       isAdmin: resp.user.isAdmin,
       totpEnabled: resp.user.totpEnabled,
       hasActiveStrategy: hasActiveStrategy,
+      hasExchangeConnection: resp.user.hasExchangeConnection,
     ));
   }
 

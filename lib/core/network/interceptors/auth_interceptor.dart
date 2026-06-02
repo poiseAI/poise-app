@@ -21,12 +21,15 @@ class AuthInterceptor extends QueuedInterceptor {
   ) async {
     final token = await _ref.read(secureStorageProvider).getToken();
     if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
+      options.headers.putIfAbsent('Authorization', () => 'Bearer $token');
     }
     final sessionId = await _ref.read(secureStorageProvider).getSessionId();
     if (sessionId != null) {
-      options.headers['X-Poise-Session-Id'] = sessionId;
-      options.headers['X-Poise-Session-Policy'] = 'single-device';
+      options.headers.putIfAbsent('X-Poise-Session-Id', () => sessionId);
+      options.headers.putIfAbsent(
+        'X-Poise-Session-Policy',
+        () => 'single-device',
+      );
     }
     handler.next(options);
   }
@@ -38,7 +41,7 @@ class AuthInterceptor extends QueuedInterceptor {
         !_isExchangeCredentialRequest(err.requestOptions.path)) {
       _ref.read(authInvalidationReasonProvider.notifier).state =
           _friendlyInvalidationMessage(err.response?.data);
-      await _ref.read(secureStorageProvider).deleteToken();
+      await _ref.read(secureStorageProvider).clearSession();
       _ref.read(authInvalidatedProvider.notifier).update((n) => n + 1);
     }
     handler.next(err);

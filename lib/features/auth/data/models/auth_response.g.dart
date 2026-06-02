@@ -10,12 +10,14 @@ _AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) =>
     _AuthResponse(
       token: json['token'] as String,
       user: AuthUser.fromJson(json['user'] as Map<String, dynamic>),
+      sessionId: _readSessionId(json, 'session_id') as String?,
     );
 
 Map<String, dynamic> _$AuthResponseToJson(_AuthResponse instance) =>
     <String, dynamic>{
       'token': instance.token,
       'user': instance.user,
+      'session_id': instance.sessionId,
     };
 
 _AuthUser _$AuthUserFromJson(Map<String, dynamic> json) => _AuthUser(
@@ -25,6 +27,10 @@ _AuthUser _$AuthUserFromJson(Map<String, dynamic> json) => _AuthUser(
       emailVerified: json['email_verified'] as bool? ?? false,
       isAdmin: json['is_admin'] as bool? ?? false,
       totpEnabled: json['totp_enabled'] as bool? ?? false,
+      hasExchangeConnection:
+          _readHasExchangeConnection(json, 'has_exchange_connection')
+                  as bool? ??
+              false,
     );
 
 Map<String, dynamic> _$AuthUserToJson(_AuthUser instance) => <String, dynamic>{
@@ -34,4 +40,5 @@ Map<String, dynamic> _$AuthUserToJson(_AuthUser instance) => <String, dynamic>{
       'email_verified': instance.emailVerified,
       'is_admin': instance.isAdmin,
       'totp_enabled': instance.totpEnabled,
+      'has_exchange_connection': instance.hasExchangeConnection,
     };

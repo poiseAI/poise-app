@@ -108,8 +108,16 @@ class SessionLockController extends StateNotifier<SessionLockState> {
     }
 
     final now = DateTime.now();
-    final storedLastActiveAt =
-        await _ref.read(secureStorageProvider).getLastActiveAt();
+    final DateTime? storedLastActiveAt;
+    try {
+      storedLastActiveAt =
+          await _ref.read(secureStorageProvider).getLastActiveAt();
+    } on Object {
+      await _requirePinOrSetup();
+      return;
+    }
+    if (!_authenticated) return;
+
     final lastActiveAt = _earliest(_lastActivityAt, storedLastActiveAt);
 
     if (lastActiveAt != null &&
@@ -118,9 +126,14 @@ class SessionLockController extends StateNotifier<SessionLockState> {
       return;
     }
 
-    _lastActivityAt = now;
-    await _ref.read(secureStorageProvider).deleteLastActiveAt();
-    _scheduleLockTimer();
+    final hasPin = await _hasAppPin();
+    if (!_authenticated) return;
+    if (!hasPin) {
+      state = const SessionLockState.setupRequired();
+      return;
+    }
+
+    await _markUnlocked();
   }
 
   Future<bool> unlockWithPin(String pin) async {
@@ -132,7 +145,18 @@ class SessionLockController extends StateNotifier<SessionLockState> {
     }
 
     state = const SessionLockState.locked(isBusy: true);
-    final saved = await _ref.read(secureStorageProvider).getAppPin();
+    final ({String hash, String salt})? saved;
+    try {
+      saved = await _ref.read(secureStorageProvider).getAppPin();
+    } on Object {
+      if (!_authenticated) return false;
+      state = const SessionLockState.locked(
+        errorText: 'Unable to verify PIN. Try again.',
+      );
+      return false;
+    }
+    if (!_authenticated) return false;
+
     if (saved == null) {
       state = const SessionLockState.setupRequired();
       return false;
@@ -167,10 +191,20 @@ class SessionLockController extends StateNotifier<SessionLockState> {
 
     state = const SessionLockState.setupRequired(isBusy: true);
     final salt = _newSalt();
-    await _ref.read(secureStorageProvider).saveAppPin(
-          hash: _hashPin(pin, salt),
-          salt: salt,
-        );
+    try {
+      await _ref.read(secureStorageProvider).saveAppPin(
+            hash: _hashPin(pin, salt),
+            salt: salt,
+          );
+    } on Object {
+      if (!_authenticated) return false;
+      state = const SessionLockState.setupRequired(
+        errorText: 'Unable to save PIN. Try again.',
+      );
+      return false;
+    }
+    if (!_authenticated) return false;
+
     await _markUnlocked();
     return true;
   }
@@ -191,17 +225,33 @@ class SessionLockController extends StateNotifier<SessionLockState> {
     if (!_authenticated) return;
 
     _lockTimer?.cancel();
-    final hasPin = await _ref.read(secureStorageProvider).hasAppPin();
+    final hasPin = await _hasAppPin();
+    if (!_authenticated) return;
+
     state = hasPin
         ? const SessionLockState.locked()
         : const SessionLockState.setupRequired();
   }
 
+  Future<bool> _hasAppPin() async {
+    try {
+      return await _ref.read(secureStorageProvider).hasAppPin();
+    } on Object {
+      return false;
+    }
+  }
+
   Future<void> _markUnlocked() async {
     _lastActivityAt = DateTime.now();
-    await _ref.read(secureStorageProvider).deleteLastActiveAt();
+    if (!_authenticated) return;
+
     state = const SessionLockState.unlocked();
     _scheduleLockTimer();
+    try {
+      await _ref.read(secureStorageProvider).deleteLastActiveAt();
+    } on Object {
+      // Storage cleanup should not strand an otherwise valid session.
+    }
   }
 
   void _scheduleLockTimer() {
