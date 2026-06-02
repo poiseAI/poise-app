@@ -56,6 +56,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         sessionStartHour: 7,
         sessionEndHour: 22,
         minRiskRewardRatio: 1.5,
+        unfilledOrderCancelAfterMinutes: 60,
         maxLeverage: 4,
         requireExitReason: true,
         requireOtpForExit: true,
@@ -65,6 +66,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('Max leverage per asset', '4x'),
         ('Max trades per day', '5'),
         ('Daily maximum loss', '1% of balance'),
+        ('Unfilled entry expires', '1 hour'),
         ('Max concurrent open positions', '5'),
         ('Max consecutive losses in a day', '3'),
       ],
@@ -89,6 +91,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         sessionStartHour: 7,
         sessionEndHour: 22,
         minRiskRewardRatio: 1.5,
+        unfilledOrderCancelAfterMinutes: 120,
         maxLeverage: 10,
         requireExitReason: true,
         requireOtpForExit: true,
@@ -98,6 +101,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('Max leverage per asset', '10x'),
         ('Max trades per day', '8'),
         ('Daily maximum loss', '2% of balance'),
+        ('Unfilled entry expires', '2 hours'),
         ('Max concurrent open positions', '5'),
         ('Max consecutive losses in a day', '3'),
       ],
@@ -122,6 +126,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         sessionStartHour: 0,
         sessionEndHour: 0,
         minRiskRewardRatio: 1.2,
+        unfilledOrderCancelAfterMinutes: 240,
         maxLeverage: 20,
         requireExitReason: false,
         requireOtpForExit: false,
@@ -131,6 +136,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('Max leverage per asset', '20x'),
         ('Max trades per day', '12'),
         ('Daily maximum loss', '5% of balance'),
+        ('Unfilled entry expires', '4 hours'),
         ('Max concurrent open positions', '10'),
         ('Max consecutive losses in a day', '5'),
       ],
@@ -156,6 +162,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         sessionStartHour: 7,
         sessionEndHour: 22,
         minRiskRewardRatio: 1.5,
+        unfilledOrderCancelAfterMinutes: 120,
         maxLeverage: 10,
         requireExitReason: true,
         requireOtpForExit: true,
@@ -165,6 +172,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ('Max leverage per asset', '10x'),
         ('Max trades per day', '8'),
         ('Daily maximum loss', '2% of balance'),
+        ('Unfilled entry expires', '2 hours'),
         ('Max concurrent open positions', '5'),
         ('Max consecutive losses in a day', '3'),
       ],
@@ -468,6 +476,8 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
 
 enum RiskAppetiteMode { onboarding, settings }
 
+const _entryExpiryOptions = [30, 60, 120, 240, 720, 0];
+
 int _indexForStrategy(Strategy strategy) {
   final byName = _SetRiskAppetiteScreenState._options.indexWhere(
     (option) => option.label.toLowerCase() == strategy.name.toLowerCase(),
@@ -508,6 +518,7 @@ CreateStrategyRequest _requestFromStrategy(
     sessionStartHour: strategy.sessionStartHour,
     sessionEndHour: strategy.sessionEndHour,
     minRiskRewardRatio: strategy.minRiskRewardRatio,
+    unfilledOrderCancelAfterMinutes: strategy.unfilledOrderCancelAfterMinutes,
     maxLeverage: strategy.maxLeverage,
     requireExitReason: strategy.requireExitReason,
     requireOtpForExit: strategy.requireOtpForExit,
@@ -526,6 +537,10 @@ List<(String, String)> _rowsForRequest(CreateStrategyRequest request) {
           ? '${_formatNumber(request.maxDailyLossPercent ?? 0)}% of balance'
           : '\$${_formatNumber(request.maxDailyLossUsd)}',
     ),
+    (
+      'Unfilled entry expires',
+      _entryExpiryLabel(request.unfilledOrderCancelAfterMinutes),
+    ),
     ('Weekly maximum loss', '\$${_formatNumber(request.maxWeeklyLossUsd)}'),
     ('Max concurrent open positions', request.maxOpenPositions.toString()),
     (
@@ -540,6 +555,20 @@ String _riskPerTradeValue(CreateStrategyRequest request) {
     return '${_formatNumber(request.maxPositionSize)}% of balance';
   }
   return '\$${_formatNumber(request.maxPositionSize)}';
+}
+
+String _entryExpiryLabel(int minutes) {
+  if (minutes <= 0) return 'Off';
+  if (minutes < 60) return '${minutes}m';
+  final hours = minutes / 60;
+  final whole =
+      hours % 1 == 0 ? hours.toInt().toString() : hours.toStringAsFixed(1);
+  return '$whole hour${whole == '1' ? '' : 's'}';
+}
+
+List<int> _entryExpiryOptionsFor(int selected) {
+  if (_entryExpiryOptions.contains(selected)) return _entryExpiryOptions;
+  return [selected, ..._entryExpiryOptions];
 }
 
 String _formatNumber(num value) {
@@ -663,6 +692,7 @@ class _RiskSummaryCard extends StatelessWidget {
     'Max leverage per asset',
     'Max trades per day',
     'Daily maximum loss',
+    'Unfilled entry expires',
     'Weekly maximum loss',
     'Max concurrent open positions',
     'Max consecutive losses in a day',
@@ -848,6 +878,12 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
             ),
           ),
         ),
+        _EntryExpiryField(
+          value: request.unfilledOrderCancelAfterMinutes,
+          onChanged: (value) => _emit(
+            request.copyWith(unfilledOrderCancelAfterMinutes: value),
+          ),
+        ),
         _RiskInputField(
           label: 'Daily maximum loss',
           controller: _dailyLossCtrl,
@@ -895,6 +931,53 @@ class _CustomRiskSettingsFormState extends State<_CustomRiskSettingsForm> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EntryExpiryField extends StatelessWidget {
+  const _EntryExpiryField({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Unfilled entry expires', style: AppTypography.bodyLg),
+          const SizedBox(height: AppSpacing.sm),
+          DropdownButtonFormField<int>(
+            initialValue: value,
+            decoration: const InputDecoration(
+              suffixIcon: Tooltip(
+                message:
+                    'Poise cancels unfilled limit entries after this window.',
+                child: Icon(
+                  Icons.help_outline_rounded,
+                  color: AppColors.textDisabled,
+                ),
+              ),
+            ),
+            items: [
+              for (final option in _entryExpiryOptionsFor(value))
+                DropdownMenuItem<int>(
+                  value: option,
+                  child: Text(_entryExpiryLabel(option)),
+                ),
+            ],
+            onChanged: (next) {
+              if (next != null) onChanged(next);
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1037,6 +1120,8 @@ String _riskTooltip(String label) {
     'Max trades per day' => 'The maximum number of trades allowed in one day.',
     'Daily maximum loss' =>
       'The daily loss threshold where Poise stops new trades.',
+    'Unfilled entry expires' =>
+      'Poise cancels unfilled limit entries after this window.',
     'Max concurrent open positions' =>
       'The maximum number of positions that can stay open at once.',
     'Max consecutive losses in a day' =>

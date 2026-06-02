@@ -16,9 +16,8 @@ part 'auth_provider.g.dart';
 @Riverpod(keepAlive: true)
 class Auth extends _$Auth {
   Timer? _refreshTimer;
-  Timer? _inactivityTimer;
   final Map<String, _LoginAttemptState> _loginAttempts = {};
-  static const inactivityTimeout = Duration(minutes: 15);
+  static const maxSessionAgeMonths = 30;
   static const maxFailedLoginAttempts = 5;
   static const loginLockoutDuration = Duration(minutes: 5);
 
@@ -30,6 +29,11 @@ class Auth extends _$Auth {
     final token = await ref.read(secureStorageProvider).getToken();
     if (token == null) {
       _cancelSessionTimers();
+      return const AuthState.unauthenticated();
+    }
+    if (await _localSessionExpired()) {
+      _cancelSessionTimers();
+      await ref.read(secureStorageProvider).clearSession();
       return const AuthState.unauthenticated();
     }
 
@@ -54,7 +58,6 @@ class Auth extends _$Auth {
             await ref.read(strategiesApiProvider).getActiveStrategies();
         final hasActiveStrategy =
             strategiesResult.valueOrNull?.isNotEmpty ?? false;
-        _scheduleInactivityTimeout();
 
         return AuthState.authenticated(
           userId: userId,
@@ -76,9 +79,8 @@ class Auth extends _$Auth {
   }
 
   void recordActivity() {
-    if (state.valueOrNull is AuthAuthenticated) {
-      _scheduleInactivityTimeout();
-    }
+    // Session inactivity is handled by sessionLockProvider. Auth only logs out
+    // for explicit logout, local max-session expiry, or server invalidation.
   }
 
   Future<Result<void, String>> login(
@@ -178,6 +180,10 @@ class Auth extends _$Auth {
       state = const AsyncData(AuthState.unauthenticated());
       return;
     }
+    if (await _localSessionExpired()) {
+      await logout();
+      return;
+    }
 
     final result = await ref.read(authApiProvider).getMe();
     await result.fold(
@@ -196,7 +202,6 @@ class Auth extends _$Auth {
             await ref.read(strategiesApiProvider).getActiveStrategies();
         final hasActiveStrategy =
             strategiesResult.valueOrNull?.isNotEmpty ?? false;
-        _scheduleInactivityTimeout();
         state = AsyncData(AuthState.authenticated(
           userId: userId,
           email: email,
@@ -247,13 +252,15 @@ class Auth extends _$Auth {
     String? sessionId,
   }) async {
     await ref.read(secureStorageProvider).saveToken(resp.token);
+    await ref
+        .read(secureStorageProvider)
+        .saveSessionExpiresAt(_sessionExpiresAtFrom(DateTime.now()));
     if (sessionId != null) {
       await ref.read(secureStorageProvider).saveSessionId(sessionId);
     }
     await ref.read(secureStorageProvider).saveUserId(resp.user.id);
     _connectWs(resp.token);
     _scheduleProactiveRefresh(resp.token);
-    _scheduleInactivityTimeout();
 
     // Compute strategy status BEFORE emitting state so the router only
     // fires once with the correct value — avoids a flash of the onboarding
@@ -283,30 +290,46 @@ class Auth extends _$Auth {
     ref.read(wsServiceProvider).connect(token);
   }
 
-  void _scheduleProactiveRefresh(String token) {
-    // JWT is 24hr — schedule re-validate at 23hr mark
+  void _scheduleProactiveRefresh(String _) {
+    // The backend owns JWT/session expiry; this timer is intentionally disabled.
     _refreshTimer?.cancel();
-    _refreshTimer = Timer(
-      const Duration(hours: 23),
-      () async {
-        final result = await ref.read(authApiProvider).getMe();
-        if (result.isErr) await logout();
-      },
-    );
-  }
-
-  void _scheduleInactivityTimeout() {
-    _inactivityTimer?.cancel();
-    _inactivityTimer = Timer(inactivityTimeout, () async {
-      await logout();
-    });
+    _refreshTimer = null;
   }
 
   void _cancelSessionTimers() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
-    _inactivityTimer?.cancel();
-    _inactivityTimer = null;
+  }
+
+  Future<bool> _localSessionExpired() async {
+    final storage = ref.read(secureStorageProvider);
+    final expiresAt = await storage.getSessionExpiresAt();
+    if (expiresAt == null) {
+      await storage.saveSessionExpiresAt(_sessionExpiresAtFrom(DateTime.now()));
+      return false;
+    }
+    return !DateTime.now().isBefore(expiresAt);
+  }
+
+  DateTime _sessionExpiresAtFrom(DateTime from) {
+    final targetMonth = from.month + maxSessionAgeMonths;
+    final year = from.year + ((targetMonth - 1) ~/ 12);
+    final month = ((targetMonth - 1) % 12) + 1;
+    final day = min(from.day, _daysInMonth(year, month));
+    return DateTime(
+      year,
+      month,
+      day,
+      from.hour,
+      from.minute,
+      from.second,
+      from.millisecond,
+      from.microsecond,
+    );
+  }
+
+  int _daysInMonth(int year, int month) {
+    return DateTime(year, month + 1, 0).day;
   }
 
   String? _lockoutMessageFor(String email) {

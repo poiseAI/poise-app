@@ -107,6 +107,7 @@ class TradePreflight {
     required this.balanceSnapshotCapturedConnections,
     required this.externalOpenPositions,
     required this.unknownRiskPositions,
+    required this.unfilledOrderCancelAfterMinutes,
   });
 
   factory TradePreflight.fromJson(
@@ -148,6 +149,9 @@ class TradePreflight {
           ((rules['external_open_positions'] ?? 0) as num).toInt(),
       unknownRiskPositions:
           ((rules['unknown_risk_positions'] ?? 0) as num).toInt(),
+      unfilledOrderCancelAfterMinutes:
+          ((rules['unfilled_order_cancel_after_minutes'] ?? 120) as num)
+              .toInt(),
     );
   }
 
@@ -168,6 +172,7 @@ class TradePreflight {
   final int balanceSnapshotCapturedConnections;
   final int externalOpenPositions;
   final int unknownRiskPositions;
+  final int unfilledOrderCancelAfterMinutes;
 }
 
 class ExchangeBalance {

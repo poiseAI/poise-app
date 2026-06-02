@@ -1,7 +1,7 @@
 name: poise_ai
 description: Crypto trading risk management with AI assistance.
 publish_to: none
-version: 1.0.12+13
+version: 1.0.14+15
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -30,6 +30,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   shared_preferences: ^2.3.4
   hive_flutter: ^1.1.0
+  crypto: ^3.0.7
 
   # Serialization
   freezed_annotation: ^3.0.0

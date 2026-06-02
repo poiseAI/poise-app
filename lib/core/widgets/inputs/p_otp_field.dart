@@ -17,6 +17,9 @@ class POtpField extends StatefulWidget {
     this.state = POtpState.idle,
     this.controller,
     this.focusNode,
+    this.obscureText = false,
+    this.autofocus = false,
+    this.enabled = true,
   });
 
   final int length;
@@ -25,6 +28,9 @@ class POtpField extends StatefulWidget {
   final POtpState state;
   final TextEditingController? controller;
   final FocusNode? focusNode;
+  final bool obscureText;
+  final bool autofocus;
+  final bool enabled;
 
   @override
   State<POtpField> createState() => _POtpFieldState();
@@ -121,6 +127,9 @@ class _POtpFieldState extends State<POtpField>
         length: widget.length,
         controller: widget.controller,
         focusNode: widget.focusNode,
+        obscureText: widget.obscureText,
+        autofocus: widget.autofocus,
+        enabled: widget.enabled,
         defaultPinTheme: base,
         focusedPinTheme: focused,
         submittedPinTheme: submitted,

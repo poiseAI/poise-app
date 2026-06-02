@@ -249,6 +249,7 @@ class _OrderCard extends StatelessWidget {
         sideLabel == 'Long' ? AppColors.profitGreen : AppColors.lossRed;
     final statusColor = _statusColor(order.status);
     final pnl = _orderPnl(order);
+    final expiryText = _entryExpiryStatus(order);
 
     return InkWell(
       onTap: onTap,
@@ -323,6 +324,29 @@ class _OrderCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (expiryText != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 16,
+                    color: AppColors.warningAmber,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      expiryText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -498,6 +522,11 @@ class _TradeInfoTab extends StatelessWidget {
                   : order.tpLevels.map(_price).join(', '),
             ),
             _DetailRow(label: 'Open Time', value: order.createdAt),
+            if (_entryExpiryDetail(order) != null)
+              _DetailRow(
+                label: 'Entry Expiry',
+                value: _entryExpiryDetail(order)!,
+              ),
             _DetailRow(label: 'Close Time', value: order.closedAt ?? '-'),
           ],
         ),
@@ -962,6 +991,49 @@ class _NewTradeButton extends StatelessWidget {
 
 String _price(double? value) =>
     value == null ? '-' : '\$${value.toStringAsFixed(2)}';
+
+String? _entryExpiryStatus(Order order) {
+  if (order.autoCancelledAt != null) return 'Auto-cancelled after expiry';
+  if (!order.isActiveTrade || order.expiresAt == null) return null;
+  final expiresAt = DateTime.tryParse(order.expiresAt!)?.toLocal();
+  if (expiresAt == null) return 'Expires at ${order.expiresAt}';
+  final remaining = expiresAt.difference(DateTime.now());
+  if (remaining <= Duration.zero) return 'Auto-cancel due now';
+  return 'Expires in ${_durationLabel(remaining)}';
+}
+
+String? _entryExpiryDetail(Order order) {
+  if (order.autoCancelledAt != null) {
+    return order.autoCancelReason ?? 'Auto-cancelled after expiry';
+  }
+  final window = _expiryWindowLabel(order.autoCancelAfterMinutes);
+  if (order.expiresAt == null) return window;
+  final expiresAt = DateTime.tryParse(order.expiresAt!)?.toLocal();
+  final when = expiresAt == null ? order.expiresAt! : _dateTimeLabel(expiresAt);
+  if (window == null) return when;
+  return '$window, $when';
+}
+
+String? _expiryWindowLabel(int? minutes) {
+  if (minutes == null) return null;
+  if (minutes <= 0) return 'Off';
+  return 'After ${_durationLabel(Duration(minutes: minutes))}';
+}
+
+String _durationLabel(Duration duration) {
+  final minutes = duration.inMinutes;
+  if (minutes < 60) return '${minutes <= 0 ? 1 : minutes}m';
+  final hours = minutes / 60;
+  final whole =
+      hours % 1 == 0 ? hours.toInt().toString() : hours.toStringAsFixed(1);
+  return '${whole}h';
+}
+
+String _dateTimeLabel(DateTime value) {
+  final hour = value.hour.toString().padLeft(2, '0');
+  final minute = value.minute.toString().padLeft(2, '0');
+  return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')} $hour:$minute';
+}
 
 String _money(double value, {bool signed = false}) {
   final prefix = signed && value > 0 ? '+' : '';

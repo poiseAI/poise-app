@@ -39,6 +39,15 @@ _Order _$OrderFromJson(Map<String, dynamic> json) => _Order(
               .toList() ??
           const [],
       slPrice: (_readSlPrice(json, 'sl_price') as num?)?.toDouble(),
+      autoCancelAfterMinutes:
+          (_readAutoCancelAfterMinutes(json, 'auto_cancel_after_minutes')
+                  as num?)
+              ?.toInt(),
+      expiresAt: _readExpiresAt(json, 'expires_at') as String?,
+      autoCancelledAt:
+          _readAutoCancelledAt(json, 'auto_cancelled_at') as String?,
+      autoCancelReason:
+          _readAutoCancelReason(json, 'auto_cancel_reason') as String?,
       createdAt: _readCreatedAt(json, 'created_at') as String? ?? '',
     );
 
@@ -66,6 +75,10 @@ Map<String, dynamic> _$OrderToJson(_Order instance) => <String, dynamic>{
       'leverage': instance.leverage,
       'tp_levels': instance.tpLevels,
       'sl_price': instance.slPrice,
+      'auto_cancel_after_minutes': instance.autoCancelAfterMinutes,
+      'expires_at': instance.expiresAt,
+      'auto_cancelled_at': instance.autoCancelledAt,
+      'auto_cancel_reason': instance.autoCancelReason,
       'created_at': instance.createdAt,
     };
 

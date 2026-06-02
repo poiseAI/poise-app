@@ -60,6 +60,15 @@ mixin _$Order {
   List<double> get tpLevels;
   @JsonKey(name: 'sl_price', readValue: _readSlPrice)
   double? get slPrice;
+  @JsonKey(
+      name: 'auto_cancel_after_minutes', readValue: _readAutoCancelAfterMinutes)
+  int? get autoCancelAfterMinutes;
+  @JsonKey(name: 'expires_at', readValue: _readExpiresAt)
+  String? get expiresAt;
+  @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+  String? get autoCancelledAt;
+  @JsonKey(name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+  String? get autoCancelReason;
   @JsonKey(name: 'created_at', readValue: _readCreatedAt)
   String get createdAt;
 
@@ -116,6 +125,14 @@ mixin _$Order {
                 other.leverage == leverage) &&
             const DeepCollectionEquality().equals(other.tpLevels, tpLevels) &&
             (identical(other.slPrice, slPrice) || other.slPrice == slPrice) &&
+            (identical(other.autoCancelAfterMinutes, autoCancelAfterMinutes) ||
+                other.autoCancelAfterMinutes == autoCancelAfterMinutes) &&
+            (identical(other.expiresAt, expiresAt) ||
+                other.expiresAt == expiresAt) &&
+            (identical(other.autoCancelledAt, autoCancelledAt) ||
+                other.autoCancelledAt == autoCancelledAt) &&
+            (identical(other.autoCancelReason, autoCancelReason) ||
+                other.autoCancelReason == autoCancelReason) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
@@ -147,12 +164,16 @@ mixin _$Order {
         leverage,
         const DeepCollectionEquality().hash(tpLevels),
         slPrice,
+        autoCancelAfterMinutes,
+        expiresAt,
+        autoCancelledAt,
+        autoCancelReason,
         createdAt
       ]);
 
   @override
   String toString() {
-    return 'Order(id: $id, symbol: $symbol, side: $side, status: $status, orderType: $orderType, quantity: $quantity, source: $source, exchange: $exchange, exchangeOrderId: $exchangeOrderId, entryPrice: $entryPrice, markPrice: $markPrice, liquidationPrice: $liquidationPrice, marginUsed: $marginUsed, realizedPnl: $realizedPnl, unrealizedPnl: $unrealizedPnl, remainingQuantity: $remainingQuantity, syncStatus: $syncStatus, lastSyncedAt: $lastSyncedAt, closedAt: $closedAt, price: $price, leverage: $leverage, tpLevels: $tpLevels, slPrice: $slPrice, createdAt: $createdAt)';
+    return 'Order(id: $id, symbol: $symbol, side: $side, status: $status, orderType: $orderType, quantity: $quantity, source: $source, exchange: $exchange, exchangeOrderId: $exchangeOrderId, entryPrice: $entryPrice, markPrice: $markPrice, liquidationPrice: $liquidationPrice, marginUsed: $marginUsed, realizedPnl: $realizedPnl, unrealizedPnl: $unrealizedPnl, remainingQuantity: $remainingQuantity, syncStatus: $syncStatus, lastSyncedAt: $lastSyncedAt, closedAt: $closedAt, price: $price, leverage: $leverage, tpLevels: $tpLevels, slPrice: $slPrice, autoCancelAfterMinutes: $autoCancelAfterMinutes, expiresAt: $expiresAt, autoCancelledAt: $autoCancelledAt, autoCancelReason: $autoCancelReason, createdAt: $createdAt)';
   }
 }
 
@@ -195,6 +216,15 @@ abstract mixin class $OrderCopyWith<$Res> {
       @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
       List<double> tpLevels,
       @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
+      @JsonKey(
+          name: 'auto_cancel_after_minutes',
+          readValue: _readAutoCancelAfterMinutes)
+      int? autoCancelAfterMinutes,
+      @JsonKey(name: 'expires_at', readValue: _readExpiresAt) String? expiresAt,
+      @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+      String? autoCancelledAt,
+      @JsonKey(name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+      String? autoCancelReason,
       @JsonKey(name: 'created_at', readValue: _readCreatedAt)
       String createdAt});
 }
@@ -234,6 +264,10 @@ class _$OrderCopyWithImpl<$Res> implements $OrderCopyWith<$Res> {
     Object? leverage = null,
     Object? tpLevels = null,
     Object? slPrice = freezed,
+    Object? autoCancelAfterMinutes = freezed,
+    Object? expiresAt = freezed,
+    Object? autoCancelledAt = freezed,
+    Object? autoCancelReason = freezed,
     Object? createdAt = null,
   }) {
     return _then(_self.copyWith(
@@ -329,6 +363,22 @@ class _$OrderCopyWithImpl<$Res> implements $OrderCopyWith<$Res> {
           ? _self.slPrice
           : slPrice // ignore: cast_nullable_to_non_nullable
               as double?,
+      autoCancelAfterMinutes: freezed == autoCancelAfterMinutes
+          ? _self.autoCancelAfterMinutes
+          : autoCancelAfterMinutes // ignore: cast_nullable_to_non_nullable
+              as int?,
+      expiresAt: freezed == expiresAt
+          ? _self.expiresAt
+          : expiresAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      autoCancelledAt: freezed == autoCancelledAt
+          ? _self.autoCancelledAt
+          : autoCancelledAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      autoCancelReason: freezed == autoCancelReason
+          ? _self.autoCancelReason
+          : autoCancelReason // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: null == createdAt
           ? _self.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -469,6 +519,17 @@ extension OrderPatterns on Order {
             @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
             List<double> tpLevels,
             @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
+            @JsonKey(
+                name: 'auto_cancel_after_minutes',
+                readValue: _readAutoCancelAfterMinutes)
+            int? autoCancelAfterMinutes,
+            @JsonKey(name: 'expires_at', readValue: _readExpiresAt)
+            String? expiresAt,
+            @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+            String? autoCancelledAt,
+            @JsonKey(
+                name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+            String? autoCancelReason,
             @JsonKey(name: 'created_at', readValue: _readCreatedAt)
             String createdAt)?
         $default, {
@@ -501,6 +562,10 @@ extension OrderPatterns on Order {
             _that.leverage,
             _that.tpLevels,
             _that.slPrice,
+            _that.autoCancelAfterMinutes,
+            _that.expiresAt,
+            _that.autoCancelledAt,
+            _that.autoCancelReason,
             _that.createdAt);
       case _:
         return orElse();
@@ -561,6 +626,17 @@ extension OrderPatterns on Order {
             @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
             List<double> tpLevels,
             @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
+            @JsonKey(
+                name: 'auto_cancel_after_minutes',
+                readValue: _readAutoCancelAfterMinutes)
+            int? autoCancelAfterMinutes,
+            @JsonKey(name: 'expires_at', readValue: _readExpiresAt)
+            String? expiresAt,
+            @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+            String? autoCancelledAt,
+            @JsonKey(
+                name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+            String? autoCancelReason,
             @JsonKey(name: 'created_at', readValue: _readCreatedAt)
             String createdAt)
         $default,
@@ -592,6 +668,10 @@ extension OrderPatterns on Order {
             _that.leverage,
             _that.tpLevels,
             _that.slPrice,
+            _that.autoCancelAfterMinutes,
+            _that.expiresAt,
+            _that.autoCancelledAt,
+            _that.autoCancelReason,
             _that.createdAt);
       case _:
         throw StateError('Unexpected subclass');
@@ -651,6 +731,17 @@ extension OrderPatterns on Order {
             @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
             List<double> tpLevels,
             @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
+            @JsonKey(
+                name: 'auto_cancel_after_minutes',
+                readValue: _readAutoCancelAfterMinutes)
+            int? autoCancelAfterMinutes,
+            @JsonKey(name: 'expires_at', readValue: _readExpiresAt)
+            String? expiresAt,
+            @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+            String? autoCancelledAt,
+            @JsonKey(
+                name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+            String? autoCancelReason,
             @JsonKey(name: 'created_at', readValue: _readCreatedAt)
             String createdAt)?
         $default,
@@ -682,6 +773,10 @@ extension OrderPatterns on Order {
             _that.leverage,
             _that.tpLevels,
             _that.slPrice,
+            _that.autoCancelAfterMinutes,
+            _that.expiresAt,
+            _that.autoCancelledAt,
+            _that.autoCancelReason,
             _that.createdAt);
       case _:
         return null;
@@ -724,6 +819,15 @@ class _Order implements Order {
       @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
       final List<double> tpLevels = const [],
       @JsonKey(name: 'sl_price', readValue: _readSlPrice) this.slPrice,
+      @JsonKey(
+          name: 'auto_cancel_after_minutes',
+          readValue: _readAutoCancelAfterMinutes)
+      this.autoCancelAfterMinutes,
+      @JsonKey(name: 'expires_at', readValue: _readExpiresAt) this.expiresAt,
+      @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+      this.autoCancelledAt,
+      @JsonKey(name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+      this.autoCancelReason,
       @JsonKey(name: 'created_at', readValue: _readCreatedAt)
       this.createdAt = ''})
       : _tpLevels = tpLevels;
@@ -805,6 +909,19 @@ class _Order implements Order {
   @JsonKey(name: 'sl_price', readValue: _readSlPrice)
   final double? slPrice;
   @override
+  @JsonKey(
+      name: 'auto_cancel_after_minutes', readValue: _readAutoCancelAfterMinutes)
+  final int? autoCancelAfterMinutes;
+  @override
+  @JsonKey(name: 'expires_at', readValue: _readExpiresAt)
+  final String? expiresAt;
+  @override
+  @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+  final String? autoCancelledAt;
+  @override
+  @JsonKey(name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+  final String? autoCancelReason;
+  @override
   @JsonKey(name: 'created_at', readValue: _readCreatedAt)
   final String createdAt;
 
@@ -866,6 +983,14 @@ class _Order implements Order {
                 other.leverage == leverage) &&
             const DeepCollectionEquality().equals(other._tpLevels, _tpLevels) &&
             (identical(other.slPrice, slPrice) || other.slPrice == slPrice) &&
+            (identical(other.autoCancelAfterMinutes, autoCancelAfterMinutes) ||
+                other.autoCancelAfterMinutes == autoCancelAfterMinutes) &&
+            (identical(other.expiresAt, expiresAt) ||
+                other.expiresAt == expiresAt) &&
+            (identical(other.autoCancelledAt, autoCancelledAt) ||
+                other.autoCancelledAt == autoCancelledAt) &&
+            (identical(other.autoCancelReason, autoCancelReason) ||
+                other.autoCancelReason == autoCancelReason) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
@@ -897,12 +1022,16 @@ class _Order implements Order {
         leverage,
         const DeepCollectionEquality().hash(_tpLevels),
         slPrice,
+        autoCancelAfterMinutes,
+        expiresAt,
+        autoCancelledAt,
+        autoCancelReason,
         createdAt
       ]);
 
   @override
   String toString() {
-    return 'Order(id: $id, symbol: $symbol, side: $side, status: $status, orderType: $orderType, quantity: $quantity, source: $source, exchange: $exchange, exchangeOrderId: $exchangeOrderId, entryPrice: $entryPrice, markPrice: $markPrice, liquidationPrice: $liquidationPrice, marginUsed: $marginUsed, realizedPnl: $realizedPnl, unrealizedPnl: $unrealizedPnl, remainingQuantity: $remainingQuantity, syncStatus: $syncStatus, lastSyncedAt: $lastSyncedAt, closedAt: $closedAt, price: $price, leverage: $leverage, tpLevels: $tpLevels, slPrice: $slPrice, createdAt: $createdAt)';
+    return 'Order(id: $id, symbol: $symbol, side: $side, status: $status, orderType: $orderType, quantity: $quantity, source: $source, exchange: $exchange, exchangeOrderId: $exchangeOrderId, entryPrice: $entryPrice, markPrice: $markPrice, liquidationPrice: $liquidationPrice, marginUsed: $marginUsed, realizedPnl: $realizedPnl, unrealizedPnl: $unrealizedPnl, remainingQuantity: $remainingQuantity, syncStatus: $syncStatus, lastSyncedAt: $lastSyncedAt, closedAt: $closedAt, price: $price, leverage: $leverage, tpLevels: $tpLevels, slPrice: $slPrice, autoCancelAfterMinutes: $autoCancelAfterMinutes, expiresAt: $expiresAt, autoCancelledAt: $autoCancelledAt, autoCancelReason: $autoCancelReason, createdAt: $createdAt)';
   }
 }
 
@@ -946,6 +1075,15 @@ abstract mixin class _$OrderCopyWith<$Res> implements $OrderCopyWith<$Res> {
       @JsonKey(name: 'tp_levels', readValue: _readTpLevels)
       List<double> tpLevels,
       @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
+      @JsonKey(
+          name: 'auto_cancel_after_minutes',
+          readValue: _readAutoCancelAfterMinutes)
+      int? autoCancelAfterMinutes,
+      @JsonKey(name: 'expires_at', readValue: _readExpiresAt) String? expiresAt,
+      @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+      String? autoCancelledAt,
+      @JsonKey(name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+      String? autoCancelReason,
       @JsonKey(name: 'created_at', readValue: _readCreatedAt)
       String createdAt});
 }
@@ -985,6 +1123,10 @@ class __$OrderCopyWithImpl<$Res> implements _$OrderCopyWith<$Res> {
     Object? leverage = null,
     Object? tpLevels = null,
     Object? slPrice = freezed,
+    Object? autoCancelAfterMinutes = freezed,
+    Object? expiresAt = freezed,
+    Object? autoCancelledAt = freezed,
+    Object? autoCancelReason = freezed,
     Object? createdAt = null,
   }) {
     return _then(_Order(
@@ -1080,6 +1222,22 @@ class __$OrderCopyWithImpl<$Res> implements _$OrderCopyWith<$Res> {
           ? _self.slPrice
           : slPrice // ignore: cast_nullable_to_non_nullable
               as double?,
+      autoCancelAfterMinutes: freezed == autoCancelAfterMinutes
+          ? _self.autoCancelAfterMinutes
+          : autoCancelAfterMinutes // ignore: cast_nullable_to_non_nullable
+              as int?,
+      expiresAt: freezed == expiresAt
+          ? _self.expiresAt
+          : expiresAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      autoCancelledAt: freezed == autoCancelledAt
+          ? _self.autoCancelledAt
+          : autoCancelledAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      autoCancelReason: freezed == autoCancelReason
+          ? _self.autoCancelReason
+          : autoCancelReason // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: null == createdAt
           ? _self.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable

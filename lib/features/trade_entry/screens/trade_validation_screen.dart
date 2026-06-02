@@ -907,6 +907,15 @@ List<({String title, String message, String category})> _cleanGuardrailChecks(
       category: 'daily_trade',
     ));
   }
+  if (preflight != null && form.orderType != OrderType.market) {
+    rows.add((
+      title: 'Entry expiry',
+      message: preflight.unfilledOrderCancelAfterMinutes <= 0
+          ? 'Unfilled entry auto-cancel is off for this strategy.'
+          : 'Unfilled entry cancels after ${_entryExpiryLabel(preflight.unfilledOrderCancelAfterMinutes)}.',
+      category: 'entry_expiry',
+    ));
+  }
   if (form.leverage > 0) {
     final max = preflight?.maxLeverage;
     rows.add((
@@ -948,6 +957,15 @@ String _guardrailTitle(GuardrailResult item, {String? fallback}) {
   return title;
 }
 
+String _entryExpiryLabel(int minutes) {
+  if (minutes <= 0) return 'Off';
+  if (minutes < 60) return '${minutes}m';
+  final hours = minutes / 60;
+  final whole =
+      hours % 1 == 0 ? hours.toInt().toString() : hours.toStringAsFixed(1);
+  return '$whole hour${whole == '1' ? '' : 's'}';
+}
+
 String _guardrailCategory(GuardrailResult item) {
   final text = '${item.title} ${item.message}'.toLowerCase();
   if (text.contains('leverage')) return 'leverage';
@@ -957,6 +975,11 @@ String _guardrailCategory(GuardrailResult item) {
       text.contains('maximum trades') ||
       text.contains('overtrade')) {
     return 'daily_trade';
+  }
+  if (text.contains('entry expiry') ||
+      text.contains('unfilled') ||
+      text.contains('auto-cancel')) {
+    return 'entry_expiry';
   }
   if (text.contains('risk per trade') ||
       text.contains('%risk') ||

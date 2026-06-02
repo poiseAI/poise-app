@@ -13,6 +13,9 @@ void main() {
       'avgPrice': '72692.90',
       'takeProfit': '73500',
       'stopLoss': '71000',
+      'auto_cancel_after_minutes': 120,
+      'expires_at': '2026-06-02T12:00:00Z',
+      'auto_cancel_reason': 'unfilled entry order expired after 120 minutes',
       'updatedTime': '1772366529000',
       'createdTime': '1772362922000',
       'exchange': 'bybit',
@@ -24,6 +27,12 @@ void main() {
     expect(order.entryPrice, 72692.90);
     expect(order.tpLevels, [73500]);
     expect(order.slPrice, 71000);
+    expect(order.autoCancelAfterMinutes, 120);
+    expect(order.expiresAt, '2026-06-02T12:00:00Z');
+    expect(
+      order.autoCancelReason,
+      'unfilled entry order expired after 120 minutes',
+    );
     expect(order.closedAt, isNotNull);
     expect(order.isActiveTrade, isFalse);
     expect(order.statusLabel, 'Filled');

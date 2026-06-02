@@ -30,6 +30,8 @@ _Strategy _$StrategyFromJson(Map<String, dynamic> json) => _Strategy(
       sessionEndHour: (json['session_end_hour'] as num?)?.toInt(),
       minRiskRewardRatio:
           (json['min_risk_reward_ratio'] as num?)?.toDouble() ?? 1.5,
+      unfilledOrderCancelAfterMinutes:
+          (json['unfilled_order_cancel_after_minutes'] as num?)?.toInt() ?? 120,
       maxLeverage: (json['max_leverage'] as num?)?.toDouble() ?? 10.0,
       requireExitReason: json['require_exit_reason'] as bool? ?? false,
       requireOtpForExit: json['require_otp_for_exit'] as bool? ?? false,
@@ -55,6 +57,8 @@ Map<String, dynamic> _$StrategyToJson(_Strategy instance) => <String, dynamic>{
       'session_start_hour': instance.sessionStartHour,
       'session_end_hour': instance.sessionEndHour,
       'min_risk_reward_ratio': instance.minRiskRewardRatio,
+      'unfilled_order_cancel_after_minutes':
+          instance.unfilledOrderCancelAfterMinutes,
       'max_leverage': instance.maxLeverage,
       'require_exit_reason': instance.requireExitReason,
       'require_otp_for_exit': instance.requireOtpForExit,
@@ -85,6 +89,8 @@ _CreateStrategyRequest _$CreateStrategyRequestFromJson(
       sessionEndHour: (json['session_end_hour'] as num?)?.toInt(),
       minRiskRewardRatio:
           (json['min_risk_reward_ratio'] as num?)?.toDouble() ?? 1.5,
+      unfilledOrderCancelAfterMinutes:
+          (json['unfilled_order_cancel_after_minutes'] as num?)?.toInt() ?? 120,
       maxLeverage: (json['max_leverage'] as num?)?.toDouble() ?? 10.0,
       requireExitReason: json['require_exit_reason'] as bool? ?? true,
       requireOtpForExit: json['require_otp_for_exit'] as bool? ?? true,
@@ -107,6 +113,8 @@ Map<String, dynamic> _$CreateStrategyRequestToJson(
       'session_start_hour': instance.sessionStartHour,
       'session_end_hour': instance.sessionEndHour,
       'min_risk_reward_ratio': instance.minRiskRewardRatio,
+      'unfilled_order_cancel_after_minutes':
+          instance.unfilledOrderCancelAfterMinutes,
       'max_leverage': instance.maxLeverage,
       'require_exit_reason': instance.requireExitReason,
       'require_otp_for_exit': instance.requireOtpForExit,

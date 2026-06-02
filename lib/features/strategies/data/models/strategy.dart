@@ -34,6 +34,9 @@ abstract class Strategy with _$Strategy {
     @JsonKey(name: 'min_risk_reward_ratio')
     @Default(1.5)
     double minRiskRewardRatio,
+    @JsonKey(name: 'unfilled_order_cancel_after_minutes')
+    @Default(120)
+    int unfilledOrderCancelAfterMinutes,
     @JsonKey(name: 'max_leverage') @Default(10.0) double maxLeverage,
     @JsonKey(name: 'require_exit_reason')
     @Default(false)
@@ -75,6 +78,9 @@ abstract class CreateStrategyRequest with _$CreateStrategyRequest {
     @JsonKey(name: 'min_risk_reward_ratio')
     @Default(1.5)
     double minRiskRewardRatio,
+    @JsonKey(name: 'unfilled_order_cancel_after_minutes')
+    @Default(120)
+    int unfilledOrderCancelAfterMinutes,
     @JsonKey(name: 'max_leverage') @Default(10.0) double maxLeverage,
     @JsonKey(name: 'require_exit_reason') @Default(true) bool requireExitReason,
     @JsonKey(name: 'require_otp_for_exit')

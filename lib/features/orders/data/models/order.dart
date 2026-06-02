@@ -42,6 +42,16 @@ abstract class Order with _$Order {
     @Default([])
     List<double> tpLevels,
     @JsonKey(name: 'sl_price', readValue: _readSlPrice) double? slPrice,
+    @JsonKey(
+      name: 'auto_cancel_after_minutes',
+      readValue: _readAutoCancelAfterMinutes,
+    )
+    int? autoCancelAfterMinutes,
+    @JsonKey(name: 'expires_at', readValue: _readExpiresAt) String? expiresAt,
+    @JsonKey(name: 'auto_cancelled_at', readValue: _readAutoCancelledAt)
+    String? autoCancelledAt,
+    @JsonKey(name: 'auto_cancel_reason', readValue: _readAutoCancelReason)
+    String? autoCancelReason,
     @JsonKey(name: 'created_at', readValue: _readCreatedAt)
     @Default('')
     String createdAt,
@@ -316,6 +326,18 @@ Object? _readSlPrice(Map<dynamic, dynamic> json, String key) => _positiveNum(
           json['sl_price'],
     );
 
+Object? _readAutoCancelAfterMinutes(Map<dynamic, dynamic> json, String key) =>
+    _int(json[key] ?? json['autoCancelAfterMinutes']);
+
+Object? _readExpiresAt(Map<dynamic, dynamic> json, String key) =>
+    _dateString(json[key] ?? json['expiresAt'] ?? json['expireTime']);
+
+Object? _readAutoCancelledAt(Map<dynamic, dynamic> json, String key) =>
+    _dateString(json[key] ?? json['autoCancelledAt']);
+
+Object? _readAutoCancelReason(Map<dynamic, dynamic> json, String key) =>
+    _str(json[key] ?? json['autoCancelReason']);
+
 Object? _readCreatedAt(Map<dynamic, dynamic> json, String key) => _dateString(
       json[key] ??
           json['createdAt'] ??
@@ -336,6 +358,17 @@ double? _num(Object? value) {
     final cleaned = value.replaceAll(',', '').trim();
     if (cleaned.isEmpty) return null;
     return double.tryParse(cleaned);
+  }
+  return null;
+}
+
+int? _int(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) {
+    final cleaned = value.replaceAll(',', '').trim();
+    if (cleaned.isEmpty) return null;
+    return int.tryParse(cleaned);
   }
   return null;
 }
