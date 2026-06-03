@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/feedback/p_empty_state.dart';
 import '../../../core/widgets/feedback/p_error_state.dart';
+import '../../../core/widgets/feedback/p_toast.dart';
 import '../../../core/utils/result.dart';
 import '../data/models/order.dart';
 import '../data/orders_api.dart';
@@ -27,6 +28,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final ordersState = ref.watch(ordersNotifierProvider);
+    final showNewTradeButton = ordersState.valueOrNull?.isNotEmpty == true;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -45,9 +47,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _NewTradeButton(
-        onPressed: () => context.go(Routes.trade),
-      ),
+      floatingActionButton: showNewTradeButton
+          ? _NewTradeButton(
+              onPressed: () => context.go(Routes.trade),
+            )
+          : null,
       body: SafeArea(
         top: false,
         child: ordersState.when(
@@ -366,18 +370,74 @@ class _OrderDetailsScreen extends ConsumerStatefulWidget {
 
 class _OrderDetailsScreenState extends ConsumerState<_OrderDetailsScreen> {
   var _tab = _OrderDetailTab.info;
-  late final Future<Result<OrderInsights, AppError>> _insightsFuture;
+  late Order _order;
+  bool _cancelling = false;
+
+  Future<Result<OrderInsights, AppError>>? _insightsFuture;
 
   @override
   void initState() {
     super.initState();
-    _insightsFuture =
-        ref.read(ordersApiProvider).getOrderInsights(widget.order.id);
+    _order = widget.order;
+  }
+
+  Future<Result<OrderInsights, AppError>> _ensureInsightsFuture() {
+    return _insightsFuture ??=
+        ref.read(ordersApiProvider).getOrderInsights(_order.id);
+  }
+
+  Future<void> _cancelOrder() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Cancel order'),
+        content: const Text(
+          'Cancel the unfilled part of this order on the exchange?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep order'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.lossRed,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cancel order'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    final result = await ref.read(ordersApiProvider).cancelOrder(_order.id);
+    if (!mounted) return;
+
+    result.fold<void>(
+      onOk: (_) {
+        setState(() {
+          _cancelling = false;
+          _order = _order.copyWith(
+            status: 'cancelled',
+            remainingQuantity: 0,
+          );
+        });
+        ref.read(ordersNotifierProvider.notifier).refresh();
+        PToast.success(context, 'Order cancelled');
+      },
+      onErr: (err) {
+        setState(() => _cancelling = false);
+        PToast.error(context, err.userMessage);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final order = widget.order;
+    final order = _order;
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
@@ -418,14 +478,24 @@ class _OrderDetailsScreenState extends ConsumerState<_OrderDetailsScreen> {
                 ),
               ],
               selected: {_tab},
-              onSelectionChanged: (selection) =>
-                  setState(() => _tab = selection.first),
+              onSelectionChanged: (selection) {
+                setState(() => _tab = selection.first);
+              },
             ),
             const SizedBox(height: AppSpacing.lg),
             if (_tab == _OrderDetailTab.info)
-              _TradeInfoTab(order: order)
+              _TradeInfoTab(
+                order: order,
+                cancelling: _cancelling,
+                onCancel: _canCancelOrder(order) && !_cancelling
+                    ? _cancelOrder
+                    : null,
+              )
             else
-              _TradeInsightsTab(future: _insightsFuture, order: order),
+              _TradeInsightsTab(
+                future: _ensureInsightsFuture(),
+                order: order,
+              ),
           ],
         ),
       ),
@@ -436,9 +506,15 @@ class _OrderDetailsScreenState extends ConsumerState<_OrderDetailsScreen> {
 enum _OrderDetailTab { info, insights }
 
 class _TradeInfoTab extends StatelessWidget {
-  const _TradeInfoTab({required this.order});
+  const _TradeInfoTab({
+    required this.order,
+    required this.cancelling,
+    required this.onCancel,
+  });
 
   final Order order;
+  final bool cancelling;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -539,6 +615,32 @@ class _TradeInfoTab extends StatelessWidget {
                 value: order.exchangeOrderId!,
               ),
             ],
+          ),
+        ],
+        if (onCancel != null || cancelling) ...[
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton.icon(
+              onPressed: onCancel,
+              icon: cancelling
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cancel_outlined, size: 18),
+              label:
+                  Text(cancelling ? 'Cancelling...' : 'Cancel unfilled order'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.lossRed,
+                side: BorderSide(
+                  color: AppColors.lossRed.withValues(alpha: 0.35),
+                ),
+                shape: const StadiumBorder(),
+              ),
+            ),
           ),
         ],
       ],
@@ -1068,6 +1170,19 @@ Color _statusColor(String status) {
     return AppColors.statusRejected;
   }
   return AppColors.textSecondary;
+}
+
+bool _canCancelOrder(Order order) {
+  final exchangeOrderId = order.exchangeOrderId?.trim() ?? '';
+  if (exchangeOrderId.isEmpty || !order.isActiveTrade) return false;
+  final status = normalizeOrderStatus(order.status);
+  return status == 'pending' ||
+      status == 'submitted' ||
+      status == 'accepted' ||
+      status == 'new' ||
+      status == 'working' ||
+      status == 'partial' ||
+      status.contains('partial');
 }
 
 String _sideLabel(String side) {
