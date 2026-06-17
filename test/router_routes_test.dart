@@ -43,4 +43,23 @@ void main() {
       );
     }
   });
+
+  test('baseline sync route constant and screen are registered', () {
+    final routesSource = File('lib/core/router/routes.dart').readAsStringSync();
+    final routerSource =
+        File('lib/core/router/app_router.dart').readAsStringSync();
+    final screenFile =
+        File('lib/features/onboarding/screens/baseline_sync_screen.dart');
+
+    expect(routesSource, contains('baselineSync'));
+    expect(routesSource, contains('/onboarding/baseline-sync'));
+    expect(routerSource, contains('BaselineSyncScreen'));
+    expect(screenFile.existsSync(), isTrue);
+
+    final screenSource = screenFile.readAsStringSync();
+    expect(screenSource, contains('Building your baseline'));
+    expect(screenSource, contains('Fetching 30 days of trade history'));
+    expect(screenSource, contains('Calculating your discipline baseline'));
+    expect(screenSource, contains('Setting up behavioural guardrails'));
+  });
 }

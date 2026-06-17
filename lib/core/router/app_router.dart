@@ -12,6 +12,8 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
+import '../../features/onboarding/screens/baseline_sync_screen.dart';
+import '../../features/onboarding/screens/email_verified_screen.dart';
 import '../../features/onboarding/screens/set_risk_appetite_screen.dart';
 import '../storage/preferences.dart';
 import '../../features/home/screens/home_screen.dart';
@@ -63,9 +65,19 @@ GoRouter appRouter(Ref ref) {
             _slideTransition(state, const VerifyEmailScreen()),
       ),
       GoRoute(
+        path: Routes.verifyEmailSuccess,
+        pageBuilder: (context, state) =>
+            _fadeTransition(state, const EmailVerifiedScreen()),
+      ),
+      GoRoute(
         path: Routes.riskAppetite,
         pageBuilder: (context, state) =>
             _slideTransition(state, const SetRiskAppetiteScreen()),
+      ),
+      GoRoute(
+        path: Routes.baselineSync,
+        pageBuilder: (context, state) =>
+            _fadeTransition(state, const BaselineSyncScreen()),
       ),
       GoRoute(
         path: Routes.forgotPassword,
@@ -182,6 +194,7 @@ String? _redirect(Ref ref, GoRouterState state) {
   final loc = state.matchedLocation;
   final onAuth = loc.startsWith('/auth');
   final onOnboarding = loc.startsWith('/onboarding');
+  final onBaselineSync = loc == Routes.baselineSync;
   final hasSeenWelcome =
       ref.read(appPreferencesProvider).valueOrNull?.hasSeenWelcome ?? false;
 
@@ -209,6 +222,9 @@ String? _redirect(Ref ref, GoRouterState state) {
     AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
         when emailVerified && !hasActiveStrategy && !onOnboarding =>
       Routes.riskAppetite,
+    AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
+        when emailVerified && hasActiveStrategy && onBaselineSync =>
+      null,
     // Logged in and onboarding done → leave auth/onboarding routes
     AuthAuthenticated(:final hasActiveStrategy, :final emailVerified)
         when emailVerified && hasActiveStrategy && (onAuth || onOnboarding) =>

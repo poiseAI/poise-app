@@ -14,12 +14,18 @@ class PPrimaryButton extends StatefulWidget {
     this.onPressed,
     this.state = PButtonState.idle,
     this.icon,
+    this.height = 52,
+    this.borderRadius,
+    this.textStyle,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final PButtonState state;
   final Widget? icon;
+  final double height;
+  final BorderRadius? borderRadius;
+  final TextStyle? textStyle;
 
   @override
   State<PPrimaryButton> createState() => _PPrimaryButtonState();
@@ -86,6 +92,9 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
     final isSuccess = widget.state == PButtonState.success;
     final isError = widget.state == PButtonState.error;
     final collapsed = isLoading || isSuccess;
+    final radius = widget.borderRadius ?? AppRadius.buttonRadius;
+    final isDisabled =
+        widget.onPressed == null && widget.state == PButtonState.idle;
 
     return GestureDetector(
       onTapDown: _onTapDown,
@@ -106,17 +115,17 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
-          height: 52,
-          width: collapsed ? 52 : double.infinity,
+          height: widget.height,
+          width: collapsed ? widget.height : double.infinity,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: isError
                 ? AppColors.lossRed
                 : _isEnabled || isLoading || isSuccess
                     ? AppColors.accent
-                    : AppColors.textDisabled.withValues(alpha: 0.4),
+                    : AppColors.bgCardElevated,
             borderRadius:
-                collapsed ? BorderRadius.circular(26) : AppRadius.buttonRadius,
+                collapsed ? BorderRadius.circular(widget.height / 2) : radius,
           ),
           child: Center(
             child: AnimatedSwitcher(
@@ -142,6 +151,10 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
                           key: const ValueKey('label'),
                           label: widget.label,
                           icon: widget.icon,
+                          textStyle: widget.textStyle,
+                          color: isDisabled
+                              ? AppColors.textDisabled
+                              : Colors.white,
                         ),
             ),
           ),
@@ -152,9 +165,17 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
 }
 
 class _LabelRow extends StatelessWidget {
-  const _LabelRow({super.key, required this.label, this.icon});
+  const _LabelRow({
+    super.key,
+    required this.label,
+    this.icon,
+    this.textStyle,
+    required this.color,
+  });
   final String label;
   final Widget? icon;
+  final TextStyle? textStyle;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +191,9 @@ class _LabelRow extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.buttonLg.copyWith(color: Colors.white),
+              style: (textStyle ?? AppTypography.buttonLg).copyWith(
+                color: color,
+              ),
             ),
           ),
         ],

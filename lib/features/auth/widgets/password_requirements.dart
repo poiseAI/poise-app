@@ -40,9 +40,10 @@ class PasswordRequirements extends StatelessWidget {
       children: [
         Text(
           'Requires at least:',
-          style: AppTypography.bodySm.copyWith(
+          style: AppTypography.labelSm.copyWith(
             color: AppColors.textSecondary,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -75,17 +76,18 @@ class _RequirementChip extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 160),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         border: Border.all(color: color.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
-        style: AppTypography.bodySm.copyWith(
+        style: AppTypography.labelSm.copyWith(
           color: color,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0,
         ),
       ),
     );

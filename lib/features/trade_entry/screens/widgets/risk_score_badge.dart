@@ -72,8 +72,6 @@ class RiskScoreBadge extends StatelessWidget {
           ),
         ],
       ),
-    )
-        .animate()
-        .shimmer(duration: 600.ms, color: color.withValues(alpha: 0.2));
+    ).animate().shimmer(duration: 600.ms, color: color.withValues(alpha: 0.2));
   }
 }

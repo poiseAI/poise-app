@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,22 +21,23 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   final _controller = PageController();
   int _page = 0;
   bool _showSplash = true;
+  Timer? _autoSlideTimer;
 
   static const _pages = [
     _WelcomePageData(
-      asset: 'assets/images/onboarding_plant.png',
+      asset: 'assets/images/onboarding_trading_os.png',
       title: 'The Trading Operating System',
       body:
           'Stop losing to emotional mistakes. Poise enforces your strategy and discipline by evaluating every trade before it is executed.',
     ),
     _WelcomePageData(
-      asset: 'assets/images/onboarding_shield.png',
+      asset: 'assets/images/onboarding_guardrails.png',
       title: 'Automated Risk Guardrails',
       body:
           'Define your limits - daily loss, max leverage, % risk per trade - and Poise automatically blocks trades that violate your rules.',
     ),
     _WelcomePageData(
-      asset: 'assets/images/onboarding_light_bulb.png',
+      asset: 'assets/images/onboarding_ai_coaching.png',
       title: 'Real-Time AI Coaching',
       body:
           'Get immediate feedback on emotional patterns like overtrading or revenge trading. Chat with Poise AI before you execute to stay consistent.',
@@ -45,12 +48,32 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   void initState() {
     super.initState();
     Future<void>.delayed(const Duration(milliseconds: 950), () {
-      if (mounted) setState(() => _showSplash = false);
+      if (mounted) {
+        setState(() => _showSplash = false);
+        _startAutoSlide();
+      }
+    });
+  }
+
+  void _startAutoSlide() {
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!mounted) return;
+      if (_page < _pages.length - 1) {
+        _controller.animateToPage(
+          _page + 1,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        timer.cancel();
+      }
     });
   }
 
   @override
   void dispose() {
+    _autoSlideTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -77,7 +100,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 child: PageView.builder(
                   controller: _controller,
                   itemCount: _pages.length,
-                  onPageChanged: (value) => setState(() => _page = value),
+                  onPageChanged: (value) {
+                    setState(() => _page = value);
+                    _startAutoSlide();
+                  },
                   itemBuilder: (context, index) => _WelcomeSlide(
                     data: _pages[index],
                     active: index == _page,
@@ -88,17 +114,25 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               const SizedBox(height: AppSpacing.xl),
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 40,
                 child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    textStyle: AppTypography.buttonSm,
+                  ),
                   onPressed: () => _continueTo(Routes.register),
                   child: const Text('Get Started'),
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 40,
                 child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    textStyle: AppTypography.buttonSm,
+                  ),
                   onPressed: () => _continueTo(Routes.login),
                   child: const Text('Log in'),
                 ),
@@ -217,10 +251,10 @@ class _WelcomeSlide extends StatelessWidget {
           textAlign: TextAlign.center,
           style: AppTypography.display2.copyWith(
             color: AppColors.primary,
-            fontFamily: 'Inter',
-            fontSize: 30,
+            fontFamily: 'Orbitron',
+            fontSize: 20,
             fontWeight: FontWeight.w700,
-            height: 1.16,
+            height: 1.22,
             letterSpacing: 0,
           ),
         )
@@ -309,9 +343,9 @@ class _PageDots extends StatelessWidget {
         count,
         (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          margin: const EdgeInsets.symmetric(horizontal: 10),
-          width: 10,
-          height: 10,
+          margin: const EdgeInsets.symmetric(horizontal: 5),
+          width: 5,
+          height: 5,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: selected == index ? AppColors.primary : AppColors.brand100,

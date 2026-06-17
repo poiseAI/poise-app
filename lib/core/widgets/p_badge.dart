@@ -13,12 +13,12 @@ class PBadge extends StatelessWidget {
 
   static PBadge fromString(String status) {
     final v = switch (status.toLowerCase()) {
-      'open'      => BadgeVariant.open,
-      'pending'   => BadgeVariant.pending,
-      'filled'    => BadgeVariant.filled,
-      'locked'    => BadgeVariant.locked,
+      'open' => BadgeVariant.open,
+      'pending' => BadgeVariant.pending,
+      'filled' => BadgeVariant.filled,
+      'locked' => BadgeVariant.locked,
       'cancelled' => BadgeVariant.cancelled,
-      _           => BadgeVariant.pending,
+      _ => BadgeVariant.pending,
     };
     return PBadge(variant: v);
   }
@@ -26,11 +26,31 @@ class PBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, fg, bg) = switch (variant) {
-      BadgeVariant.open      => ('Open',      AppColors.profitGreen, AppColors.profitGreen.withValues(alpha: 0.12)),
-      BadgeVariant.pending   => ('Pending',   AppColors.warningAmber, AppColors.warningAmber.withValues(alpha: 0.12)),
-      BadgeVariant.filled    => ('Filled',    AppColors.accent, AppColors.accent.withValues(alpha: 0.12)),
-      BadgeVariant.locked    => ('Locked',    AppColors.textSecondary, AppColors.borderLight),
-      BadgeVariant.cancelled => ('Cancelled', AppColors.lossRed, AppColors.lossRed.withValues(alpha: 0.12)),
+      BadgeVariant.open => (
+          'Open',
+          AppColors.profitGreen,
+          AppColors.profitGreen.withValues(alpha: 0.12)
+        ),
+      BadgeVariant.pending => (
+          'Pending',
+          AppColors.warningAmber,
+          AppColors.warningAmber.withValues(alpha: 0.12)
+        ),
+      BadgeVariant.filled => (
+          'Filled',
+          AppColors.accent,
+          AppColors.accent.withValues(alpha: 0.12)
+        ),
+      BadgeVariant.locked => (
+          'Locked',
+          AppColors.textSecondary,
+          AppColors.borderLight
+        ),
+      BadgeVariant.cancelled => (
+          'Cancelled',
+          AppColors.lossRed,
+          AppColors.lossRed.withValues(alpha: 0.12)
+        ),
     };
 
     return Container(

@@ -78,11 +78,6 @@ class Auth extends _$Auth {
     );
   }
 
-  void recordActivity() {
-    // Session inactivity is handled by sessionLockProvider. Auth only logs out
-    // for explicit logout, local max-session expiry, or server invalidation.
-  }
-
   Future<Result<void, String>> login(
     String email,
     String password, {

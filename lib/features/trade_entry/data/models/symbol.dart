@@ -12,7 +12,9 @@ abstract class TradingSymbol with _$TradingSymbol {
     @JsonKey(readValue: _readExchange) @Default('bybit') String exchange,
     @JsonKey(readValue: _readStatus) @Default('Trading') String status,
     @JsonKey(readValue: _readLastPrice) @Default(0.0) double lastPrice,
-    @JsonKey(readValue: _readPriceChangePct) @Default(0.0) double priceChangePct,
+    @JsonKey(readValue: _readPriceChangePct)
+    @Default(0.0)
+    double priceChangePct,
     @JsonKey(readValue: _readMinQty) @Default(0.001) double minQty,
     @JsonKey(readValue: _readMaxLeverage) @Default(100) int maxLeverage,
     @JsonKey(readValue: _readTickSize) @Default(0.0) double tickSize,
@@ -64,7 +66,10 @@ Object? _readQtyStep(Map<dynamic, dynamic> json, String key) =>
     _num(json[key] ?? json['qty_step'] ?? json['qtyStep'] ?? json['stepSize']);
 
 Object? _readMinNotional(Map<dynamic, dynamic> json, String key) =>
-    _num(json[key] ?? json['min_notional'] ?? json['minNotional'] ?? json['notional']);
+    _num(json[key] ??
+        json['min_notional'] ??
+        json['minNotional'] ??
+        json['notional']);
 
 Object? _num(Object? value) {
   if (value is num) return value.toDouble();

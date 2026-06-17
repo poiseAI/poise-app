@@ -13,6 +13,7 @@ class PTextField extends StatefulWidget {
     this.controller,
     required this.label,
     this.hint,
+    this.showLabelAbove = false,
     this.keyboardType,
     this.obscureText = false,
     this.fieldState = PFieldState.idle,
@@ -24,11 +25,15 @@ class PTextField extends StatefulWidget {
     this.maxLength,
     this.enabled = true,
     this.autofocus = false,
+    this.compact = false,
+    this.showObscureToggle = true,
+    this.showValidationIcon = true,
   });
 
   final TextEditingController? controller;
   final String label;
   final String? hint;
+  final bool showLabelAbove;
   final TextInputType? keyboardType;
   final bool obscureText;
   final PFieldState fieldState;
@@ -40,6 +45,9 @@ class PTextField extends StatefulWidget {
   final int? maxLength;
   final bool enabled;
   final bool autofocus;
+  final bool compact;
+  final bool showObscureToggle;
+  final bool showValidationIcon;
 
   @override
   State<PTextField> createState() => _PTextFieldState();
@@ -79,7 +87,17 @@ class _PTextFieldState extends State<PTextField>
   Widget _buildSuffix() {
     final iconColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
-    if (widget.obscureText) {
+    if (widget.fieldState == PFieldState.error) {
+      return const Padding(
+        padding: EdgeInsets.only(right: 4),
+        child: Icon(
+          Icons.error_outline_rounded,
+          size: 20,
+          color: AppColors.lossRed,
+        ),
+      );
+    }
+    if (widget.obscureText && widget.showObscureToggle) {
       return IconButton(
         tooltip: _obscured ? 'Show value' : 'Hide value',
         onPressed: widget.enabled
@@ -92,7 +110,7 @@ class _PTextFieldState extends State<PTextField>
         ),
       );
     }
-    if (widget.fieldState == PFieldState.valid) {
+    if (widget.fieldState == PFieldState.valid && widget.showValidationIcon) {
       return Padding(
         padding: const EdgeInsets.only(right: 4),
         child: const Icon(
@@ -117,8 +135,12 @@ class _PTextFieldState extends State<PTextField>
   Widget build(BuildContext context) {
     final isError = widget.fieldState == PFieldState.error;
     final colorScheme = Theme.of(context).colorScheme;
+    final inputRadius = BorderRadius.circular(widget.compact ? 8 : 12);
+    final outlineColor =
+        isError ? AppColors.lossRed : Theme.of(context).colorScheme.outline;
+    final focusColor = isError ? AppColors.lossRed : AppColors.primary;
 
-    return AnimatedBuilder(
+    final field = AnimatedBuilder(
       animation: _shakeCtrl,
       builder: (context, child) {
         final shake = _shakeCtrl.isAnimating
@@ -138,17 +160,89 @@ class _PTextFieldState extends State<PTextField>
         enabled: widget.enabled,
         autofocus: widget.autofocus,
         cursorColor: AppColors.primary,
-        style: AppTypography.body.copyWith(color: colorScheme.onSurface),
+        style: (widget.compact ? AppTypography.bodySm : AppTypography.body)
+            .copyWith(color: colorScheme.onSurface),
         decoration: InputDecoration(
-          labelText: widget.label,
+          labelText: widget.showLabelAbove ? null : widget.label,
           hintText: widget.hint,
           errorText: isError ? widget.errorText : null,
           suffixIcon: _buildSuffix(),
-          suffixIconConstraints:
-              const BoxConstraints(minWidth: 44, minHeight: 44),
+          suffixIconConstraints: BoxConstraints(
+            minWidth: widget.compact ? 40 : 44,
+            minHeight: widget.compact ? 40 : 44,
+          ),
           counterText: '',
+          isDense: widget.compact,
+          constraints:
+              widget.compact ? const BoxConstraints(minHeight: 40) : null,
+          contentPadding: widget.compact
+              ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
+              : null,
+          border: widget.compact
+              ? OutlineInputBorder(
+                  borderRadius: inputRadius,
+                  borderSide: BorderSide(
+                    color: outlineColor,
+                  ),
+                )
+              : null,
+          enabledBorder: widget.compact
+              ? OutlineInputBorder(
+                  borderRadius: inputRadius,
+                  borderSide: BorderSide(
+                    color: outlineColor,
+                  ),
+                )
+              : null,
+          focusedBorder: widget.compact
+              ? OutlineInputBorder(
+                  borderRadius: inputRadius,
+                  borderSide: BorderSide(
+                    color: focusColor,
+                    width: 1.5,
+                  ),
+                )
+              : null,
+          errorBorder: widget.compact
+              ? OutlineInputBorder(
+                  borderRadius: inputRadius,
+                  borderSide: const BorderSide(
+                    color: AppColors.lossRed,
+                    width: 1,
+                  ),
+                )
+              : null,
+          focusedErrorBorder: widget.compact
+              ? OutlineInputBorder(
+                  borderRadius: inputRadius,
+                  borderSide: const BorderSide(
+                    color: AppColors.lossRed,
+                    width: 1.5,
+                  ),
+                )
+              : null,
         ),
       ),
+    );
+
+    if (!widget.showLabelAbove) return field;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.label,
+          style:
+              (widget.compact ? AppTypography.label : AppTypography.bodyMedium)
+                  .copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(height: widget.compact ? 4 : 6),
+        field,
+      ],
     );
   }
 }

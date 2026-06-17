@@ -27,9 +27,8 @@ class ExitOtp extends _$ExitOtp {
     if (state.isVerifying) return;
 
     // Get exit request ID captured during the prior create step
-    final exitRequestId = ref
-        .read(exitRequestProvider(positionId))
-        .exitRequestId;
+    final exitRequestId =
+        ref.read(exitRequestProvider(positionId)).exitRequestId;
 
     if (exitRequestId == null || exitRequestId.isEmpty) {
       state = state.copyWith(

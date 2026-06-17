@@ -42,7 +42,9 @@ class ToolCallCard extends StatelessWidget {
             duration: const Duration(milliseconds: 300),
             child: isDone
                 ? const Icon(Icons.check_circle_rounded,
-                    size: 14, color: AppColors.profitGreen, key: ValueKey('done'))
+                        size: 14,
+                        color: AppColors.profitGreen,
+                        key: ValueKey('done'))
                     .animate()
                     .scale(begin: const Offset(0, 0), curve: Curves.easeOutBack)
                 : SizedBox(
@@ -59,9 +61,7 @@ class ToolCallCard extends StatelessWidget {
           Text(
             _humanName(toolCall.name),
             style: AppTypography.caption.copyWith(
-              color: isDone
-                  ? AppColors.profitGreen
-                  : AppColors.accentPurple,
+              color: isDone ? AppColors.profitGreen : AppColors.accentPurple,
             ),
           ),
         ],

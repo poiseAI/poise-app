@@ -21,19 +21,20 @@ class RiskApi {
           await _dio.get<Map<String, dynamic>>('/risk/tokens/$symbol/score');
       return Ok(RiskScore.fromJson(resp.data!));
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 
   Future<Result<PortfolioRisk, AppError>> getPortfolioRisk() async {
     try {
-      final resp =
-          await _dio.get<Map<String, dynamic>>('/risk/portfolio');
+      final resp = await _dio.get<Map<String, dynamic>>('/risk/portfolio');
       return Ok(PortfolioRisk.fromJson(resp.data!));
     } on DioException catch (e) {
-      return Err(
-          e.error is AppError ? e.error as AppError : UnknownError(e.message ?? ''));
+      return Err(e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.message ?? ''));
     }
   }
 }

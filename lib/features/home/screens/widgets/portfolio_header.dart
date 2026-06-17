@@ -51,9 +51,7 @@ class PortfolioHeader extends StatelessWidget {
               style: AppTypography.body.copyWith(color: pnlColor),
             );
           },
-        )
-            .animate(delay: 80.ms)
-            .fadeIn(duration: 280.ms),
+        ).animate(delay: 80.ms).fadeIn(duration: 280.ms),
       ],
     );
   }

@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
+import '../../../core/widgets/feedback/p_success_seal.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
 import '../../../core/widgets/inputs/p_otp_field.dart';
 import '../../../core/widgets/inputs/p_text_field.dart';
@@ -37,6 +38,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   PFieldState _confirmState = PFieldState.idle;
   String? _passError;
   String? _confirmError;
+  String? _errorMessage;
   bool _otpComplete = false;
   bool _resending = false;
   Timer? _otpTimer;
@@ -98,7 +100,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final confirmOk = _validateConfirm();
     if (!passOk || !confirmOk) return;
 
-    setState(() => _buttonState = PButtonState.loading);
+    setState(() {
+      _buttonState = PButtonState.loading;
+      _errorMessage = null;
+    });
 
     final result = await ref.read(authApiProvider).resetPassword(
           email: widget.email,
@@ -123,19 +128,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       },
       onErr: (e) {
         setState(() {
-          _buttonState = PButtonState.error;
-          _otpState = POtpState.error;
-        });
-        PToast.error(context, e.userMessage);
-        Future.delayed(const Duration(milliseconds: 400), () {
-          if (mounted) {
-            setState(() {
-              _buttonState = PButtonState.idle;
-              _otpState = POtpState.idle;
-              _step = _ResetPasswordStep.otp;
-            });
-            _otpCtrl.clear();
-          }
+          _buttonState = PButtonState.idle;
+          _errorMessage = e.userMessage;
         });
       },
     );
@@ -169,7 +163,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       return Scaffold(
         appBar: AppBar(
           centerTitle: false,
-          title: const Text('Forgot Password'),
+          title: const Text('Forgot password'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => context.go(Routes.login),
@@ -182,7 +176,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: AppSpacing.lg),
-                const Text('Reset your password', style: AppTypography.h4),
+                Text(
+                  'Reset your password',
+                  style: AppTypography.h2.copyWith(
+                    fontFamily: 'Orbitron',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                    letterSpacing: 0,
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Enter your email first so Poise can send a reset code.',
@@ -202,18 +205,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         ),
       );
     }
+    final isPasswordStep = _step == _ResetPasswordStep.password;
+
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
+        toolbarHeight: 48,
         centerTitle: false,
-        title: Text(
-          _step == _ResetPasswordStep.otp
-              ? 'Forgot Password'
-              : 'Create New Password',
-        ),
+        title: isPasswordStep ? null : const Text('Forgot password'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
-            if (_step == _ResetPasswordStep.password) {
+            if (isPasswordStep) {
               setState(() => _step = _ResetPasswordStep.otp);
             } else {
               context.pop();
@@ -222,102 +225,182 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                _step == _ResetPasswordStep.otp
-                    ? 'Reset your password'
-                    : 'Create New Password',
-                style: AppTypography.h4,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                _step == _ResetPasswordStep.otp
-                    ? 'A 6-digit OTP has been sent to your email. Please input it here to reset your password'
-                    : 'Choose a secure new password for this account.',
-                style: AppTypography.bodyLg
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              if (_step == _ResetPasswordStep.otp) ...[
-                const Text('Enter OTP', style: AppTypography.label),
-                const SizedBox(height: AppSpacing.sm),
-                Center(
-                  child: POtpField(
-                    controller: _otpCtrl,
-                    state: _otpState,
-                    onCompleted: (val) => setState(() {
-                      _otpComplete = true;
-                      _step = _ResetPasswordStep.password;
-                    }),
-                    onChanged: (_) {
-                      if (_otpState != POtpState.idle) {
-                        setState(() => _otpState = POtpState.idle);
-                      }
-                      setState(() => _otpComplete = false);
-                    },
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-                Center(
-                  child: TextButton(
-                    onPressed:
-                        _resending || _secondsRemaining > 0 ? null : _resend,
-                    child: Text(
-                      _resending
-                          ? 'Sending...'
-                          : _secondsRemaining > 0
-                              ? 'Request a new OTP in ${_formatOtpTime(_secondsRemaining)}'
-                              : 'Request a new OTP',
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(minHeight: constraints.maxHeight - 34),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPasswordStep
+                          ? 'Create a new password'
+                          : 'Reset your password',
+                      style: AppTypography.h2.copyWith(
+                        fontFamily: 'Orbitron',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        letterSpacing: 0,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      isPasswordStep
+                          ? 'Enter a new secure password for your account'
+                          : 'A 6-digit OTP has been sent to your email. Please input it here to reset your password',
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (isPasswordStep && _errorMessage != null) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 13,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.lossRedBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.lossRed.withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              size: 20,
+                              color: AppColors.lossRed,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: AppTypography.bodySm.copyWith(
+                                  color: AppColors.lossRed,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ] else ...[
+                      SizedBox(height: isPasswordStep ? 32 : AppSpacing.xxl),
+                    ],
+                    if (!isPasswordStep) ...[
+                      const Text('Enter OTP', style: AppTypography.label),
+                      const SizedBox(height: AppSpacing.sm),
+                      Center(
+                        child: POtpField(
+                          controller: _otpCtrl,
+                          state: _otpState,
+                          onCompleted: (val) => setState(() {
+                            _otpComplete = true;
+                          }),
+                          onChanged: (_) {
+                            if (_otpState != POtpState.idle) {
+                              setState(() => _otpState = POtpState.idle);
+                            }
+                            setState(() => _otpComplete = false);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      PPrimaryButton(
+                        label: 'Continue',
+                        onPressed: _otpComplete
+                            ? () => setState(
+                                  () => _step = _ResetPasswordStep.password,
+                                )
+                            : null,
+                        height: 44,
+                        borderRadius: BorderRadius.circular(22),
+                        textStyle: AppTypography.button,
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      Center(
+                        child: TextButton(
+                          onPressed: _resending || _secondsRemaining > 0
+                              ? null
+                              : _resend,
+                          child: Text(
+                            _resending
+                                ? 'Sending...'
+                                : _secondsRemaining > 0
+                                    ? 'Request a new OTP in ${_formatOtpTime(_secondsRemaining)}'
+                                    : 'Request a new OTP',
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      PTextField(
+                        controller: _passCtrl,
+                        label: 'New password',
+                        showLabelAbove: true,
+                        obscureText: true,
+                        textInputAction: TextInputAction.next,
+                        fieldState: _passState,
+                        errorText: _passError,
+                        compact: true,
+                        showValidationIcon: false,
+                        onChanged: (val) {
+                          setState(() {
+                            if (_errorMessage != null) _errorMessage = null;
+                          });
+                          if (_passState != PFieldState.idle) {
+                            _validatePassword();
+                          }
+                          if (_confirmState != PFieldState.idle) {
+                            _validateConfirm();
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      PasswordRequirements(password: _passCtrl.text),
+                      const SizedBox(height: 18),
+                      PTextField(
+                        controller: _confirmCtrl,
+                        label: 'Confirm password',
+                        hint: 'Repeat password',
+                        showLabelAbove: true,
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        fieldState: _confirmState,
+                        errorText: _confirmError,
+                        compact: true,
+                        showValidationIcon: false,
+                        onChanged: (val) {
+                          setState(() {
+                            if (_errorMessage != null) _errorMessage = null;
+                          });
+                          if (_confirmState != PFieldState.idle) {
+                            _validateConfirm();
+                          }
+                        },
+                        onEditingComplete: _submit,
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 32),
+                      PPrimaryButton(
+                        label: 'Save',
+                        state: _buttonState,
+                        onPressed: _otpComplete ? _submit : null,
+                        height: 44,
+                        borderRadius: BorderRadius.circular(22),
+                        textStyle: AppTypography.button,
+                      ),
+                    ],
+                  ],
                 ),
-              ] else ...[
-                PTextField(
-                  controller: _passCtrl,
-                  label: 'New password',
-                  obscureText: true,
-                  textInputAction: TextInputAction.next,
-                  fieldState: _passState,
-                  errorText: _passError,
-                  onChanged: (val) {
-                    setState(() {});
-                    if (_passState != PFieldState.idle) {
-                      _validatePassword();
-                    }
-                    if (_confirmState != PFieldState.idle) {
-                      _validateConfirm();
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                PasswordRequirements(password: _passCtrl.text),
-                const SizedBox(height: AppSpacing.md),
-                PTextField(
-                  controller: _confirmCtrl,
-                  label: 'Confirm password',
-                  hint: 'Repeat password',
-                  obscureText: true,
-                  textInputAction: TextInputAction.done,
-                  fieldState: _confirmState,
-                  errorText: _confirmError,
-                  onChanged: (val) {
-                    if (_confirmState != PFieldState.idle) _validateConfirm();
-                  },
-                  onEditingComplete: _submit,
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                PPrimaryButton(
-                  label: 'Save',
-                  state: _buttonState,
-                  onPressed: _otpComplete ? _submit : null,
-                ),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ),
@@ -340,18 +423,18 @@ class _PasswordUpdatedSuccessScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(flex: 2),
-              Image.asset(
-                'assets/images/success_lock.png',
-                width: 190,
-                height: 190,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-              ),
+              const PSuccessSeal(),
               const Spacer(),
-              const Text(
+              Text(
                 'Your password has been updated',
                 textAlign: TextAlign.center,
-                style: AppTypography.h2,
+                style: AppTypography.h2.copyWith(
+                  fontFamily: 'Orbitron',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  letterSpacing: 0,
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -364,8 +447,11 @@ class _PasswordUpdatedSuccessScreen extends StatelessWidget {
               ),
               const Spacer(flex: 2),
               PPrimaryButton(
-                label: 'Login',
+                label: 'Log in',
                 onPressed: () => context.go(Routes.login),
+                height: 44,
+                borderRadius: BorderRadius.circular(22),
+                textStyle: AppTypography.button,
               ),
               const SizedBox(height: AppSpacing.lg),
             ],

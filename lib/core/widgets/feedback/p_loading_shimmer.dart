@@ -18,6 +18,7 @@ class PShimmerBox extends StatelessWidget {
   final double width;
   final double height;
   final BorderRadius? radius;
+
   /// Adds ±heightVariance organic variation (#74).
   final double heightVariance;
 

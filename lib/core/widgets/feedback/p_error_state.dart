@@ -36,7 +36,8 @@ class PErrorState extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               message,
-              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+              style:
+                  AppTypography.body.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[

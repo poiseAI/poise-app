@@ -146,8 +146,7 @@ class AiChatApi {
   Future<Result<List<Map<String, dynamic>>, AppError>> getSession(
       String id) async {
     try {
-      final resp =
-          await _dio.get<Map<String, dynamic>>('/ai/sessions/$id');
+      final resp = await _dio.get<Map<String, dynamic>>('/ai/sessions/$id');
       final raw = (resp.data?['messages'] as List<dynamic>?) ?? [];
       final msgs = raw.whereType<Map<String, dynamic>>().toList();
       return Ok(msgs);

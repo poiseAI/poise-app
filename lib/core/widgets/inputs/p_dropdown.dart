@@ -6,7 +6,8 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 class PDropdownItem<T> {
-  const PDropdownItem({required this.value, required this.label, this.subtitle});
+  const PDropdownItem(
+      {required this.value, required this.label, this.subtitle});
   final T value;
   final String label;
   final String? subtitle;

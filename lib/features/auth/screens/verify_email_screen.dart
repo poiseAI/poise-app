@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
@@ -78,18 +77,25 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     result.fold(
       onOk: (_) {
-        setState(() {
-          _buttonState = PButtonState.success;
-          _otpState = POtpState.success;
-        });
-        Future<void>.delayed(const Duration(milliseconds: 420), () {
-          if (!mounted) return;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute<void>(
-              builder: (_) => const _EmailVerifiedSuccessScreen(),
-            ),
-          );
-        });
+        final auth = ref.read(authProvider).valueOrNull;
+        final isSettings =
+            auth is AuthAuthenticated && auth.hasActiveStrategy;
+        if (isSettings) {
+          // Settings: router won't auto-redirect; show success briefly then go.
+          setState(() {
+            _buttonState = PButtonState.success;
+            _otpState = POtpState.success;
+          });
+          Future<void>.delayed(const Duration(milliseconds: 420), () {
+            if (!mounted) return;
+            context.go(Routes.profile);
+          });
+        } else {
+          // New user: navigate to success screen immediately so GoRouter's
+          // redirect (which fires next frame) lands on /onboarding/... and
+          // skips back to riskAppetite. The success screen auto-advances.
+          context.go(Routes.verifyEmailSuccess);
+        }
       },
       onErr: (message) {
         setState(() {
@@ -153,7 +159,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       appBar: AppBar(
         centerTitle: false,
         title: Text(
-          isSettingsVerification ? 'Verify new email address' : 'Verify email',
+          isSettingsVerification ? 'Verify new email address' : 'Sign up',
           style: AppTypography.h1,
         ),
         leading: IconButton(
@@ -172,12 +178,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.lg),
+              const Text(
+                'Verify your email address',
+                style: AppTypography.h2,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 isSettingsVerification
                     ? 'A 6-digit OTP has been sent to your email. Please enter it below to verify your email.'
                     : 'A 6-digit OTP has been sent to $email. Please enter it below to verify your email.',
-                style: AppTypography.bodyLg.copyWith(
-                  color: AppColors.textPrimary,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
                   height: 1.45,
                 ),
               ),
@@ -190,7 +201,6 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 state: _otpState,
                 onCompleted: (_) {
                   setState(() => _otpComplete = true);
-                  _verify();
                 },
                 onChanged: (value) {
                   if (_otpState != POtpState.idle) {
@@ -198,6 +208,12 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   }
                   setState(() => _otpComplete = value.length == 6);
                 },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              PPrimaryButton(
+                label: 'Continue',
+                state: _buttonState,
+                onPressed: _otpComplete ? _verify : null,
               ),
               const Spacer(),
               Center(
@@ -212,65 +228,6 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                             : 'Request a new OTP',
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmailVerifiedSuccessScreen extends ConsumerWidget {
-  const _EmailVerifiedSuccessScreen();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        child: Padding(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              Image.asset(
-                'assets/images/success_person_check.png',
-                width: 190,
-                height: 190,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-              ).animate().fadeIn(duration: 240.ms).scale(
-                    begin: const Offset(0.92, 0.92),
-                    end: const Offset(1, 1),
-                    curve: Curves.easeOutBack,
-                  ),
-              const Spacer(),
-              const Text(
-                'Email Verified Successfully',
-                textAlign: TextAlign.center,
-                style: AppTypography.h2,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Click continue below to proceed',
-                textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Spacer(flex: 2),
-              PPrimaryButton(
-                label: 'Continue',
-                onPressed: () {
-                  final auth = ref.read(authProvider).valueOrNull;
-                  if (auth is AuthAuthenticated && auth.hasActiveStrategy) {
-                    context.go(Routes.profile);
-                  } else {
-                    context.go(Routes.riskAppetite);
-                  }
-                },
               ),
               const SizedBox(height: AppSpacing.lg),
             ],

@@ -52,11 +52,9 @@ class AppPreferences {
 
   bool get hasSeenWelcome => _prefs.getBool(_hasSeenWelcomeKey) ?? false;
 
-  Future<void> setHasSeenWelcome() =>
-      _prefs.setBool(_hasSeenWelcomeKey, true);
+  Future<void> setHasSeenWelcome() => _prefs.setBool(_hasSeenWelcomeKey, true);
 
-  bool get notifPermissionAsked =>
-      _prefs.getBool(_notifPermAskedKey) ?? false;
+  bool get notifPermissionAsked => _prefs.getBool(_notifPermAskedKey) ?? false;
 
   Future<void> setNotifPermissionAsked() =>
       _prefs.setBool(_notifPermAskedKey, true);

@@ -488,6 +488,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
                   controller: _nameCtrl,
                   focusNode: _nameFocus,
                   label: 'Your name',
+                  showLabelAbove: true,
                   textInputAction: TextInputAction.next,
                   fieldState: _nameState,
                   errorText: _nameError,
@@ -501,6 +502,7 @@ class _EditProfileScreenState extends ConsumerState<_EditProfileScreen> {
                   controller: _emailCtrl,
                   focusNode: _emailFocus,
                   label: 'Email address',
+                  showLabelAbove: true,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.done,
                   fieldState: _emailState,
@@ -650,6 +652,7 @@ class _ChangePasswordScreenState extends ConsumerState<_ChangePasswordScreen> {
               controller: _currentPasswordCtrl,
               focusNode: _currentPasswordFocus,
               label: 'Current password',
+              showLabelAbove: true,
               obscureText: true,
               textInputAction: TextInputAction.next,
               fieldState: _currentPasswordState,
@@ -666,6 +669,7 @@ class _ChangePasswordScreenState extends ConsumerState<_ChangePasswordScreen> {
               controller: _newPasswordCtrl,
               focusNode: _newPasswordFocus,
               label: 'New password',
+              showLabelAbove: true,
               obscureText: true,
               textInputAction: TextInputAction.next,
               fieldState: _newPasswordState,
@@ -689,6 +693,7 @@ class _ChangePasswordScreenState extends ConsumerState<_ChangePasswordScreen> {
               focusNode: _confirmPasswordFocus,
               label: 'Confirm password',
               hint: 'Repeat password',
+              showLabelAbove: true,
               obscureText: true,
               textInputAction: TextInputAction.done,
               fieldState: _confirmPasswordState,
@@ -772,7 +777,9 @@ class ExchangeConnectionsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final fromOnboarding =
         GoRouterState.of(context).uri.queryParameters['from'] == 'onboarding';
-    final exitRoute = fromOnboarding ? Routes.home : Routes.profile;
+    if (fromOnboarding) return const _ExchangeOnboardingFlow();
+
+    const exitRoute = Routes.profile;
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
@@ -782,24 +789,788 @@ class ExchangeConnectionsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         centerTitle: false,
-        title: Text(fromOnboarding ? 'Connect exchange' : ''),
-        actions: fromOnboarding
-            ? [
-                TextButton(
-                  onPressed: () =>
-                      context.canPop() ? context.pop() : context.go(exitRoute),
-                  child: const Text('Skip'),
-                ),
-              ]
-            : null,
+        title: const Text('Exchange Connections', style: AppTypography.h1),
       ),
-      body: SafeArea(
+      body: const SafeArea(
         top: false,
-        child: _ExchangeConnectionsSection(fromOnboarding: fromOnboarding),
+        child: _ExchangeConnectionsSection(fromOnboarding: false),
       ),
     );
   }
 }
+
+class _ExchangeOnboardingFlow extends ConsumerStatefulWidget {
+  const _ExchangeOnboardingFlow();
+
+  @override
+  ConsumerState<_ExchangeOnboardingFlow> createState() =>
+      _ExchangeOnboardingFlowState();
+}
+
+class _ExchangeOnboardingFlowState
+    extends ConsumerState<_ExchangeOnboardingFlow> {
+  late Future<Result<List<Map<String, dynamic>>, AppError>> _future;
+  final _apiKeyCtrl = TextEditingController();
+  final _apiSecretCtrl = TextEditingController();
+  String? _selectedExchange;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _loadConnections();
+    _apiKeyCtrl.addListener(_onFormChanged);
+    _apiSecretCtrl.addListener(_onFormChanged);
+  }
+
+  @override
+  void dispose() {
+    _apiKeyCtrl.removeListener(_onFormChanged);
+    _apiSecretCtrl.removeListener(_onFormChanged);
+    _apiKeyCtrl.dispose();
+    _apiSecretCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onFormChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<Result<List<Map<String, dynamic>>, AppError>>
+      _loadConnections() async {
+    final result = await ref.read(profileApiProvider).getExchangeConnections();
+    final connections = result.valueOrNull;
+    if (mounted &&
+        connections != null &&
+        connections.any(_isActiveConnection)) {
+      ref.read(authProvider.notifier).markHasExchangeConnection();
+    }
+    return result;
+  }
+
+  Future<void> _connectSelectedExchange() async {
+    final exchange = _selectedExchange;
+    if (exchange == null || _loading) return;
+
+    final apiKey = _apiKeyCtrl.text.trim();
+    final apiSecret = _apiSecretCtrl.text.trim();
+    if (apiKey.isEmpty || apiSecret.isEmpty) {
+      PToast.error(context, 'API key and secret key are required');
+      return;
+    }
+
+    setState(() => _loading = true);
+    final result = await ref.read(profileApiProvider).createExchangeConnection(
+          exchange: exchange,
+          apiKey: apiKey,
+          apiSecret: apiSecret,
+          isTestnet: false,
+        );
+    if (!mounted) return;
+    setState(() => _loading = false);
+    result.fold(
+      onOk: (_) {
+        ref.read(authProvider.notifier).markHasExchangeConnection();
+        unawaited(ref.read(authProvider.notifier).refreshSession());
+        context.go(Routes.baselineSync);
+      },
+      onErr: (err) => PToast.error(context, err.userMessage),
+    );
+  }
+
+  void _openForm(String exchange) {
+    setState(() {
+      _selectedExchange = exchange;
+      _apiKeyCtrl.clear();
+      _apiSecretCtrl.clear();
+    });
+  }
+
+  void _backToChooser() {
+    setState(() {
+      _selectedExchange = null;
+      _apiKeyCtrl.clear();
+      _apiSecretCtrl.clear();
+      _loading = false;
+    });
+  }
+
+  void _goBaseline() => context.go(Routes.baselineSync);
+
+  bool _isActiveConnection(Map<String, dynamic> connection) =>
+      (connection['is_active'] as bool?) ?? true;
+
+  Map<String, dynamic>? _connectionFor(
+    List<Map<String, dynamic>> connections,
+    String exchange,
+  ) {
+    for (final connection in connections) {
+      final name = (connection['exchange'] as String? ?? '').toLowerCase();
+      if (name == exchange) return connection;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: FutureBuilder<Result<List<Map<String, dynamic>>, AppError>>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              );
+            }
+            final result = snap.data;
+            if (result == null || result.isErr) {
+              return const PErrorState(message: 'Failed to load connections');
+            }
+
+            final connections = result.value;
+            final selected = _selectedExchange;
+            if (selected != null) {
+              return _ExchangeOnboardingForm(
+                exchange: selected,
+                apiKeyCtrl: _apiKeyCtrl,
+                apiSecretCtrl: _apiSecretCtrl,
+                loading: _loading,
+                canSubmit: _apiKeyCtrl.text.trim().isNotEmpty &&
+                    _apiSecretCtrl.text.trim().isNotEmpty,
+                onBack: _backToChooser,
+                onHelp: () => _showOnboardingApiHelpSheet(context, selected),
+                onSubmit: _connectSelectedExchange,
+              );
+            }
+
+            return _ExchangeOnboardingChooser(
+              bybitConnected: _connectionFor(connections, 'bybit') != null &&
+                  _isActiveConnection(_connectionFor(connections, 'bybit')!),
+              binanceConnected:
+                  _connectionFor(connections, 'binance') != null &&
+                      _isActiveConnection(
+                        _connectionFor(connections, 'binance')!,
+                      ),
+              onSelectExchange: _openForm,
+              onContinue:
+                  connections.any(_isActiveConnection) ? _goBaseline : null,
+              onLater: _goBaseline,
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ExchangeOnboardingChooser extends StatelessWidget {
+  const _ExchangeOnboardingChooser({
+    required this.bybitConnected,
+    required this.binanceConnected,
+    required this.onSelectExchange,
+    required this.onContinue,
+    required this.onLater,
+  });
+
+  final bool bybitConnected;
+  final bool binanceConnected;
+  final ValueChanged<String> onSelectExchange;
+  final VoidCallback? onContinue;
+  final VoidCallback onLater;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 34, 24, 20),
+            children: [
+              Text(
+                'Connect your exchange',
+                style: AppTypography.display2.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: 24,
+                  height: 1.2,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Poise reads your futures balance and checks every trade before it reaches your exchange',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 28),
+              const _SecurityCallout(),
+              const SizedBox(height: 28),
+              _OnboardingExchangeRow(
+                exchange: 'bybit',
+                connected: bybitConnected,
+                onTap: () => onSelectExchange('bybit'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _OnboardingExchangeRow(
+                exchange: 'binance',
+                connected: binanceConnected,
+                onTap: () => onSelectExchange('binance'),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Connect at least one exchange to continue',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+          child: Column(
+            children: [
+              PPrimaryButton(
+                label: 'Continue',
+                height: 44,
+                onPressed: onContinue,
+              ),
+              const SizedBox(height: 6),
+              TextButton(
+                onPressed: onLater,
+                child: const Text("I'll do this later"),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExchangeOnboardingForm extends StatelessWidget {
+  const _ExchangeOnboardingForm({
+    required this.exchange,
+    required this.apiKeyCtrl,
+    required this.apiSecretCtrl,
+    required this.loading,
+    required this.canSubmit,
+    required this.onBack,
+    required this.onHelp,
+    required this.onSubmit,
+  });
+
+  final String exchange;
+  final TextEditingController apiKeyCtrl;
+  final TextEditingController apiSecretCtrl;
+  final bool loading;
+  final bool canSubmit;
+  final VoidCallback onBack;
+  final VoidCallback onHelp;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _label(exchange);
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: loading ? null : onBack,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  style: IconButton.styleFrom(
+                    side: const BorderSide(color: AppColors.borderLight),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: AppRadius.cardRadius,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Connect $label',
+                      style: AppTypography.display2.copyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: 24,
+                        height: 1.2,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                  _ExchangeBadge(exchange: exchange),
+                ],
+              ),
+              const SizedBox(height: 26),
+              _ApiHelpCard(onTap: loading ? null : onHelp),
+              const SizedBox(height: 24),
+              PTextField(
+                controller: apiKeyCtrl,
+                label: 'API key',
+                showLabelAbove: true,
+                obscureText: true,
+                enabled: !loading,
+                compact: true,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+              PTextField(
+                controller: apiSecretCtrl,
+                label: 'Secret key',
+                showLabelAbove: true,
+                obscureText: true,
+                enabled: !loading,
+                compact: true,
+                textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 22),
+              const _PermissionsCallout(),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+          child: PPrimaryButton(
+            label: 'Connect exchange',
+            height: 44,
+            state: loading ? PButtonState.loading : PButtonState.idle,
+            onPressed: loading || !canSubmit ? null : onSubmit,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SecurityCallout extends StatelessWidget {
+  const _SecurityCallout();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.shield_outlined,
+            size: 18,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Your keys are encrypted at rest. Poise uses read & trade access only, it can never withdraw your funds.',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingExchangeRow extends StatelessWidget {
+  const _OnboardingExchangeRow({
+    required this.exchange,
+    required this.connected,
+    required this.onTap,
+  });
+
+  final String exchange;
+  final bool connected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _label(exchange);
+    return Material(
+      color: AppColors.bgSurface,
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.cardRadius,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 60),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              _ExchangeMark(exchange: exchange),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Connect exchange',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (connected) ...[
+                const _ConnectedPill(active: true),
+                const SizedBox(width: 8),
+              ],
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textDisabled,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExchangeBadge extends StatelessWidget {
+  const _ExchangeBadge({required this.exchange});
+
+  final String exchange;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: const BoxDecoration(
+        color: AppColors.textPrimary,
+        borderRadius: AppRadius.pillRadius,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ExchangeMark(exchange: exchange),
+          const SizedBox(width: 6),
+          Text(
+            exchange.toUpperCase(),
+            style: AppTypography.labelSm.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApiHelpCard extends StatelessWidget {
+  const _ApiHelpCard({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary.withValues(alpha: 0.06),
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.cardRadius,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border:
+                Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.help_outline_rounded,
+                size: 18,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'How do I get my API keys?',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'A quick, safe walkthrough',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PermissionsCallout extends StatelessWidget {
+  const _PermissionsCallout();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.profitGreen.withValues(alpha: 0.10),
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.verified_user_outlined,
+            size: 18,
+            color: AppColors.profitGreen,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Enable Contract, Trade (Orders & Positions). Never enable Withdrawals, Poise doesn't need it.",
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textPrimary,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _showOnboardingApiHelpSheet(
+  BuildContext context,
+  String exchange,
+) {
+  final label = _label(exchange);
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _OnboardingApiHelpSheet(exchange: label),
+  );
+}
+
+class _OnboardingApiHelpSheet extends StatelessWidget {
+  const _OnboardingApiHelpSheet({required this.exchange});
+
+  final String exchange;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          MediaQuery.viewInsetsOf(context).bottom + 16,
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            borderRadius: AppRadius.cardRadiusLg,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Create your $exchange key',
+                        style: AppTypography.h4.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                for (final entry in _onboardingApiSteps(exchange).entries) ...[
+                  _ApiHelpStep(number: entry.key, text: entry.value),
+                  const SizedBox(height: 8),
+                ],
+                const _ApiWarningRow(
+                  icon: Icons.warning_amber_rounded,
+                  color: AppColors.lossRed,
+                  backgroundColor: AppColors.lossRedBg,
+                  text:
+                      'Leave Withdraw and Account Transfer unchecked. Poise never moves your funds.',
+                ),
+                const SizedBox(height: 8),
+                _ApiWarningRow(
+                  icon: Icons.warning_amber_rounded,
+                  color: AppColors.warningAmber,
+                  backgroundColor: AppColors.warningAmberBg,
+                  text:
+                      'New $exchange accounts must wait 48 hours before creating a key. The Secret is shown only once.',
+                ),
+                const SizedBox(height: 14),
+                PPrimaryButton(
+                  label: 'Got it',
+                  height: 44,
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ApiHelpStep extends StatelessWidget {
+  const _ApiHelpStep({required this.number, required this.text});
+
+  final int number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$number',
+              style: AppTypography.label.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApiWarningRow extends StatelessWidget {
+  const _ApiWarningRow({
+    required this.icon,
+    required this.color,
+    required this.backgroundColor,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Color backgroundColor;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypography.caption.copyWith(
+                color: color,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Map<int, String> _onboardingApiSteps(String label) => {
+      1: 'Log in to $label, open your profile and go to Account & Security -> API Management.',
+      2: 'Tap Create New Key and choose System-generated API Keys -> API Transactions.',
+      3: 'Under permissions, enable Contract, Trade (Orders & Positions).',
+      4: 'Copy both the API key and Secret key, then paste them into Poise.',
+    };
 
 class _ExchangeConnectionsSection extends ConsumerStatefulWidget {
   const _ExchangeConnectionsSection({required this.fromOnboarding});
@@ -857,11 +1628,9 @@ class _ExchangeConnectionsSectionState
         return ListView(
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
           children: [
-            const Text('Connect your exchange', style: AppTypography.h2),
-            const SizedBox(height: AppSpacing.xs),
             Text(
               activeConnections == 0
-                  ? 'Link your trading accounts'
+                  ? 'Link your trading account to start trading'
                   : '$activeConnections exchange${activeConnections == 1 ? '' : 's'} connected',
               style: AppTypography.body.copyWith(
                 color: AppColors.textSecondary,
@@ -988,7 +1757,9 @@ class _DesktopSetupCard extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
-                shape: const StadiumBorder(),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppRadius.buttonRadius,
+                ),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1245,35 +2016,7 @@ class _ExchangeConnectionTileState
   }
 
   Future<void> _showApiHelpSheet(BuildContext context) {
-    final label = _label(widget.exchange);
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _SheetFrame(
-        title: 'Get API from $label',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final entry in _apiInstructions(label).entries) ...[
-              Text(
-                '${entry.key}. ${entry.value}',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            const SizedBox(height: AppSpacing.sm),
-            PPrimaryButton(
-              label: 'I understand',
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      ),
-    );
+    return _showOnboardingApiHelpSheet(context, widget.exchange);
   }
 }
 
@@ -1326,25 +2069,12 @@ class _InlineExchangeForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text('Enter Details', style: AppTypography.bodyMedium),
-            ),
-            TextButton(
-              onPressed: loading ? null : onHelp,
-              child: const Text('How to get API'),
-            ),
-          ],
-        ),
-        Text(
-          'Enter your API key and secret key to start trading',
-          style: AppTypography.bodySm.copyWith(color: AppColors.textSecondary),
-        ),
+        _ApiHelpCard(onTap: loading ? null : onHelp),
         const SizedBox(height: AppSpacing.md),
         PTextField(
           controller: apiKeyCtrl,
-          label: 'API Key',
+          label: 'API key',
+          showLabelAbove: true,
           obscureText: true,
           enabled: !loading,
           textInputAction: TextInputAction.next,
@@ -1353,24 +2083,19 @@ class _InlineExchangeForm extends StatelessWidget {
         PTextField(
           controller: apiSecretCtrl,
           label: 'Secret key',
+          showLabelAbove: true,
           obscureText: true,
           enabled: !loading,
           textInputAction: TextInputAction.done,
         ),
         const SizedBox(height: AppSpacing.md),
         PPrimaryButton(
-          label: 'Continue',
+          label: 'Connect exchange',
           state: loading ? PButtonState.loading : PButtonState.idle,
           onPressed: loading ? null : onSubmit,
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          'Only read and trade permissions are required. Never enable withdrawal permissions.',
-          style: AppTypography.caption.copyWith(
-            color: AppColors.textTertiary,
-            height: 1.35,
-          ),
-        ),
+        const _PermissionsCallout(),
       ],
     );
   }
@@ -1439,14 +2164,6 @@ class _ExchangeMark extends StatelessWidget {
 }
 
 String _label(String exchange) => exchange == 'binance' ? 'Binance' : 'Bybit';
-
-Map<int, String> _apiInstructions(String label) => {
-      1: 'Log in to your $label account in a web browser.',
-      2: 'Open API management from account settings or the user menu.',
-      3: 'Create a new API key with a clear label such as Poise trading.',
-      4: 'Enable read and trade permissions only. Do not enable withdrawals.',
-      5: 'Copy the API key and secret key into Poise, then continue.',
-    };
 
 class SecurityScreen extends StatelessWidget {
   const SecurityScreen({super.key});
@@ -2201,7 +2918,8 @@ void _showLogoutSheet(BuildContext context, WidgetRef ref) {
     backgroundColor: Colors.transparent,
     builder: (context) => _ConfirmSheet(
       title: 'Log out',
-      body: 'Are you sure you want to log out?',
+      body:
+          'You will be signed out of Poise on this device. Any active trades or guardrails remain active on the exchange.',
       primaryLabel: 'Log out',
       primaryColor: AppColors.lossRed,
       primaryIcon: Icons.logout_rounded,
@@ -2221,7 +2939,8 @@ void _showDeleteSheet(BuildContext context, WidgetRef ref) {
     builder: (context) => _ConfirmSheet(
       title: 'Delete Account',
       titleColor: AppColors.lossRed,
-      body: 'Are you sure you want to delete your account?',
+      body:
+          'This will permanently delete your Poise account and all associated data. This action cannot be undone.',
       primaryLabel: 'Delete account',
       primaryColor: AppColors.lossRed,
       primaryIcon: Icons.delete_outline_rounded,
@@ -2266,7 +2985,7 @@ class _ConfirmSheet extends StatelessWidget {
     return _SheetFrame(
       title: title,
       titleColor: titleColor,
-      showClose: false,
+      showClose: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2276,18 +2995,6 @@ class _ConfirmSheet extends StatelessWidget {
                 AppTypography.bodyLg.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.xl),
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.textPrimary,
-              foregroundColor: Colors.white,
-              shape: const RoundedRectangleBorder(
-                borderRadius: AppRadius.buttonRadius,
-              ),
-            ),
-            child: const Text('No'),
-          ),
-          const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             onPressed: () async => onPrimary(),
             icon: primaryIcon == null
@@ -2305,6 +3012,18 @@ class _ConfirmSheet extends StatelessWidget {
                 borderRadius: AppRadius.buttonRadius,
               ),
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              side: const BorderSide(color: AppColors.borderLight),
+              shape: const RoundedRectangleBorder(
+                borderRadius: AppRadius.buttonRadius,
+              ),
+            ),
+            child: const Text('Cancel'),
           ),
         ],
       ),

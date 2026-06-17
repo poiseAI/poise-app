@@ -14,8 +14,8 @@ abstract final class AppTypography {
     fontFamily: _orbitron,
     fontSize: 48,
     fontWeight: FontWeight.w700,
-    height: 1.25,          // 60 / 48
-    letterSpacing: -0.96,  // -2% × 48
+    height: 1.25, // 60 / 48
+    letterSpacing: -0.96, // -2% × 48
     color: AppColors.textPrimary,
   );
 
@@ -24,8 +24,8 @@ abstract final class AppTypography {
     fontFamily: _orbitron,
     fontSize: 36,
     fontWeight: FontWeight.w700,
-    height: 1.222,         // 44 / 36
-    letterSpacing: -0.72,  // -2% × 36
+    height: 1.222, // 44 / 36
+    letterSpacing: -0.72, // -2% × 36
     color: AppColors.textPrimary,
   );
 

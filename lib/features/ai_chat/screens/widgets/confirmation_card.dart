@@ -36,7 +36,8 @@ class ConfirmationCard extends StatelessWidget {
               size: 16, color: AppColors.profitGreen),
           const SizedBox(width: AppSpacing.xs),
           Text('Confirmed',
-              style: AppTypography.caption.copyWith(color: AppColors.profitGreen)),
+              style:
+                  AppTypography.caption.copyWith(color: AppColors.profitGreen)),
         ],
       );
     } else if (!isPending) {
@@ -98,7 +99,8 @@ class ConfirmationCard extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text('Confirm',
-                        style: AppTypography.label.copyWith(color: Colors.white)),
+                        style:
+                            AppTypography.label.copyWith(color: Colors.white)),
                   ),
                 ),
               ),

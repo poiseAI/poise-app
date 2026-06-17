@@ -6,7 +6,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
-import '../../../core/widgets/feedback/p_toast.dart';
 import '../../../core/widgets/inputs/p_text_field.dart';
 import '../providers/auth_provider.dart';
 
@@ -20,26 +19,22 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _totpCtrl = TextEditingController();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
-  final _totpFocus = FocusNode();
 
   PButtonState _buttonState = PButtonState.idle;
   PFieldState _emailState = PFieldState.idle;
   PFieldState _passwordState = PFieldState.idle;
   String? _emailError;
   String? _passwordError;
-  bool _showTotp = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _totpCtrl.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
-    _totpFocus.dispose();
     super.dispose();
   }
 
@@ -67,13 +62,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final passOk = _validatePassword(_passwordCtrl.text);
     if (!emailOk || !passOk) return;
 
-    setState(() => _buttonState = PButtonState.loading);
+    setState(() {
+      _buttonState = PButtonState.loading;
+      _errorMessage = null;
+    });
 
     final result = await ref.read(authProvider.notifier).login(
           _emailCtrl.text.trim(),
           _passwordCtrl.text,
-          totpToken:
-              _showTotp && _totpCtrl.text.length == 6 ? _totpCtrl.text : null,
         );
 
     if (!mounted) return;
@@ -81,27 +77,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     result.fold(
       onOk: (_) {
         setState(() => _buttonState = PButtonState.success);
-        // Router handles redirect based on auth state
       },
       onErr: (e) {
-        final msg = e.toLowerCase();
-        if (msg.contains('totp') ||
-            msg.contains('2fa') ||
-            msg.contains('authenticator') ||
-            msg.contains('one-time')) {
-          setState(() {
-            _buttonState = PButtonState.idle;
-            _showTotp = true;
-          });
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (mounted) _totpFocus.requestFocus();
-          });
-          return;
-        }
-        setState(() => _buttonState = PButtonState.error);
-        PToast.error(context, e);
-        Future.delayed(const Duration(milliseconds: 400), () {
-          if (mounted) setState(() => _buttonState = PButtonState.idle);
+        setState(() {
+          _buttonState = PButtonState.idle;
+          _errorMessage = e;
         });
       },
     );
@@ -117,91 +97,132 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canSubmit = _emailCtrl.text.trim().isNotEmpty &&
+        _passwordCtrl.text.isNotEmpty;
+
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
+        toolbarHeight: 48,
+        backgroundColor: AppColors.bgPrimary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: _goBack,
         ),
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: AppSpacing.screenPadding,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: constraints.maxHeight * 0.10),
-                  const Center(child: _PoiseMark()),
-                  const SizedBox(height: AppSpacing.xl),
-                  const Text('Welcome back', style: AppTypography.h1),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Sign in to keep every trade inside your plan.',
-                    style: AppTypography.bodyLg
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                  SizedBox(
-                      height: constraints.maxHeight > 720
-                          ? AppSpacing.xxl
-                          : AppSpacing.xl),
-                  PTextField(
-                    controller: _emailCtrl,
-                    focusNode: _emailFocus,
-                    label: 'Email address',
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    fieldState: _emailState,
-                    errorText: _emailError,
-                    autofocus: true,
-                    onChanged: (val) {
-                      if (_emailState != PFieldState.idle) {
-                        _validateEmail(val);
-                      }
-                    },
-                    onEditingComplete: () => _passwordFocus.requestFocus(),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  PTextField(
-                    controller: _passwordCtrl,
-                    focusNode: _passwordFocus,
-                    label: 'Password',
-                    obscureText: true,
-                    textInputAction:
-                        _showTotp ? TextInputAction.next : TextInputAction.done,
-                    fieldState: _passwordState,
-                    errorText: _passwordError,
-                    onChanged: (val) {
-                      if (_passwordState != PFieldState.idle) {
-                        _validatePassword(val);
-                      }
-                    },
-                    onEditingComplete:
-                        _showTotp ? () => _totpFocus.requestFocus() : _submit,
-                  ),
-                  if (_showTotp) ...[
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _PoiseWordmark(),
+                    const SizedBox(height: 28),
+                    Text(
+                      'Welcome back',
+                      style: AppTypography.h2.copyWith(
+                        fontFamily: 'Orbitron',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Log into your Poise account to access your dashboard and trading tools',
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 13,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.lossRedBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.lossRed.withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              size: 20,
+                              color: AppColors.lossRed,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: AppTypography.bodySm.copyWith(
+                                  color: AppColors.lossRed,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ] else ...[
+                      const SizedBox(height: 22),
+                    ],
+                    PTextField(
+                      controller: _emailCtrl,
+                      focusNode: _emailFocus,
+                      label: 'Email',
+                      hint: 'you@email.com',
+                      showLabelAbove: true,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      fieldState: _emailState,
+                      errorText: _emailError,
+                      compact: true,
+                      showValidationIcon: false,
+                      onChanged: (val) {
+                        setState(() {
+                          if (_errorMessage != null) _errorMessage = null;
+                        });
+                        if (_emailState != PFieldState.idle) _validateEmail(val);
+                      },
+                      onEditingComplete: () => _passwordFocus.requestFocus(),
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     PTextField(
-                      controller: _totpCtrl,
-                      focusNode: _totpFocus,
-                      label: '2FA code',
-                      keyboardType: TextInputType.number,
+                      controller: _passwordCtrl,
+                      focusNode: _passwordFocus,
+                      label: 'Password',
+                      hint: 'Enter your password',
+                      showLabelAbove: true,
+                      obscureText: true,
                       textInputAction: TextInputAction.done,
+                      fieldState: _passwordState,
+                      errorText: _passwordError,
+                      compact: true,
+                      showObscureToggle: true,
+                      showValidationIcon: false,
+                      onChanged: (val) {
+                        setState(() {
+                          if (_errorMessage != null) _errorMessage = null;
+                        });
+                        if (_passwordState != PFieldState.idle) {
+                          _validatePassword(val);
+                        }
+                      },
                       onEditingComplete: _submit,
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Enter the 6-digit code from your authenticator app.',
-                      style: AppTypography.bodySm
-                          .copyWith(color: AppColors.textSecondary),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.sm),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
+                    const SizedBox(height: AppSpacing.sm),
+                    TextButton(
                       onPressed: () => context.push(Routes.forgotPassword),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
@@ -210,86 +231,119 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       child: Text(
                         'Forgot password?',
-                        style: AppTypography.bodySm
-                            .copyWith(color: AppColors.primary),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  PPrimaryButton(
-                    label: 'Log in',
-                    state: _buttonState,
-                    onPressed: _submit,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Center(
-                    child: TextButton(
-                      onPressed: () => context.go(Routes.register),
-                      child: Text.rich(
-                        TextSpan(
-                          text: "Don't have an account? ",
-                          style: AppTypography.body
-                              .copyWith(color: AppColors.textSecondary),
-                          children: [
-                            TextSpan(
-                              text: 'Sign up',
-                              style: AppTypography.body.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                                decoration: TextDecoration.underline,
-                                decorationColor: AppColors.primary,
-                              ),
-                            ),
-                          ],
+                        style: AppTypography.buttonSm.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
                         ),
-                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+              child: PPrimaryButton(
+                label: 'Login',
+                state: _buttonState,
+                onPressed: canSubmit ? _submit : null,
+                height: 44,
+                borderRadius: BorderRadius.circular(22),
+                textStyle: AppTypography.button,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    "Don't have an account?",
+                    style: AppTypography.bodySm.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go(Routes.register),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.only(left: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Sign up',
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
   }
 }
 
-class _PoiseMark extends StatelessWidget {
-  const _PoiseMark();
+class _PoiseWordmark extends StatelessWidget {
+  const _PoiseWordmark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(
+          width: 18,
+          height: 22,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _LogoBar(height: 12),
+              SizedBox(width: 2),
+              _LogoBar(height: 18),
+              SizedBox(width: 2),
+              _LogoBar(height: 14),
+            ],
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          'poise',
+          style: AppTypography.h2.copyWith(
+            color: AppColors.primary,
+            fontFamily: 'Orbitron',
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            height: 1,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LogoBar extends StatelessWidget {
+  const _LogoBar({required this.height});
+
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 82,
-      height: 82,
+      width: 4,
+      height: height,
       decoration: BoxDecoration(
-        color: AppColors.brand500,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brand500.withValues(alpha: 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(
-            Icons.shield_rounded,
-            size: 46,
-            color: Colors.white.withValues(alpha: 0.96),
-          ),
-          const Icon(
-            Icons.show_chart_rounded,
-            size: 24,
-            color: AppColors.brand500,
-          ),
-        ],
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(1),
       ),
     );
   }

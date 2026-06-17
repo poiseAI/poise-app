@@ -3,12 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
-import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
+import '../../../core/widgets/feedback/p_success_seal.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../strategies/data/models/strategy.dart';
@@ -33,7 +33,10 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
   bool _initializedFromActive = false;
   CreateStrategyRequest _customRequest = _options.last.request;
   CreateStrategyRequest? _activeRequest;
+  _RiskPreset? _appliedPreset;
 
+  // TODO(KAN-19): These preset values are hardcoded defaults. Replace with
+  // a backend /strategies/presets or /config endpoint when available.
   static const _options = [
     _RiskPreset(
       label: 'Conservative',
@@ -210,18 +213,17 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
 
-    ref.read(authProvider.notifier).markHasActiveStrategy();
     if (widget.mode == RiskAppetiteMode.settings) {
+      ref.read(authProvider.notifier).markHasActiveStrategy();
       PToast.success(context, 'Risk appetite updated');
       Navigator.of(context).pop();
       return;
     }
 
-    await Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => const _RiskAppetiteSuccessScreen(),
-      ),
-    );
+    setState(() {
+      _buttonState = PButtonState.idle;
+      _appliedPreset = _presetForSelected();
+    });
   }
 
   @override
@@ -235,6 +237,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
       _initializedFromActive = true;
     }
     if (_confirming) return _buildConfirm(context);
+    if (widget.mode == RiskAppetiteMode.onboarding && _appliedPreset != null) {
+      return _RiskAppetiteSuccessScreen(preset: _appliedPreset!);
+    }
     if (widget.mode == RiskAppetiteMode.settings && !_editingSettings) {
       return _buildSettingsSummary(context);
     }
@@ -258,26 +263,36 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Padding(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Your Risk Appetite determines the trading rules (Conservative, Balanced, Aggressive, or Custom) that Poise enforces to align every trade with your chosen tolerance.',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.45,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: AppSpacing.screenPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Your Risk Appetite determines the trading rules (Conservative, Balanced, Aggressive, or Custom) that Poise enforces to align every trade with your chosen tolerance.',
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _RiskSummaryCard(
+                      preset: preset,
+                      onEdit: () => setState(() => _editingSettings = true),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              _RiskSummaryCard(
-                preset: preset,
-                onEdit: () => setState(() => _editingSettings = true),
-              ),
-              const Spacer(),
-              SizedBox(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, AppSpacing.lg),
+              child: SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: OutlinedButton(
@@ -285,7 +300,87 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
                   child: const Text('Change risk appetite'),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelect(BuildContext context) {
+    if (widget.mode == RiskAppetiteMode.onboarding) {
+      return _buildOnboardingSelect(context);
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        centerTitle: false,
+        title: const Text('Change risk appetite', style: AppTypography.h1),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => setState(() => _editingSettings = false),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Poise enforces a rule set matched to how you trade. Every trade is checked against these limits before it reaches the exchange.',
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textPrimary,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      ..._options.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final option = entry.value;
+                        final selected = index == _selected;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _RiskOnboardingCard(
+                            preset: option,
+                            selected: selected,
+                            onTap: () {
+                              if (option.label == 'Customizable') {
+                                _showCoreSheet();
+                                return;
+                              }
+                              setState(() => _selected = index);
+                            },
+                          ).animate(delay: (index * 35).ms).fadeIn().slideY(
+                                begin: 0.04,
+                                end: 0,
+                                curve: Curves.easeOutCubic,
+                              ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              PPrimaryButton(
+                label: 'Continue',
+                height: 44,
+                onPressed: _selected == null
+                    ? null
+                    : () => setState(() => _confirming = true),
+              ),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         ),
@@ -293,80 +388,162 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
     );
   }
 
-  Widget _buildSelect(BuildContext context) {
+  Widget _buildOnboardingSelect(BuildContext context) {
+    final selectedPreset = _selected == null
+        ? null
+        : _SetRiskAppetiteScreenState._options[_selected!];
+    final canContinue =
+        selectedPreset != null && selectedPreset.label != 'Customizable';
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: widget.mode == RiskAppetiteMode.settings
-          ? AppBar(
-              centerTitle: false,
-              title:
-                  const Text('Change risk appetite', style: AppTypography.h1),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => setState(() => _editingSettings = false),
-              ),
-              bottom: const PreferredSize(
-                preferredSize: Size.fromHeight(1),
-                child: Divider(height: 1, color: AppColors.borderLight),
-              ),
-            )
-          : null,
       body: SafeArea(
         child: Padding(
-          padding: AppSpacing.screenPadding,
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, AppSpacing.sm),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (widget.mode == RiskAppetiteMode.onboarding)
-                const SizedBox(height: AppSpacing.xl),
-              if (widget.mode == RiskAppetiteMode.onboarding)
-                const Text('Risk Appetite', style: AppTypography.h2),
-              if (widget.mode == RiskAppetiteMode.onboarding)
-                const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Each risk appetite has specific trading rules that dictate how Poise enforces limits and guardrails.',
-                style: AppTypography.bodyLg.copyWith(
-                  color: AppColors.textPrimary,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                'Select an option',
-                style: AppTypography.bodyLg.copyWith(
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Set your risk appetite',
+                        style: TextStyle(
+                          fontFamily: 'Orbitron',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                          letterSpacing: 0,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Poise enforces a rule set matched to how you trade. Every trade is checked against these limits before it reaches the exchange.',
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textPrimary,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      ..._options.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final option = entry.value;
+                        final selected = index == _selected;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _RiskOnboardingCard(
+                            preset: option,
+                            selected: selected,
+                            onTap: () => _selectOnboardingPreset(index),
+                          ).animate(delay: (index * 35).ms).fadeIn().slideY(
+                                begin: 0.04,
+                                end: 0,
+                                curve: Curves.easeOutCubic,
+                              ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              ..._options.asMap().entries.map((entry) {
-                final index = entry.key;
-                final option = entry.value;
-                final selected = index == _selected;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: _RiskSelectCard(
-                    preset: option,
-                    selected: selected,
-                    onTap: () => setState(() => _selected = index),
-                  ).animate(delay: (index * 45).ms).fadeIn().slideY(
-                        begin: 0.06,
-                        end: 0,
-                        curve: Curves.easeOutCubic,
-                      ),
-                );
-              }),
-              const Spacer(),
               PPrimaryButton(
                 label: 'Continue',
-                onPressed: _selected == null
-                    ? null
-                    : () => setState(() => _confirming = true),
+                height: 44,
+                state: _buttonState,
+                onPressed: canContinue && _buttonState == PButtonState.idle
+                    ? _confirm
+                    : null,
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void _selectOnboardingPreset(int index) {
+    final option = _options[index];
+    if (option.label == 'Customizable') {
+      _showCoreSheet();
+      return;
+    }
+    setState(() => _selected = index);
+  }
+
+  void _showCoreSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
+            decoration: const BoxDecoration(
+              color: AppColors.bgPrimary,
+              borderRadius: AppRadius.sheetRadius,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderLight,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                const Text(
+                  'Custom guardrails need Poise Core',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.h2,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Set every guardrail by hand with your own risk caps, leverage, and loss limits. It is part of Poise Core.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                PPrimaryButton(
+                  label: 'Upgrade to Poise Core',
+                  height: 44,
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Poise Core upgrades are coming soon'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: Text(
+                    'Maybe later',
+                    style: AppTypography.button.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -379,13 +556,17 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         title: Text(
           widget.mode == RiskAppetiteMode.settings
               ? 'Customize risk settings'
-              : 'Confirm configuration',
+              : 'Risk appetite',
           style: AppTypography.h1,
         ),
         centerTitle: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => setState(() => _confirming = false),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.borderLight),
         ),
       ),
       body: SafeArea(
@@ -394,21 +575,12 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RichText(
-                text: TextSpan(
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.textPrimary,
-                    height: 1.45,
-                  ),
-                  children: [
-                    const TextSpan(
-                        text: 'Please review your risk settings for a '),
-                    TextSpan(
-                      text: '${_riskLabel(preset)} Appetite',
-                      style: const TextStyle(color: AppColors.primary),
-                    ),
-                    const TextSpan(text: ' below.'),
-                  ],
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Review your ${_riskLabel(preset).toLowerCase()} settings',
+                style: AppTypography.bodyLg.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -432,7 +604,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
               PPrimaryButton(
                 label: widget.mode == RiskAppetiteMode.settings
                     ? 'Confirm and save'
-                    : 'Confirm',
+                    : 'Confirm configuration',
                 state: _buttonState,
                 onPressed:
                     _buttonState == PButtonState.loading ? null : _confirm,
@@ -576,6 +748,63 @@ String _formatNumber(num value) {
   return value.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
 }
 
+String _onboardingSubtitle(_RiskPreset preset) {
+  return switch (preset.label) {
+    'Conservative' => 'Capital first. Slow and steady',
+    'Balanced' => 'Balanced risk. Consistent growth',
+    'Aggressive' => 'High conviction. High stakes',
+    'Customizable' => 'Your rules. Your way',
+    _ => preset.shortDesc,
+  };
+}
+
+List<String> _metadataChipsFor(_RiskPreset preset) {
+  if (preset.label == 'Customizable') {
+    return const ['Manual guardrails'];
+  }
+  final risk = preset.request.maxDailyLossPercent;
+  return [
+    'Risk: Up to ${_formatNumber(risk ?? preset.request.maxPositionSize)}%',
+    'Leverage ${_formatNumber(preset.request.maxLeverage)}x',
+  ];
+}
+
+List<(String, String)> _guardrailRows(_RiskPreset preset) {
+  return [
+    for (final row in preset.rows)
+      if (_onboardingGuardrailLabels.contains(row.$1)) row,
+  ];
+}
+
+const _onboardingGuardrailLabels = {
+  'Percentage risk per trade',
+  'Max leverage per asset',
+  'Max trades per day',
+  'Daily maximum loss',
+  'Max concurrent open positions',
+  'Max consecutive losses in a day',
+};
+
+IconData _presetIcon(_RiskPreset preset) {
+  return switch (preset.label) {
+    'Conservative' => Icons.verified_user_outlined,
+    'Balanced' => Icons.balance_rounded,
+    'Aggressive' => Icons.bolt_rounded,
+    'Customizable' => Icons.tune_rounded,
+    _ => Icons.shield_outlined,
+  };
+}
+
+Color _presetAccent(_RiskPreset preset) {
+  return switch (preset.label) {
+    'Conservative' => AppColors.profitGreen,
+    'Balanced' => AppColors.primary,
+    'Aggressive' => AppColors.riskHigh,
+    'Customizable' => AppColors.textTertiary,
+    _ => AppColors.primary,
+  };
+}
+
 class _RiskPreset {
   const _RiskPreset({
     required this.label,
@@ -638,7 +867,9 @@ class _RiskSummaryCard extends StatelessWidget {
           Text(_riskLabel(preset), style: AppTypography.h4),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Customize your risk settings',
+            preset.label == 'Customizable'
+                ? 'Customize your risk settings'
+                : preset.shortDesc,
             style: AppTypography.bodySm.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -699,8 +930,8 @@ class _RiskSummaryCard extends StatelessWidget {
   };
 }
 
-class _RiskSelectCard extends StatelessWidget {
-  const _RiskSelectCard({
+class _RiskOnboardingCard extends StatelessWidget {
+  const _RiskOnboardingCard({
     required this.preset,
     required this.selected,
     required this.onTap,
@@ -712,50 +943,265 @@ class _RiskSelectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCore = preset.label == 'Customizable';
     return AnimatedContainer(
       width: double.infinity,
       duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: AppRadius.cardRadius,
+        borderRadius: AppRadius.cardRadiusLg,
         border: Border.all(
           color: selected ? AppColors.primary : AppColors.borderLight,
-          width: selected ? 2 : 1,
+          width: selected ? 1.6 : 1,
         ),
         boxShadow: selected
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.18),
+                  color: AppColors.primary.withValues(alpha: 0.10),
                   blurRadius: 0,
-                  spreadRadius: 3,
+                  spreadRadius: 2,
                 ),
               ]
             : null,
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.cardRadius,
-        child: Padding(
-          padding: AppSpacing.cardPadding,
-          child: Column(
-            crossAxisAlignment:
-                selected ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-            children: [
-              Text(_riskLabel(preset), style: AppTypography.h4),
-              if (selected) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  preset.reviewDesc,
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.textPrimary,
-                    height: 1.45,
-                  ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: AppRadius.cardRadiusLg,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.cardRadiusLg,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _RiskIconTile(preset: preset),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            preset.label,
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _onboardingSubtitle(preset),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textPrimary,
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _RiskRadioMark(selected: selected),
+                        if (isCore) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          const _CorePill(),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    for (final chip in _metadataChipsFor(preset))
+                      _RiskMetadataChip(label: chip),
+                  ],
+                ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: selected && !isCore
+                      ? _GuardrailValues(
+                          key: ValueKey('guardrails-${preset.label}'),
+                          rows: _guardrailRows(preset),
+                        )
+                      : const SizedBox.shrink(key: ValueKey('collapsed')),
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _RiskIconTile extends StatelessWidget {
+  const _RiskIconTile({required this.preset});
+
+  final _RiskPreset preset;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _presetAccent(preset);
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(_presetIcon(preset), color: color, size: 22),
+    );
+  }
+}
+
+class _RiskRadioMark extends StatelessWidget {
+  const _RiskRadioMark({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      width: 18,
+      height: 18,
+      duration: const Duration(milliseconds: 160),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? AppColors.primary : AppColors.borderLight,
+          width: selected ? 5 : 1.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _RiskMetadataChip extends StatelessWidget {
+  const _RiskMetadataChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: AppRadius.chipRadius,
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.labelSm.copyWith(
+          color: AppColors.primaryDark,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+}
+
+class _CorePill extends StatelessWidget {
+  const _CorePill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: AppRadius.chipRadius,
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock_outline_rounded,
+              size: 12, color: AppColors.primary),
+          const SizedBox(width: 3),
+          Text(
+            'Core',
+            style: AppTypography.labelSm.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuardrailValues extends StatelessWidget {
+  const _GuardrailValues({super.key, required this.rows});
+
+  final List<(String, String)> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        const Divider(height: 1, color: AppColors.borderLight),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Guardrail values',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...rows.map(
+          (row) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppColors.bgSurface,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      row.$1,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    row.$2,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1131,7 +1577,9 @@ String _riskTooltip(String label) {
 }
 
 class _RiskAppetiteSuccessScreen extends ConsumerWidget {
-  const _RiskAppetiteSuccessScreen();
+  const _RiskAppetiteSuccessScreen({required this.preset});
+
+  final _RiskPreset preset;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1139,52 +1587,82 @@ class _RiskAppetiteSuccessScreen extends ConsumerWidget {
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
-          padding: AppSpacing.screenPadding,
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, AppSpacing.sm),
           child: Column(
             children: [
-              const Spacer(flex: 2),
-              Image.asset(
-                'assets/images/success_rocket.png',
-                width: 190,
-                height: 190,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-              ).animate().fadeIn(duration: 260.ms).scale(
+              const Spacer(flex: 3),
+              const PSuccessSeal()
+                  .animate()
+                  .fadeIn(
+                    duration: 260.ms,
+                  )
+                  .scale(
                     begin: const Offset(0.92, 0.92),
                     end: const Offset(1, 1),
                     curve: Curves.easeOutBack,
                   ),
-              const Spacer(),
-              const Text(
-                'Risk Appetite Successfully Set',
-                textAlign: TextAlign.center,
-                style: AppTypography.h2,
-              ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.xl),
               Text(
-                'Click continue below to proceed',
+                '${_riskLabel(preset)} rules applied',
                 textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
+                style: const TextStyle(
+                  fontFamily: 'Orbitron',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                  letterSpacing: 0,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              const Spacer(flex: 2),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Poise will now guard every trade against these limits. You can fine-tune them anytime in Settings.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodySm.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (final chip in _successChipsFor(preset))
+                    _RiskMetadataChip(label: chip),
+                ],
+              ),
+              const Spacer(flex: 4),
               PPrimaryButton(
-                label: 'Continue',
-                onPressed: () async {
-                  final prefs = await ref.read(appPreferencesProvider.future);
-                  await prefs.setOnboardingComplete();
+                label: 'Connect your exchange',
+                height: 44,
+                onPressed: () {
                   ref.read(authProvider.notifier).markHasActiveStrategy();
-                  if (context.mounted) {
-                    context.go('${Routes.exchangeConnections}?from=onboarding');
-                  }
+                  context.go('${Routes.exchangeConnections}?from=onboarding');
                 },
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+List<String> _successChipsFor(_RiskPreset preset) {
+  return [
+    '${_dailyLossCapLabel(preset.request)} daily loss cap',
+    '${_formatNumber(preset.request.maxLeverage)}x max leverage',
+    '${preset.request.maxTradesPerDay} trades / day',
+  ];
+}
+
+String _dailyLossCapLabel(CreateStrategyRequest request) {
+  if (request.dailyLossLimitType == 'percent_balance' &&
+      request.maxDailyLossPercent != null) {
+    return '${_formatNumber(request.maxDailyLossPercent!)}%';
+  }
+  return '\$${_formatNumber(request.maxDailyLossUsd)}';
 }
