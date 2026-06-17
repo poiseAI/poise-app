@@ -1744,32 +1744,27 @@ class _DesktopSetupCard extends StatelessWidget {
           const Text('Prefer using a computer?', style: AppTypography.h4),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Connect exchange securely on desktop',
+            'Connect exchange securely via email link',
             style: AppTypography.body.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
               onPressed: onSendLink,
-              style: OutlinedButton.styleFrom(
+              style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: AppRadius.buttonRadius,
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: AppTypography.bodySm.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Use desktop instead'),
-                  SizedBox(width: AppSpacing.xs),
-                  Icon(Icons.open_in_new_rounded, size: 16),
-                ],
-              ),
+              icon: const Icon(Icons.open_in_new_rounded, size: 15),
+              label: const Text('Send secure web setup link'),
             ),
           ),
         ],

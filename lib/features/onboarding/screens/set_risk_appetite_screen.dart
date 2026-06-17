@@ -9,7 +9,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/feedback/p_success_seal.dart';
-import '../../../core/widgets/feedback/p_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../strategies/data/models/strategy.dart';
 import '../../strategies/providers/strategies_provider.dart';
@@ -215,13 +214,11 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
 
     if (widget.mode == RiskAppetiteMode.settings) {
       ref.read(authProvider.notifier).markHasActiveStrategy();
-      PToast.success(context, 'Risk appetite updated');
-      Navigator.of(context).pop();
-      return;
     }
 
     setState(() {
       _buttonState = PButtonState.idle;
+      _confirming = false;
       _appliedPreset = _presetForSelected();
     });
   }
@@ -237,8 +234,9 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
       _initializedFromActive = true;
     }
     if (_confirming) return _buildConfirm(context);
-    if (widget.mode == RiskAppetiteMode.onboarding && _appliedPreset != null) {
-      return _RiskAppetiteSuccessScreen(preset: _appliedPreset!);
+    if (_appliedPreset != null) {
+      return _RiskAppetiteSuccessScreen(
+          preset: _appliedPreset!, mode: widget.mode);
     }
     if (widget.mode == RiskAppetiteMode.settings && !_editingSettings) {
       return _buildSettingsSummary(context);
@@ -327,6 +325,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ),
       ),
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, AppSpacing.sm),
           child: Column(
@@ -570,6 +569,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
         ),
       ),
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
@@ -1577,9 +1577,11 @@ String _riskTooltip(String label) {
 }
 
 class _RiskAppetiteSuccessScreen extends ConsumerWidget {
-  const _RiskAppetiteSuccessScreen({required this.preset});
+  const _RiskAppetiteSuccessScreen(
+      {required this.preset, required this.mode});
 
   final _RiskPreset preset;
+  final RiskAppetiteMode mode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1624,22 +1626,49 @@ class _RiskAppetiteSuccessScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  for (final chip in _successChipsFor(preset))
-                    _RiskMetadataChip(label: chip),
-                ],
+              Center(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final chip in _successChipsFor(preset))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.check_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              chip,
+                              style: AppTypography.bodySm.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const Spacer(flex: 4),
               PPrimaryButton(
-                label: 'Connect your exchange',
+                label: mode == RiskAppetiteMode.onboarding
+                    ? 'Connect your exchange'
+                    : 'Done',
                 height: 44,
                 onPressed: () {
-                  ref.read(authProvider.notifier).markHasActiveStrategy();
-                  context.go('${Routes.exchangeConnections}?from=onboarding');
+                  if (mode == RiskAppetiteMode.onboarding) {
+                    ref.read(authProvider.notifier).markHasActiveStrategy();
+                    context
+                        .go('${Routes.exchangeConnections}?from=onboarding');
+                  } else {
+                    Navigator.of(context).pop();
+                  }
                 },
               ),
               const SizedBox(height: AppSpacing.sm),
