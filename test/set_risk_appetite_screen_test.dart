@@ -10,6 +10,8 @@ import 'package:poise_ai/core/utils/result.dart';
 import 'package:poise_ai/core/widgets/buttons/p_primary_button.dart';
 import 'package:poise_ai/features/auth/providers/auth_provider.dart';
 import 'package:poise_ai/features/auth/providers/auth_state.dart';
+import 'package:poise_ai/features/billing/data/billing_api.dart';
+import 'package:poise_ai/features/billing/providers/billing_provider.dart';
 import 'package:poise_ai/features/onboarding/screens/set_risk_appetite_screen.dart';
 import 'package:poise_ai/features/strategies/data/models/strategy.dart';
 import 'package:poise_ai/features/strategies/data/strategies_api.dart';
@@ -75,6 +77,22 @@ void main() {
     expect(find.text('Maybe later'), findsOneWidget);
   });
 
+  testWidgets('customizable upgrade starts Poise Core checkout',
+      (tester) async {
+    final launched = <String>[];
+    await _pumpRiskHarness(tester, launchedBillingUrls: launched);
+
+    await tester.ensureVisible(find.text('Customizable'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Customizable'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Upgrade to Poise Core'));
+    await tester.pumpAndSettle();
+
+    expect(launched, ['https://checkout.stripe.test/session']);
+  });
+
   testWidgets('continue applies selected preset and opens exchange CTA',
       (tester) async {
     final strategiesApi = _RecordingStrategiesApi();
@@ -112,6 +130,7 @@ void main() {
 Future<void> _pumpRiskHarness(
   WidgetTester tester, {
   _RecordingStrategiesApi? strategiesApi,
+  List<String>? launchedBillingUrls,
 }) async {
   SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1179, 2556);
@@ -139,6 +158,11 @@ Future<void> _pumpRiskHarness(
     ProviderScope(
       overrides: [
         strategiesApiProvider.overrideWithValue(api),
+        billingApiProvider.overrideWithValue(_RecordingBillingApi()),
+        billingUrlLauncherProvider.overrideWithValue((url) async {
+          launchedBillingUrls?.add(url);
+          return true;
+        }),
         authProvider.overrideWith(_TestAuth.new),
       ],
       child: MaterialApp.router(
@@ -148,6 +172,17 @@ Future<void> _pumpRiskHarness(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+class _RecordingBillingApi extends BillingApi {
+  _RecordingBillingApi() : super(Dio());
+
+  @override
+  Future<Result<BillingCheckoutSession, AppError>> startCheckout() async {
+    return const Ok(
+      BillingCheckoutSession(url: 'https://checkout.stripe.test/session'),
+    );
+  }
 }
 
 class _TestAuth extends Auth {

@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../../../billing/data/billing_api.dart';
 
 part 'auth_response.freezed.dart';
 part 'auth_response.g.dart';
@@ -13,6 +14,17 @@ Object? _readHasExchangeConnection(Map<dynamic, dynamic> json, String key) =>
 
 Object? _readSessionId(Map<dynamic, dynamic> json, String key) =>
     json['session_id'] ?? json['sessionId'];
+
+BillingSubscription _readSubscription(Object? json) {
+  if (json is Map<String, dynamic>) return BillingSubscription.fromJson(json);
+  if (json is Map) {
+    return BillingSubscription.fromJson(Map<String, dynamic>.from(json));
+  }
+  return BillingSubscription.none;
+}
+
+Map<String, dynamic> _writeSubscription(BillingSubscription subscription) =>
+    subscription.toJson();
 
 @freezed
 abstract class AuthResponse with _$AuthResponse {
@@ -43,6 +55,9 @@ abstract class AuthUser with _$AuthUser {
       readValue: _readHasExchangeConnection,
     )
     bool hasExchangeConnection,
+    @Default(BillingSubscription.none)
+    @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+    BillingSubscription subscription,
   }) = _AuthUser;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) =>

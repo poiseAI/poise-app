@@ -18,6 +18,8 @@ import '../../../core/widgets/inputs/p_text_field.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
 import '../../auth/widgets/password_requirements.dart';
+import '../../billing/data/billing_api.dart';
+import '../../billing/providers/billing_provider.dart';
 import '../../onboarding/screens/set_risk_appetite_screen.dart';
 import '../../strategies/providers/strategies_provider.dart';
 import '../data/profile_api.dart';
@@ -88,6 +90,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: AppColors.textSecondary,
             ),
           ),
+          const SizedBox(height: 20),
+          _BillingSection(subscription: authState.subscription),
           const SizedBox(height: 20),
           SizedBox(
             height: 52,
@@ -160,6 +164,121 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
+}
+
+class _BillingSection extends ConsumerWidget {
+  const _BillingSection({required this.subscription});
+
+  final BillingSubscription subscription;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isCore = subscription.entitled;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.bgSurface,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: AppColors.primary,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Poise Core',
+                      style: AppTypography.bodyLg.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _billingSubtitle(subscription),
+                      style: AppTypography.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                isCore
+                    ? _billingStatusLabel(subscription.status)
+                    : r'$79/month',
+                style: AppTypography.bodySm.copyWith(
+                  color: isCore ? AppColors.profitGreen : AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 44,
+            child: PPrimaryButton(
+              label: isCore ? 'Manage billing' : 'Start trial',
+              height: 44,
+              onPressed: () => _runBillingAction(context, ref, isCore),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runBillingAction(
+    BuildContext context,
+    WidgetRef ref,
+    bool manageBilling,
+  ) async {
+    final controller = ref.read(billingControllerProvider);
+    final result = manageBilling
+        ? await controller.openPortal()
+        : await controller.startCheckout();
+    if (result.isErr && context.mounted) {
+      PToast.error(context, result.error.userMessage);
+    }
+  }
+}
+
+String _billingSubtitle(BillingSubscription subscription) {
+  if (!subscription.entitled) return '14-day trial';
+  if (subscription.cancelAtPeriodEnd) return 'Access until period end';
+  return switch (subscription.status) {
+    BillingStatus.trialing => 'Trial active',
+    BillingStatus.active => 'Active',
+    BillingStatus.pastDue => 'Payment needs attention',
+    _ => 'Active',
+  };
+}
+
+String _billingStatusLabel(BillingStatus status) {
+  return switch (status) {
+    BillingStatus.trialing => 'Trial',
+    BillingStatus.active => 'Active',
+    BillingStatus.pastDue => 'Past due',
+    _ => 'Active',
+  };
 }
 
 String _titleCaseName(String value) {

@@ -10,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/feedback/p_success_seal.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../billing/providers/billing_provider.dart';
 import '../../strategies/data/models/strategy.dart';
 import '../../strategies/providers/strategies_provider.dart';
 
@@ -519,13 +520,16 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
                 PPrimaryButton(
                   label: 'Upgrade to Poise Core',
                   height: 44,
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.of(sheetContext).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Poise Core upgrades are coming soon'),
-                      ),
-                    );
+                    final result = await ref
+                        .read(billingControllerProvider)
+                        .startCheckout();
+                    if (result.isErr && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result.error.userMessage)),
+                      );
+                    }
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -1577,8 +1581,7 @@ String _riskTooltip(String label) {
 }
 
 class _RiskAppetiteSuccessScreen extends ConsumerWidget {
-  const _RiskAppetiteSuccessScreen(
-      {required this.preset, required this.mode});
+  const _RiskAppetiteSuccessScreen({required this.preset, required this.mode});
 
   final _RiskPreset preset;
   final RiskAppetiteMode mode;
@@ -1664,8 +1667,7 @@ class _RiskAppetiteSuccessScreen extends ConsumerWidget {
                 onPressed: () {
                   if (mode == RiskAppetiteMode.onboarding) {
                     ref.read(authProvider.notifier).markHasActiveStrategy();
-                    context
-                        .go('${Routes.exchangeConnections}?from=onboarding');
+                    context.go('${Routes.exchangeConnections}?from=onboarding');
                   } else {
                     Navigator.of(context).pop();
                   }

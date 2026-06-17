@@ -412,6 +412,8 @@ mixin _$AuthUser {
   @JsonKey(
       name: 'has_exchange_connection', readValue: _readHasExchangeConnection)
   bool get hasExchangeConnection;
+  @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+  BillingSubscription get subscription;
 
   /// Create a copy of AuthUser
   /// with the given fields replaced by the non-null parameter values.
@@ -438,17 +440,19 @@ mixin _$AuthUser {
             (identical(other.totpEnabled, totpEnabled) ||
                 other.totpEnabled == totpEnabled) &&
             (identical(other.hasExchangeConnection, hasExchangeConnection) ||
-                other.hasExchangeConnection == hasExchangeConnection));
+                other.hasExchangeConnection == hasExchangeConnection) &&
+            (identical(other.subscription, subscription) ||
+                other.subscription == subscription));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, email, fullName,
-      emailVerified, isAdmin, totpEnabled, hasExchangeConnection);
+      emailVerified, isAdmin, totpEnabled, hasExchangeConnection, subscription);
 
   @override
   String toString() {
-    return 'AuthUser(id: $id, email: $email, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasExchangeConnection: $hasExchangeConnection)';
+    return 'AuthUser(id: $id, email: $email, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasExchangeConnection: $hasExchangeConnection, subscription: $subscription)';
   }
 }
 
@@ -467,7 +471,9 @@ abstract mixin class $AuthUserCopyWith<$Res> {
       @JsonKey(
           name: 'has_exchange_connection',
           readValue: _readHasExchangeConnection)
-      bool hasExchangeConnection});
+      bool hasExchangeConnection,
+      @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+      BillingSubscription subscription});
 }
 
 /// @nodoc
@@ -489,6 +495,7 @@ class _$AuthUserCopyWithImpl<$Res> implements $AuthUserCopyWith<$Res> {
     Object? isAdmin = null,
     Object? totpEnabled = null,
     Object? hasExchangeConnection = null,
+    Object? subscription = null,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -519,6 +526,10 @@ class _$AuthUserCopyWithImpl<$Res> implements $AuthUserCopyWith<$Res> {
           ? _self.hasExchangeConnection
           : hasExchangeConnection // ignore: cast_nullable_to_non_nullable
               as bool,
+      subscription: null == subscription
+          ? _self.subscription
+          : subscription // ignore: cast_nullable_to_non_nullable
+              as BillingSubscription,
     ));
   }
 }
@@ -627,7 +638,9 @@ extension AuthUserPatterns on AuthUser {
             @JsonKey(
                 name: 'has_exchange_connection',
                 readValue: _readHasExchangeConnection)
-            bool hasExchangeConnection)?
+            bool hasExchangeConnection,
+            @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+            BillingSubscription subscription)?
         $default, {
     required TResult orElse(),
   }) {
@@ -641,7 +654,8 @@ extension AuthUserPatterns on AuthUser {
             _that.emailVerified,
             _that.isAdmin,
             _that.totpEnabled,
-            _that.hasExchangeConnection);
+            _that.hasExchangeConnection,
+            _that.subscription);
       case _:
         return orElse();
     }
@@ -673,7 +687,9 @@ extension AuthUserPatterns on AuthUser {
             @JsonKey(
                 name: 'has_exchange_connection',
                 readValue: _readHasExchangeConnection)
-            bool hasExchangeConnection)
+            bool hasExchangeConnection,
+            @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+            BillingSubscription subscription)
         $default,
   ) {
     final _that = this;
@@ -686,7 +702,8 @@ extension AuthUserPatterns on AuthUser {
             _that.emailVerified,
             _that.isAdmin,
             _that.totpEnabled,
-            _that.hasExchangeConnection);
+            _that.hasExchangeConnection,
+            _that.subscription);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -717,7 +734,9 @@ extension AuthUserPatterns on AuthUser {
             @JsonKey(
                 name: 'has_exchange_connection',
                 readValue: _readHasExchangeConnection)
-            bool hasExchangeConnection)?
+            bool hasExchangeConnection,
+            @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+            BillingSubscription subscription)?
         $default,
   ) {
     final _that = this;
@@ -730,7 +749,8 @@ extension AuthUserPatterns on AuthUser {
             _that.emailVerified,
             _that.isAdmin,
             _that.totpEnabled,
-            _that.hasExchangeConnection);
+            _that.hasExchangeConnection,
+            _that.subscription);
       case _:
         return null;
     }
@@ -750,7 +770,9 @@ class _AuthUser implements AuthUser {
       @JsonKey(
           name: 'has_exchange_connection',
           readValue: _readHasExchangeConnection)
-      this.hasExchangeConnection = false});
+      this.hasExchangeConnection = false,
+      @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+      this.subscription = BillingSubscription.none});
   factory _AuthUser.fromJson(Map<String, dynamic> json) =>
       _$AuthUserFromJson(json);
 
@@ -774,6 +796,9 @@ class _AuthUser implements AuthUser {
   @JsonKey(
       name: 'has_exchange_connection', readValue: _readHasExchangeConnection)
   final bool hasExchangeConnection;
+  @override
+  @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+  final BillingSubscription subscription;
 
   /// Create a copy of AuthUser
   /// with the given fields replaced by the non-null parameter values.
@@ -805,17 +830,19 @@ class _AuthUser implements AuthUser {
             (identical(other.totpEnabled, totpEnabled) ||
                 other.totpEnabled == totpEnabled) &&
             (identical(other.hasExchangeConnection, hasExchangeConnection) ||
-                other.hasExchangeConnection == hasExchangeConnection));
+                other.hasExchangeConnection == hasExchangeConnection) &&
+            (identical(other.subscription, subscription) ||
+                other.subscription == subscription));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, email, fullName,
-      emailVerified, isAdmin, totpEnabled, hasExchangeConnection);
+      emailVerified, isAdmin, totpEnabled, hasExchangeConnection, subscription);
 
   @override
   String toString() {
-    return 'AuthUser(id: $id, email: $email, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasExchangeConnection: $hasExchangeConnection)';
+    return 'AuthUser(id: $id, email: $email, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasExchangeConnection: $hasExchangeConnection, subscription: $subscription)';
   }
 }
 
@@ -836,7 +863,9 @@ abstract mixin class _$AuthUserCopyWith<$Res>
       @JsonKey(
           name: 'has_exchange_connection',
           readValue: _readHasExchangeConnection)
-      bool hasExchangeConnection});
+      bool hasExchangeConnection,
+      @JsonKey(fromJson: _readSubscription, toJson: _writeSubscription)
+      BillingSubscription subscription});
 }
 
 /// @nodoc
@@ -858,6 +887,7 @@ class __$AuthUserCopyWithImpl<$Res> implements _$AuthUserCopyWith<$Res> {
     Object? isAdmin = null,
     Object? totpEnabled = null,
     Object? hasExchangeConnection = null,
+    Object? subscription = null,
   }) {
     return _then(_AuthUser(
       id: null == id
@@ -888,6 +918,10 @@ class __$AuthUserCopyWithImpl<$Res> implements _$AuthUserCopyWith<$Res> {
           ? _self.hasExchangeConnection
           : hasExchangeConnection // ignore: cast_nullable_to_non_nullable
               as bool,
+      subscription: null == subscription
+          ? _self.subscription
+          : subscription // ignore: cast_nullable_to_non_nullable
+              as BillingSubscription,
     ));
   }
 }

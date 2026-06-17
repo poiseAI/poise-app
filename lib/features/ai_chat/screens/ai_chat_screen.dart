@@ -8,6 +8,11 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/buttons/p_primary_button.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/auth_state.dart';
+import '../../billing/data/billing_api.dart';
+import '../../billing/providers/billing_provider.dart';
 import '../data/ai_chat_api.dart';
 import '../data/models/chat_message.dart';
 import '../providers/ai_chat_provider.dart';
@@ -41,13 +46,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final prompt = widget.initialPrompt?.trim();
-      if (_sentInitialPrompt || prompt == null || prompt.isEmpty) return;
-      _sentInitialPrompt = true;
-      ref.read(aiChatProvider.notifier).send(prompt);
-      _scrollToBottom();
-    });
   }
 
   @override
@@ -100,9 +98,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   Widget build(BuildContext context) {
     final messages = ref.watch(aiChatProvider);
     final notifier = ref.read(aiChatProvider.notifier);
+    final subscription = ref.watch(authProvider).valueOrNull?.subscription ??
+        BillingSubscription.none;
+    final hasCore = subscription.entitled;
     final isStreaming =
         messages.whereType<AiMessage>().any((msg) => msg.isStreaming);
 
+    _maybeSendInitialPrompt(hasCore);
     ref.listen(aiChatProvider, (_, __) => _scrollToBottom());
 
     return Scaffold(
@@ -138,43 +140,70 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           children: [
             // Messages
             Expanded(
-              child: messages.isEmpty
-                  ? _EmptyState(
-                      onStartTap: () => _inputFocus.requestFocus(),
-                      onPromptTap: (p) {
-                        _inputCtrl.text = p;
-                        _send();
+              child: !hasCore
+                  ? _CoreLockedState(
+                      onStartTrial: () async {
+                        final result = await ref
+                            .read(billingControllerProvider)
+                            .startCheckout();
+                        if (result.isErr && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(result.error.userMessage)),
+                          );
+                        }
                       },
                     )
-                  : ListView.separated(
-                      controller: _scrollCtrl,
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      itemCount: messages.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (ctx, i) =>
-                          _buildMessage(messages[i], notifier),
-                    ),
+                  : messages.isEmpty
+                      ? _EmptyState(
+                          onStartTap: () => _inputFocus.requestFocus(),
+                          onPromptTap: (p) {
+                            _inputCtrl.text = p;
+                            _send();
+                          },
+                        )
+                      : ListView.separated(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          itemCount: messages.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.sm),
+                          itemBuilder: (ctx, i) =>
+                              _buildMessage(messages[i], notifier),
+                        ),
             ),
 
             // Input bar
-            _InputBar(
-              controller: _inputCtrl,
-              focusNode: _inputFocus,
-              isStreaming: isStreaming,
-              onSend: _send,
-              onStop: _stop,
-              onChanged: (val) {
-                final isMulti = val.contains('\n') || val.length > 60;
-                if (isMulti != _isMultiline) {
-                  setState(() => _isMultiline = isMulti);
-                }
-              },
-            ),
+            if (hasCore)
+              _InputBar(
+                controller: _inputCtrl,
+                focusNode: _inputFocus,
+                isStreaming: isStreaming,
+                onSend: _send,
+                onStop: _stop,
+                onChanged: (val) {
+                  final isMulti = val.contains('\n') || val.length > 60;
+                  if (isMulti != _isMultiline) {
+                    setState(() => _isMultiline = isMulti);
+                  }
+                },
+              ),
           ],
         ),
       ),
     );
+  }
+
+  void _maybeSendInitialPrompt(bool hasCore) {
+    final prompt = widget.initialPrompt?.trim();
+    if (!hasCore || _sentInitialPrompt || prompt == null || prompt.isEmpty) {
+      return;
+    }
+    _sentInitialPrompt = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(aiChatProvider.notifier).send(prompt);
+      _scrollToBottom();
+    });
   }
 
   Widget _buildMessage(ChatMessage msg, AiChat notifier) {
@@ -204,6 +233,49 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         ),
       ToolResultMessage() => const SizedBox.shrink(),
     };
+  }
+}
+
+class _CoreLockedState extends StatelessWidget {
+  const _CoreLockedState({required this.onStartTrial});
+
+  final VoidCallback onStartTrial;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: AppSpacing.screenPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 46),
+          Text(
+            'Ask Poise AI\nabout your\ntrading',
+            style: AppTypography.display1.copyWith(
+              color: AppColors.brand100,
+              fontSize: 38,
+              height: 1.16,
+              letterSpacing: 0,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'Start your 14-day Poise Core trial to chat with Poise AI about your trading.',
+            style: AppTypography.bodyLg.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          PPrimaryButton(
+            label: 'Start trial',
+            height: 48,
+            onPressed: onStartTrial,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
+      ),
+    );
   }
 }
 

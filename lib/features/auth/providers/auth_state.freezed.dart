@@ -154,7 +154,8 @@ extension AuthStatePatterns on AuthState {
             bool isAdmin,
             bool totpEnabled,
             bool hasActiveStrategy,
-            bool hasExchangeConnection)?
+            bool hasExchangeConnection,
+            BillingSubscription subscription)?
         authenticated,
     required TResult orElse(),
   }) {
@@ -174,7 +175,8 @@ extension AuthStatePatterns on AuthState {
             _that.isAdmin,
             _that.totpEnabled,
             _that.hasActiveStrategy,
-            _that.hasExchangeConnection);
+            _that.hasExchangeConnection,
+            _that.subscription);
       case _:
         return orElse();
     }
@@ -206,7 +208,8 @@ extension AuthStatePatterns on AuthState {
             bool isAdmin,
             bool totpEnabled,
             bool hasActiveStrategy,
-            bool hasExchangeConnection)
+            bool hasExchangeConnection,
+            BillingSubscription subscription)
         authenticated,
   }) {
     final _that = this;
@@ -225,7 +228,8 @@ extension AuthStatePatterns on AuthState {
             _that.isAdmin,
             _that.totpEnabled,
             _that.hasActiveStrategy,
-            _that.hasExchangeConnection);
+            _that.hasExchangeConnection,
+            _that.subscription);
     }
   }
 
@@ -254,7 +258,8 @@ extension AuthStatePatterns on AuthState {
             bool isAdmin,
             bool totpEnabled,
             bool hasActiveStrategy,
-            bool hasExchangeConnection)?
+            bool hasExchangeConnection,
+            BillingSubscription subscription)?
         authenticated,
   }) {
     final _that = this;
@@ -273,7 +278,8 @@ extension AuthStatePatterns on AuthState {
             _that.isAdmin,
             _that.totpEnabled,
             _that.hasActiveStrategy,
-            _that.hasExchangeConnection);
+            _that.hasExchangeConnection,
+            _that.subscription);
       case _:
         return null;
     }
@@ -332,7 +338,8 @@ class AuthAuthenticated implements AuthState {
       this.isAdmin = false,
       this.totpEnabled = false,
       this.hasActiveStrategy = false,
-      this.hasExchangeConnection = false});
+      this.hasExchangeConnection = false,
+      this.subscription = BillingSubscription.none});
 
   final String userId;
   final String email;
@@ -349,6 +356,8 @@ class AuthAuthenticated implements AuthState {
   final bool hasActiveStrategy;
   @JsonKey()
   final bool hasExchangeConnection;
+  @JsonKey()
+  final BillingSubscription subscription;
 
   /// Create a copy of AuthState
   /// with the given fields replaced by the non-null parameter values.
@@ -375,7 +384,9 @@ class AuthAuthenticated implements AuthState {
             (identical(other.hasActiveStrategy, hasActiveStrategy) ||
                 other.hasActiveStrategy == hasActiveStrategy) &&
             (identical(other.hasExchangeConnection, hasExchangeConnection) ||
-                other.hasExchangeConnection == hasExchangeConnection));
+                other.hasExchangeConnection == hasExchangeConnection) &&
+            (identical(other.subscription, subscription) ||
+                other.subscription == subscription));
   }
 
   @override
@@ -389,11 +400,12 @@ class AuthAuthenticated implements AuthState {
       isAdmin,
       totpEnabled,
       hasActiveStrategy,
-      hasExchangeConnection);
+      hasExchangeConnection,
+      subscription);
 
   @override
   String toString() {
-    return 'AuthState.authenticated(userId: $userId, email: $email, token: $token, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasActiveStrategy: $hasActiveStrategy, hasExchangeConnection: $hasExchangeConnection)';
+    return 'AuthState.authenticated(userId: $userId, email: $email, token: $token, fullName: $fullName, emailVerified: $emailVerified, isAdmin: $isAdmin, totpEnabled: $totpEnabled, hasActiveStrategy: $hasActiveStrategy, hasExchangeConnection: $hasExchangeConnection, subscription: $subscription)';
   }
 }
 
@@ -413,7 +425,8 @@ abstract mixin class $AuthAuthenticatedCopyWith<$Res>
       bool isAdmin,
       bool totpEnabled,
       bool hasActiveStrategy,
-      bool hasExchangeConnection});
+      bool hasExchangeConnection,
+      BillingSubscription subscription});
 }
 
 /// @nodoc
@@ -437,6 +450,7 @@ class _$AuthAuthenticatedCopyWithImpl<$Res>
     Object? totpEnabled = null,
     Object? hasActiveStrategy = null,
     Object? hasExchangeConnection = null,
+    Object? subscription = null,
   }) {
     return _then(AuthAuthenticated(
       userId: null == userId
@@ -475,6 +489,10 @@ class _$AuthAuthenticatedCopyWithImpl<$Res>
           ? _self.hasExchangeConnection
           : hasExchangeConnection // ignore: cast_nullable_to_non_nullable
               as bool,
+      subscription: null == subscription
+          ? _self.subscription
+          : subscription // ignore: cast_nullable_to_non_nullable
+              as BillingSubscription,
     ));
   }
 }

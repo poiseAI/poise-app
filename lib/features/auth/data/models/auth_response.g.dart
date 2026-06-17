@@ -31,6 +31,9 @@ _AuthUser _$AuthUserFromJson(Map<String, dynamic> json) => _AuthUser(
           _readHasExchangeConnection(json, 'has_exchange_connection')
                   as bool? ??
               false,
+      subscription: json['subscription'] == null
+          ? BillingSubscription.none
+          : _readSubscription(json['subscription']),
     );
 
 Map<String, dynamic> _$AuthUserToJson(_AuthUser instance) => <String, dynamic>{
@@ -41,4 +44,5 @@ Map<String, dynamic> _$AuthUserToJson(_AuthUser instance) => <String, dynamic>{
       'is_admin': instance.isAdmin,
       'totp_enabled': instance.totpEnabled,
       'has_exchange_connection': instance.hasExchangeConnection,
+      'subscription': _writeSubscription(instance.subscription),
     };

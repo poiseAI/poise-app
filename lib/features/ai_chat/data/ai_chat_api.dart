@@ -107,6 +107,8 @@ class AiChatApi {
           }
         }
       }
+    } on DioException catch (e) {
+      yield AiError(_streamErrorMessage(e));
     } catch (e) {
       yield AiError(e.toString());
     }
@@ -224,8 +226,22 @@ class AiChatApi {
           // ignore malformed SSE lines
         }
       }
+    } on DioException catch (e) {
+      yield AiError(_streamErrorMessage(e));
     } catch (e) {
       yield AiError(e.toString());
     }
   }
+}
+
+String _streamErrorMessage(DioException e) {
+  final data = e.response?.data;
+  if (e.response?.statusCode == 402 &&
+      data is Map<String, dynamic> &&
+      data['code'] == 'core_required') {
+    return 'Start your 14-day Poise Core trial to chat with Poise AI.';
+  }
+  return e.error is AppError
+      ? (e.error as AppError).userMessage
+      : e.message ?? e.toString();
 }

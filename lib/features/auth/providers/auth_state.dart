@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../../billing/data/billing_api.dart';
 
 part 'auth_state.freezed.dart';
 
@@ -18,5 +19,13 @@ sealed class AuthState with _$AuthState {
     @Default(false) bool totpEnabled,
     @Default(false) bool hasActiveStrategy,
     @Default(false) bool hasExchangeConnection,
+    @Default(BillingSubscription.none) BillingSubscription subscription,
   }) = AuthAuthenticated;
+}
+
+extension AuthStateSubscription on AuthState {
+  BillingSubscription get subscription => switch (this) {
+        AuthAuthenticated(:final subscription) => subscription,
+        _ => BillingSubscription.none,
+      };
 }

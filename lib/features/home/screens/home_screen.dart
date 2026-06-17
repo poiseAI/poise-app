@@ -693,13 +693,11 @@ class _HeroBadge extends StatelessWidget {
     required this.text,
     required this.textColor,
     required this.bgColor,
-    this.borderColor,
   });
 
   final String text;
   final Color textColor;
   final Color bgColor;
-  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -708,9 +706,6 @@ class _HeroBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        border: borderColor != null
-            ? Border.all(color: borderColor!, width: 1)
-            : null,
       ),
       child: Text(
         text,

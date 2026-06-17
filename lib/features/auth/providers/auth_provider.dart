@@ -7,6 +7,7 @@ import '../../../core/storage/secure_storage.dart';
 import '../../../core/websocket/ws_service.dart';
 import '../../../core/utils/result.dart';
 import '../../strategies/data/strategies_api.dart';
+import '../../billing/data/billing_api.dart';
 import '../data/auth_api.dart';
 import '../data/models/auth_response.dart';
 import 'auth_state.dart';
@@ -50,6 +51,7 @@ class Auth extends _$Auth {
             data['has_exchange_connection'] as bool? ??
                 data['exchange_setup_complete'] as bool? ??
                 false;
+        final subscription = _subscriptionFromProfile(data);
         _connectWs(token);
         _scheduleProactiveRefresh(token);
 
@@ -69,6 +71,7 @@ class Auth extends _$Auth {
           totpEnabled: data['totp_enabled'] as bool? ?? false,
           hasActiveStrategy: hasActiveStrategy,
           hasExchangeConnection: hasExchangeConnection,
+          subscription: subscription,
         );
       },
       onErr: (_) async {
@@ -193,6 +196,7 @@ class Auth extends _$Auth {
             data['has_exchange_connection'] as bool? ??
                 data['exchange_setup_complete'] as bool? ??
                 false;
+        final subscription = _subscriptionFromProfile(data);
         final strategiesResult =
             await ref.read(strategiesApiProvider).getActiveStrategies();
         final hasActiveStrategy =
@@ -207,6 +211,7 @@ class Auth extends _$Auth {
           totpEnabled: data['totp_enabled'] as bool? ?? false,
           hasActiveStrategy: hasActiveStrategy,
           hasExchangeConnection: hasExchangeConnection,
+          subscription: subscription,
         ));
       },
       onErr: (_) async => logout(),
@@ -280,6 +285,7 @@ class Auth extends _$Auth {
       totpEnabled: resp.user.totpEnabled,
       hasActiveStrategy: hasActiveStrategy,
       hasExchangeConnection: resp.user.hasExchangeConnection,
+      subscription: resp.user.subscription,
     ));
   }
 
@@ -371,6 +377,17 @@ class Auth extends _$Auth {
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
     return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
+}
+
+BillingSubscription _subscriptionFromProfile(Map<String, dynamic> data) {
+  final raw = data['subscription'];
+  if (raw is Map<String, dynamic>) {
+    return BillingSubscription.fromJson(raw);
+  }
+  if (raw is Map) {
+    return BillingSubscription.fromJson(Map<String, dynamic>.from(raw));
+  }
+  return BillingSubscription.none;
 }
 
 final class _LoginAttemptState {
