@@ -83,3 +83,7 @@ Object? _int(Object? value) {
   if (value is String) return int.tryParse(value);
   return value;
 }
+
+extension TradingSymbolPriceChange on TradingSymbol {
+  double get priceChange24h => lastPrice * priceChangePct / 100;
+}

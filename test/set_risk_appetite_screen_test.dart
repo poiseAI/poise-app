@@ -178,7 +178,9 @@ class _RecordingBillingApi extends BillingApi {
   _RecordingBillingApi() : super(Dio());
 
   @override
-  Future<Result<BillingCheckoutSession, AppError>> startCheckout() async {
+  Future<Result<BillingCheckoutSession, AppError>> startCheckout(
+    BillingCycle cycle,
+  ) async {
     return const Ok(
       BillingCheckoutSession(url: 'https://checkout.stripe.test/session'),
     );

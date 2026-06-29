@@ -25,6 +25,7 @@ import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/trade_validation/screens/exit_request_screen.dart';
 import '../../features/trade_validation/screens/exit_otp_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/billing/screens/billing_screen.dart';
 import '../widgets/p_bottom_nav.dart';
 import '../widgets/ws_status_banner.dart';
 
@@ -166,6 +167,16 @@ GoRouter appRouter(Ref ref) {
         path: Routes.exchangeConnections,
         pageBuilder: (context, state) =>
             _slideTransition(state, const ExchangeConnectionsScreen()),
+      ),
+      GoRoute(
+        path: Routes.billing,
+        pageBuilder: (context, state) =>
+            _slideTransition(state, const BillingScreen()),
+      ),
+      GoRoute(
+        path: Routes.billingSuccess,
+        pageBuilder: (context, state) =>
+            _fadeTransition(state, const BillingSuccessScreen()),
       ),
 
       // ── Full-screen overlays (push over shell) ──────────────────

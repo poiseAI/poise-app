@@ -56,14 +56,18 @@ void main() {
 
   test('startCheckout and createPortal parse hosted urls', () async {
     final dio = _MockDio();
-    when(() => dio.post<Map<String, dynamic>>('/billing/checkout'))
-        .thenAnswer((_) async => Response<Map<String, dynamic>>(
-              requestOptions: RequestOptions(path: '/billing/checkout'),
-              data: {
-                'checkout_url': 'https://checkout.stripe.test/session',
-                'session_id': 'cs_test',
-              },
-            ));
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        '/billing/checkout',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async => Response<Map<String, dynamic>>(
+          requestOptions: RequestOptions(path: '/billing/checkout'),
+          data: {
+            'checkout_url': 'https://checkout.stripe.test/session',
+            'session_id': 'cs_test',
+          },
+        ));
     when(() => dio.post<Map<String, dynamic>>('/billing/portal'))
         .thenAnswer((_) async => Response<Map<String, dynamic>>(
               requestOptions: RequestOptions(path: '/billing/portal'),
@@ -72,7 +76,7 @@ void main() {
               },
             ));
 
-    final checkout = await BillingApi(dio).startCheckout();
+    final checkout = await BillingApi(dio).startCheckout(BillingCycle.monthly);
     final portal = await BillingApi(dio).createPortal();
 
     expect(checkout.isOk, isTrue);

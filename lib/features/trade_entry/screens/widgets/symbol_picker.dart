@@ -47,38 +47,59 @@ class SymbolPicker extends ConsumerWidget {
         child: Container(
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: AppColors.borderLight),
-          ),
           child: Row(
             children: [
-              Expanded(
-                child: selected == null
-                    ? const Text(
-                        'Select trading pair',
-                        style: TextStyle(
-                          color: AppColors.textDisabled,
-                          fontSize: 14,
-                          fontFamily: 'Inter',
-                        ),
-                      )
-                    : Text(
-                        _displayPair(selected),
-                        style: AppTypography.bodyLg,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-              ),
               if (selected != null) ...[
-                const SizedBox(width: AppSpacing.sm),
+                _SymbolIcon(symbol: selected),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            _displayPair(selected),
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: const BoxDecoration(
+                              color: AppColors.bgSurface,
+                              borderRadius: AppRadius.pillRadius,
+                            ),
+                            child: const Text(
+                              'Futures',
+                              style: AppTypography.caption,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '\$${_formatPrice(selected.lastPrice)}',
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '\$${_formatPrice(selected.lastPrice)}',
+                      _formatChangeAbsolute(selected.priceChange24h),
                       style: AppTypography.bodySm.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.pnlColor(selected.priceChangePct),
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
@@ -89,13 +110,29 @@ class SymbolPicker extends ConsumerWidget {
                     ),
                   ],
                 ),
+                const SizedBox(width: AppSpacing.sm),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 22,
+                  color: AppColors.textSecondary,
+                ),
+              ] else ...[
+                const Expanded(
+                  child: Text(
+                    'Select trading pair',
+                    style: TextStyle(
+                      color: AppColors.textDisabled,
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 22,
+                  color: AppColors.textSecondary,
+                ),
               ],
-              const SizedBox(width: AppSpacing.sm),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 22,
-                color: AppColors.textSecondary,
-              ),
             ],
           ),
         ),
@@ -392,4 +429,37 @@ String _formatPrice(double value) {
 String _formatPct(double value) {
   final sign = value >= 0 ? '+' : '';
   return '$sign${value.toStringAsFixed(2)}%';
+}
+
+String _formatChangeAbsolute(double value) {
+  final sign = value >= 0 ? '+' : '';
+  return '$sign${value.toStringAsFixed(3)}';
+}
+
+class _SymbolIcon extends StatelessWidget {
+  const _SymbolIcon({required this.symbol});
+
+  final TradingSymbol symbol;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = symbol.baseAsset.isNotEmpty ? symbol.baseAsset[0] : '?';
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7931A),
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: AppTypography.bodyMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
 }

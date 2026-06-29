@@ -85,6 +85,15 @@ abstract final class AppTypography {
     color: AppColors.textPrimary,
   );
 
+  // Body with the label tone used in the new billing feature rows
+  static const TextStyle bodyLabel = TextStyle(
+    fontFamily: _inter,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.429, // 20 / 14
+    color: AppColors.textLabel,
+  );
+
   // Figma: Text xs/Regular  12px / 18px
   static const TextStyle bodySm = TextStyle(
     fontFamily: _inter,

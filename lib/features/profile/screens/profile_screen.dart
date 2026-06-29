@@ -19,7 +19,6 @@ import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
 import '../../auth/widgets/password_requirements.dart';
 import '../../billing/data/billing_api.dart';
-import '../../billing/providers/billing_provider.dart';
 import '../../onboarding/screens/set_risk_appetite_screen.dart';
 import '../../strategies/providers/strategies_provider.dart';
 import '../data/profile_api.dart';
@@ -91,11 +90,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          _BillingSection(subscription: authState.subscription),
-          const SizedBox(height: 20),
           SizedBox(
-            height: 52,
+            height: 40,
             child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(40),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                side: const BorderSide(color: AppColors.brand100),
+                textStyle: AppTypography.button,
+              ),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => _EditProfileScreen(
@@ -139,13 +142,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           _SettingsTile(
             icon: Icons.notifications_none_rounded,
-            label: 'Notifications',
+            label: 'Notification',
             onTap: () => context.push(Routes.notificationSettings),
           ),
           _SettingsTile(
             icon: Icons.shield_outlined,
             label: 'Data & Privacy',
             onTap: () => context.push(Routes.dataPrivacy),
+          ),
+          _SettingsTile(
+            icon: Icons.add_to_photos_outlined,
+            label: 'Subscription',
+            onTap: () => context.push(Routes.billing),
+            trailing: authState.subscription.entitled
+                ? _SubscriptionBadge(subscription: authState.subscription)
+                : null,
           ),
           const SizedBox(height: 30),
           _ProfileActionTile(
@@ -166,119 +177,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-class _BillingSection extends ConsumerWidget {
-  const _BillingSection({required this.subscription});
+class _SubscriptionBadge extends StatelessWidget {
+  const _SubscriptionBadge({required this.subscription});
 
   final BillingSubscription subscription;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isCore = subscription.entitled;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: AppColors.primary,
-                  size: 19,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Poise Core',
-                      style: AppTypography.bodyLg.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _billingSubtitle(subscription),
-                      style: AppTypography.bodySm.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                isCore
-                    ? _billingStatusLabel(subscription.status)
-                    : r'$79/month',
-                style: AppTypography.bodySm.copyWith(
-                  color: isCore ? AppColors.profitGreen : AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    if (subscription.entitled) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 2,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.badgeSuccessBg,
+          borderRadius: AppRadius.chipRadius,
+          border: Border.all(color: AppColors.badgeSuccessBorder),
+        ),
+        child: Text(
+          'Poise Core',
+          style: AppTypography.bodySm.copyWith(
+            color: AppColors.badgeSuccessText,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            height: 44,
-            child: PPrimaryButton(
-              label: isCore ? 'Manage billing' : 'Start trial',
-              height: 44,
-              onPressed: () => _runBillingAction(context, ref, isCore),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _runBillingAction(
-    BuildContext context,
-    WidgetRef ref,
-    bool manageBilling,
-  ) async {
-    final controller = ref.read(billingControllerProvider);
-    final result = manageBilling
-        ? await controller.openPortal()
-        : await controller.startCheckout();
-    if (result.isErr && context.mounted) {
-      PToast.error(context, result.error.userMessage);
+        ),
+      );
     }
+    return const SizedBox.shrink();
   }
-}
-
-String _billingSubtitle(BillingSubscription subscription) {
-  if (!subscription.entitled) return '14-day trial';
-  if (subscription.cancelAtPeriodEnd) return 'Access until period end';
-  return switch (subscription.status) {
-    BillingStatus.trialing => 'Trial active',
-    BillingStatus.active => 'Active',
-    BillingStatus.pastDue => 'Payment needs attention',
-    _ => 'Active',
-  };
-}
-
-String _billingStatusLabel(BillingStatus status) {
-  return switch (status) {
-    BillingStatus.trialing => 'Trial',
-    BillingStatus.active => 'Active',
-    BillingStatus.pastDue => 'Past due',
-    _ => 'Active',
-  };
 }
 
 String _titleCaseName(String value) {
@@ -314,12 +241,14 @@ class _SettingsTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.subtitle,
+    this.trailing,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final String? subtitle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -332,10 +261,10 @@ class _SettingsTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: AppRadius.cardRadius,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 60),
+            constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: 14,
+              vertical: 12,
             ),
             decoration: BoxDecoration(
               borderRadius: AppRadius.cardRadius,
@@ -343,7 +272,7 @@ class _SettingsTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, color: AppColors.textSecondary, size: 20),
+                Icon(icon, color: AppColors.textSecondary, size: 18),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -354,8 +283,9 @@ class _SettingsTile extends StatelessWidget {
                         label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodyLg.copyWith(
-                          color: AppColors.textPrimary,
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textHeading,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       if (subtitle != null && subtitle!.isNotEmpty) ...[
@@ -372,6 +302,10 @@ class _SettingsTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (trailing != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  trailing!,
+                ],
                 const SizedBox(width: AppSpacing.sm),
                 const Icon(
                   Icons.chevron_right_rounded,
@@ -402,13 +336,15 @@ class _ProfileActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.bgPrimary,
+      color: color == AppColors.lossRed
+          ? AppColors.bgPrimary
+          : AppColors.bgSurface,
       borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: onPressed,
         borderRadius: AppRadius.cardRadius,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 58),
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: AppRadius.cardRadius,
@@ -854,7 +790,7 @@ class _PasswordChangedSuccessScreen extends StatelessWidget {
             children: [
               const Spacer(flex: 2),
               Image.asset(
-                'assets/images/success_lock.png',
+                'assets/images/checkmark.png',
                 width: 190,
                 height: 190,
                 fit: BoxFit.contain,

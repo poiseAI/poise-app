@@ -30,6 +30,19 @@ void main() {
     expect(title.style?.fontFamily, 'Orbitron');
     expect(title.style?.color, AppColors.primary);
     expect(title.style?.fontSize, closeTo(20, 0.1));
+    expect(find.text('poise'), findsNothing);
+    expect(find.text('Automated Risk Guardrails'), findsNothing);
+    expect(find.text('Real-Time AI Coaching'), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/head-welcome.png',
+      ),
+      findsOneWidget,
+    );
 
     final getStartedSize = tester.getSize(find.text('Get Started'));
     final loginSize = tester.getSize(find.text('Log in'));
@@ -42,7 +55,7 @@ void main() {
         .whereType<BoxDecoration>()
         .where((decoration) => decoration.shape == BoxShape.circle)
         .toList();
-    expect(dotDecorations, hasLength(3));
+    expect(dotDecorations, hasLength(1));
 
     final dots = find.byWidgetPredicate(
       (widget) =>
@@ -50,7 +63,7 @@ void main() {
           widget.decoration is BoxDecoration &&
           (widget.decoration! as BoxDecoration).shape == BoxShape.circle,
     );
-    for (var index = 0; index < 3; index += 1) {
+    for (var index = 0; index < 1; index += 1) {
       expect(tester.getSize(dots.at(index)).width, closeTo(15, 0.1));
       expect(tester.getSize(dots.at(index)).height, closeTo(5, 0.1));
       expect(

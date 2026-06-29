@@ -6,7 +6,12 @@ import '../data/billing_api.dart';
 
 final billingUrlLauncherProvider =
     Provider<Future<bool> Function(String url)>((ref) {
-  return (url) => launchUrlString(url, mode: LaunchMode.externalApplication);
+  return (url) async {
+    final openedInApp =
+        await launchUrlString(url, mode: LaunchMode.inAppBrowserView);
+    if (openedInApp) return true;
+    return launchUrlString(url, mode: LaunchMode.externalApplication);
+  };
 });
 
 final billingSubscriptionProvider =
@@ -23,14 +28,17 @@ class BillingController {
   BillingController(this.ref);
   final Ref ref;
 
-  Future<Result<void, AppError>> startCheckout() async {
-    final result = await ref.read(billingApiProvider).startCheckout();
+  Future<Result<void, AppError>> startCheckout(BillingCycle cycle) async {
+    final result = await ref.read(billingApiProvider).startCheckout(cycle);
     if (result.isErr) return Err(result.error);
     final session = result.value;
     if (session.url.isEmpty) {
       return const Err(UnknownError('Checkout URL was empty'));
     }
-    await ref.read(billingUrlLauncherProvider)(session.url);
+    final launched = await ref.read(billingUrlLauncherProvider)(session.url);
+    if (!launched) {
+      return const Err(UnknownError('Could not open checkout'));
+    }
     return const Ok(null);
   }
 
@@ -41,7 +49,10 @@ class BillingController {
     if (session.url.isEmpty) {
       return const Err(UnknownError('Billing portal URL was empty'));
     }
-    await ref.read(billingUrlLauncherProvider)(session.url);
+    final launched = await ref.read(billingUrlLauncherProvider)(session.url);
+    if (!launched) {
+      return const Err(UnknownError('Could not open billing portal'));
+    }
     return const Ok(null);
   }
 }

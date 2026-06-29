@@ -10,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/feedback/p_success_seal.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../billing/data/billing_api.dart';
 import '../../billing/providers/billing_provider.dart';
 import '../../strategies/data/models/strategy.dart';
 import '../../strategies/providers/strategies_provider.dart';
@@ -524,7 +525,7 @@ class _SetRiskAppetiteScreenState extends ConsumerState<SetRiskAppetiteScreen> {
                     Navigator.of(sheetContext).pop();
                     final result = await ref
                         .read(billingControllerProvider)
-                        .startCheckout();
+                        .startCheckout(BillingCycle.monthly);
                     if (result.isErr && mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(result.error.userMessage)),

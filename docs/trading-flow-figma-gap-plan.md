@@ -37,7 +37,7 @@ Second fidelity pass on 2026-05-30:
 - Simplified the trading-pair sheet to the Figma list pattern instead of a search-first picker.
 - Added absolute/percent change formatting in the pair price row.
 - Removed the extra validation-page acknowledgement button; acknowledgement now happens through the Poise AI path shown in Figma.
-- Replaced the trade submitted success icon with the repo's `success_bag.png` asset, matching the Figma success visual.
+- Replaced the trade submitted success image with the shared `assets/images/checkmark.png` asset, removing the unused `success_check_circle.png` asset.
 - Simplified active-trade cards and added history grouping labels (`Today`, `Yesterday`, date) to better match the Trades handoff.
 - Reverted Risk Appetite option cards to Figma's selected-only description pattern.
 - Re-aligned exchange connection copy to the Figma wording (`Connect your exchange`, `Link your trading accounts`, `Use desktop instead`).

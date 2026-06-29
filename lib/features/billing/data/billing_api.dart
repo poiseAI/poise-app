@@ -20,14 +20,21 @@ enum BillingStatus {
   unpaid
 }
 
+enum BillingCycle { none, monthly, yearly }
+
 class BillingSubscription {
   const BillingSubscription({
     required this.plan,
     required this.status,
     required this.entitled,
+    this.cycle = BillingCycle.none,
     this.trialEnd,
     this.currentPeriodEnd,
     this.cancelAtPeriodEnd = false,
+    this.tradesUsed,
+    this.tradesLimit,
+    this.trialDaysRemaining,
+    this.trialDaysTotal,
   });
 
   static const none = BillingSubscription(
@@ -42,26 +49,43 @@ class BillingSubscription {
       plan: _planFromString(data['plan'] as String?),
       status: _statusFromString(data['status'] as String?),
       entitled: data['entitled'] as bool? ?? false,
+      cycle: _cycleFromString(data['billing_cycle'] as String?),
       trialEnd: _dateFromJson(data['trial_end']),
       currentPeriodEnd: _dateFromJson(data['current_period_end']),
       cancelAtPeriodEnd: data['cancel_at_period_end'] as bool? ?? false,
+      tradesUsed: data['trades_used'] as int?,
+      tradesLimit: data['trades_limit'] as int?,
+      trialDaysRemaining: data['trial_days_remaining'] as int?,
+      trialDaysTotal: data['trial_days_total'] as int?,
     );
   }
 
   final BillingPlan plan;
   final BillingStatus status;
   final bool entitled;
+  final BillingCycle cycle;
   final DateTime? trialEnd;
   final DateTime? currentPeriodEnd;
   final bool cancelAtPeriodEnd;
+  final int? tradesUsed;
+  final int? tradesLimit;
+  final int? trialDaysRemaining;
+  final int? trialDaysTotal;
+
+  bool get isTrialing => status == BillingStatus.trialing;
 
   Map<String, dynamic> toJson() => {
         'plan': _planToString(plan),
         'status': _statusToString(status),
         'entitled': entitled,
+        'billing_cycle': _cycleToString(cycle),
         'trial_end': trialEnd?.toUtc().toIso8601String(),
         'current_period_end': currentPeriodEnd?.toUtc().toIso8601String(),
         'cancel_at_period_end': cancelAtPeriodEnd,
+        'trades_used': tradesUsed,
+        'trades_limit': tradesLimit,
+        'trial_days_remaining': trialDaysRemaining,
+        'trial_days_total': trialDaysTotal,
       };
 }
 
@@ -106,9 +130,17 @@ class BillingApi {
     }
   }
 
-  Future<Result<BillingCheckoutSession, AppError>> startCheckout() async {
+  Future<Result<BillingCheckoutSession, AppError>> startCheckout(
+    BillingCycle cycle,
+  ) async {
     try {
-      final resp = await _dio.post<Map<String, dynamic>>('/billing/checkout');
+      final resp = await _dio.post<Map<String, dynamic>>(
+        '/billing/checkout',
+        data: {
+          if (cycle != BillingCycle.none)
+            'billing_cycle': _cycleToString(cycle),
+        },
+      );
       return Ok(BillingCheckoutSession.fromJson(resp.data ?? const {}));
     } on DioException catch (e) {
       return Err(e.error is AppError
@@ -164,6 +196,24 @@ String _statusToString(BillingStatus value) {
     BillingStatus.canceled => 'canceled',
     BillingStatus.unpaid => 'unpaid',
     BillingStatus.none => 'none',
+  };
+}
+
+BillingCycle _cycleFromString(String? value) {
+  return switch (value) {
+    'month' => BillingCycle.monthly,
+    'monthly' => BillingCycle.monthly,
+    'year' => BillingCycle.yearly,
+    'yearly' => BillingCycle.yearly,
+    _ => BillingCycle.none,
+  };
+}
+
+String _cycleToString(BillingCycle value) {
+  return switch (value) {
+    BillingCycle.monthly => 'monthly',
+    BillingCycle.yearly => 'yearly',
+    BillingCycle.none => 'none',
   };
 }
 

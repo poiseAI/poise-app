@@ -34,11 +34,13 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         child: switch (homeState) {
           HomeLoading() => const _LoadingBody(),
-          HomeNoExchange() => _DashboardBody(
-              positions: const [],
-              summary: const PnlSummary(),
-              hasExchange: false,
+          HomeNoExchange() => _NoExchangeBody(
               onRefresh: () => ref.read(homeProvider.notifier).refresh(),
+              onConnectExchange: () => showExchangeSetupSheet(
+                context,
+                ref,
+                onManualSetup: () => context.go(Routes.exchangeConnections),
+              ),
             ),
           HomeEmpty(:final summary) => _DashboardBody(
               positions: const [],
@@ -106,56 +108,90 @@ class _LoadingBody extends StatelessWidget {
   }
 }
 
+class _NoExchangeBody extends StatelessWidget {
+  const _NoExchangeBody({
+    required this.onRefresh,
+    required this.onConnectExchange,
+  });
 
-class _ConnectExchangeSection extends StatelessWidget {
-  const _ConnectExchangeSection({required this.onConnect});
-  final VoidCallback onConnect;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onConnectExchange;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.14),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Connect your exchange',
-                  style: AppTypography.h4.copyWith(
-                    color: AppColors.textPrimary,
+    return RefreshIndicator(
+      color: AppColors.accent,
+      onRefresh: onRefresh,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            sliver: SliverFillRemaining(
+              hasScrollBody: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.lg),
+                  const _HomeHeader(avatarSize: 50),
+                  const Spacer(flex: 26),
+                  Image.asset(
+                    'assets/images/empty-home-rocket.png',
+                    width: 216,
+                    height: 216,
+                    fit: BoxFit.contain,
                   ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Connect exchange to start trading',
-                  style: AppTypography.bodySm.copyWith(
-                    color: AppColors.textSecondary,
+                  const SizedBox(height: 54),
+                  Text(
+                    'Connect Your Exchange',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.h1.copyWith(
+                      fontSize: 22,
+                      height: 1.25,
+                      color: Colors.black,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  Text(
+                    'Start tracking your trades automatically',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.bodyLg.copyWith(
+                      fontSize: 16,
+                      height: 1.35,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Align(
+                    alignment: Alignment.center,
+                    child: TextButton.icon(
+                      onPressed: onConnectExchange,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        textStyle: AppTypography.h2.copyWith(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      label: const Text('Connect Exchange'),
+                      iconAlignment: IconAlignment.end,
+                      icon: const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 30,
+                      ),
+                    ),
+                  ),
+                  const Spacer(flex: 42),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          FilledButton(
-            onPressed: onConnect,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: const StadiumBorder(),
-              textStyle: AppTypography.button,
-            ),
-            child: const Text('Connect'),
           ),
         ],
       ),
@@ -168,13 +204,11 @@ class _DashboardBody extends ConsumerStatefulWidget {
     required this.positions,
     required this.summary,
     required this.onRefresh,
-    this.hasExchange = true,
   });
 
   final List<Position> positions;
   final PnlSummary summary;
   final Future<void> Function() onRefresh;
-  final bool hasExchange;
 
   @override
   ConsumerState<_DashboardBody> createState() => _DashboardBodyState();
@@ -250,17 +284,22 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
                     positions: widget.positions,
                     analytics: analytics,
                   ),
-                  if (!widget.hasExchange) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _ConnectExchangeSection(
-                      onConnect: () => showExchangeSetupSheet(
-                        context,
-                        ref,
-                        onManualSetup: () =>
-                            context.go(Routes.exchangeConnections),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: FilledButton.icon(
+                      onPressed: () => context.go(Routes.trade),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.profitGreen,
+                        foregroundColor: Colors.white,
+                        shape: const StadiumBorder(),
+                        textStyle: AppTypography.button,
                       ),
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text('New Trade'),
                     ),
-                  ],
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   _CostlyMistakeCard(
                     summary: widget.summary,
@@ -294,11 +333,12 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody> {
       ),
     );
   }
-
 }
 
 class _HomeHeader extends ConsumerWidget {
-  const _HomeHeader();
+  const _HomeHeader({this.avatarSize = 32});
+
+  final double avatarSize;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -311,8 +351,8 @@ class _HomeHeader extends ConsumerWidget {
     return Row(
       children: [
         Container(
-          width: 32,
-          height: 32,
+          width: avatarSize,
+          height: avatarSize,
           decoration: const BoxDecoration(
             color: AppColors.bgSecondary,
             shape: BoxShape.circle,
@@ -330,7 +370,10 @@ class _HomeHeader extends ConsumerWidget {
             children: [
               Text(
                 identity,
-                style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
+                style: AppTypography.h4.copyWith(
+                  fontSize: avatarSize > 32 ? 17 : null,
+                  fontWeight: FontWeight.w700,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -338,6 +381,7 @@ class _HomeHeader extends ConsumerWidget {
               Text(
                 _greeting(),
                 style: AppTypography.body.copyWith(
+                  fontSize: avatarSize > 32 ? 16 : null,
                   color: AppColors.textSecondary,
                 ),
               ),
@@ -446,7 +490,6 @@ class _PeriodTabs extends StatelessWidget {
   }
 }
 
-
 class _AdherenceHero extends StatelessWidget {
   const _AdherenceHero({
     required this.summary,
@@ -486,7 +529,8 @@ class _AdherenceHero extends StatelessWidget {
       final arrow = isPos ? '↑' : '↓';
       final badgeColor = isPos ? AppColors.profitGreen : AppColors.lossRed;
       leftBadge = _HeroBadge(
-        text: '$arrow ${adherenceChangePct.abs().toStringAsFixed(0)}% vs yesterday',
+        text:
+            '$arrow ${adherenceChangePct.abs().toStringAsFixed(0)}% vs yesterday',
         textColor: badgeColor,
         bgColor: Colors.white.withValues(alpha: 0.92),
       );
@@ -1308,7 +1352,6 @@ class _InsightPreviewCard extends StatelessWidget {
   }
 }
 
-
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.child,
@@ -1633,7 +1676,6 @@ class _StatusPill extends StatelessWidget {
     );
   }
 }
-
 
 class _ErrorBody extends StatelessWidget {
   const _ErrorBody({required this.message, required this.onRetry});

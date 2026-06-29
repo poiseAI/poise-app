@@ -54,6 +54,10 @@ abstract final class AppColors {
   static const Color textTertiary = Color(0xFF667085);
   static const Color textDisabled = Color(0xFF98A2B3);
 
+  // Additional heading / label tones used in the new billing/profile screens
+  static const Color textHeading = Color(0xFF344054);
+  static const Color textLabel = Color(0xFF343330);
+
   // ── Text — dark ─────────────────────────────────────────────────────────────
   static const Color textPrimaryDark = Color(0xFFF9FAFB);
   static const Color textSecondaryDark = Color(0xFF98A2B3);
@@ -82,6 +86,19 @@ abstract final class AppColors {
   static const Color statusFilled = primary;
   static const Color statusCancelled = Color(0xFF98A2B3);
   static const Color statusRejected = lossRed;
+
+  // ── Badges / chips (new billing/profile screens) ─────────────────────────────
+  static const Color badgeSuccessBg = Color(0xFFECFDF3);
+  static const Color badgeSuccessBorder = Color(0xFFAAEFC6);
+  static const Color badgeSuccessText = Color(0xFF069454);
+  static const Color badgeWarningBg = Color(0xFFFFF9EB);
+  static const Color badgeWarningBorder = Color(0xFFFEDE88);
+  static const Color badgeWarningText = Color(0xFFB54708);
+  static const Color badgeInfoBg = Color(0xFFEFF7FF);
+  static const Color badgeInfoBorder = Color(0xFF004BE9);
+  static const Color badgeInfoText = Color(0xFF004BE9);
+  static const Color billingSelectedBg = Color(0xFFEFF5FF);
+  static const Color billingSelectedBorder = Color(0xFF004BE9);
 
   // ── Misc ─────────────────────────────────────────────────────────────────────
   static const Color transparent = Color(0x00000000);

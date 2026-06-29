@@ -245,6 +245,7 @@ class TradeValidationResult {
     required this.dailyLimitAcknowledgementRequired,
     required this.blockingGuardrails,
     required this.warningGuardrails,
+    required this.behavioralWarnings,
     this.aiSessionId,
   });
 
@@ -299,10 +300,8 @@ class TradeValidationResult {
       dailyLimitAcknowledgementRequired:
           summary['daily_limit_acknowledgement_required'] as bool? ?? false,
       blockingGuardrails: _guardrails(json['blocking_guardrails']),
-      warningGuardrails: [
-        ..._guardrails(json['warning_guardrails']),
-        ..._guardrails(json['behavioural_warnings']),
-      ],
+      warningGuardrails: _guardrails(json['warning_guardrails']),
+      behavioralWarnings: _guardrails(json['behavioural_warnings']),
       aiSessionId: json['ai_session_id'] as String?,
     );
   }
@@ -333,6 +332,7 @@ class TradeValidationResult {
   final bool dailyLimitAcknowledgementRequired;
   final List<GuardrailResult> blockingGuardrails;
   final List<GuardrailResult> warningGuardrails;
+  final List<GuardrailResult> behavioralWarnings;
   final String? aiSessionId;
 
   List<GuardrailResult> get guardrailWarnings => [
@@ -340,10 +340,16 @@ class TradeValidationResult {
         ...blockingGuardrails.where((item) => !_isExchangeGuardrail(item)),
       ];
 
+  List<GuardrailResult> get allWarnings => [
+        ...warningGuardrails,
+        ...behavioralWarnings,
+        ...blockingGuardrails.where((item) => !_isExchangeGuardrail(item)),
+      ];
+
   bool get requiresExchangeConnection =>
       blockingGuardrails.any(_isExchangeGuardrail);
 
-  bool get hasWarnings => guardrailWarnings.isNotEmpty;
+  bool get hasWarnings => allWarnings.isNotEmpty;
   bool get isBlocked => requiresExchangeConnection;
 }
 

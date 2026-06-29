@@ -148,7 +148,7 @@ class _ValidationMissingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(title: const Text('Trade validation')),
+      appBar: AppBar(title: const Text('Trade review')),
       body: SafeArea(
         child: Padding(
           padding: AppSpacing.screenPadding,
@@ -156,7 +156,7 @@ class _ValidationMissingScreen extends StatelessWidget {
             children: [
               const Spacer(),
               const Text(
-                'Trade validation is not ready',
+                'Trade review is not ready',
                 style: AppTypography.h3,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -345,16 +345,24 @@ class _InfoTile extends StatelessWidget {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTypography.bodySm.copyWith(
               color: AppColors.textSecondary,
+              fontSize: 11,
+              height: 1.1,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTypography.body.copyWith(
               color: AppColors.textSecondary,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
+              height: 1.1,
             ),
           ),
         ],
@@ -424,20 +432,35 @@ class _GuardrailChecks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = _guardrailReviewRows(validation, form);
+    final riskRows = _guardrailReviewRows(validation, form);
+    final behavioral = validation.behavioralWarnings;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Review guardrails', style: AppTypography.bodyMedium),
         const SizedBox(height: AppSpacing.md),
-        for (final row in rows) ...[
+        for (final row in riskRows) ...[
           _GuardrailCard(
             title: row.title,
             message: row.message,
             warning: row.warning != null,
             onAskAi: row.warning == null ? null : () => onAskAi(row.warning!),
           ),
-          if (row != rows.last) const SizedBox(height: AppSpacing.sm),
+          if (row != riskRows.last) const SizedBox(height: AppSpacing.sm),
+        ],
+        if (behavioral.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.lg),
+          const Text('Behavioural Analysis', style: AppTypography.bodyMedium),
+          const SizedBox(height: AppSpacing.md),
+          for (final item in behavioral) ...[
+            _GuardrailCard(
+              title: _guardrailTitle(item),
+              message: item.message,
+              warning: true,
+              onAskAi: () => onAskAi(item),
+            ),
+            if (item != behavioral.last) const SizedBox(height: AppSpacing.sm),
+          ],
         ],
       ],
     );
@@ -747,18 +770,18 @@ class _TradeSubmittedSuccessScreen extends ConsumerWidget {
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
           child: Column(
             children: [
-              const Spacer(),
+              const SizedBox(height: 158),
               Image.asset(
-                'assets/images/success_bag.png',
-                width: 150,
-                height: 150,
+                'assets/images/checkmark.png',
+                width: 200,
+                height: 200,
                 fit: BoxFit.contain,
                 filterQuality: FilterQuality.high,
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: 57),
               const Text(
                 'Trade Submitted Successfully',
                 textAlign: TextAlign.center,
@@ -773,7 +796,7 @@ class _TradeSubmittedSuccessScreen extends ConsumerWidget {
                   height: 1.45,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 171),
               SizedBox(
                 width: double.infinity,
                 height: 44,
@@ -803,6 +826,7 @@ class _TradeSubmittedSuccessScreen extends ConsumerWidget {
                   child: const Text('Go to home'),
                 ),
               ),
+              const SizedBox(height: 7),
             ],
           ),
         ),
@@ -1054,8 +1078,7 @@ List<({String label, double price, double profit, double movePct})>
   return [
     for (var i = 0; i < tps.length; i++)
       (
-        label:
-            tps.length == 1 ? 'Possible Profit' : 'TP${i + 1} Possible Profit',
+        label: 'TP${i + 1} Possible Profit',
         price: tps[i],
         profit: _tpProfit(form, entry, tps[i]),
         movePct: ((tps[i] - entry).abs() / entry) * 100,

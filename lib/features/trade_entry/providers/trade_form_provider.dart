@@ -143,7 +143,6 @@ class TradeForm extends _$TradeForm {
     state = state.copyWith(
       side: side,
       directionTouched: true,
-      exitPlanTouched: false,
       validation: null,
     );
   }
@@ -205,13 +204,13 @@ class TradeForm extends _$TradeForm {
       );
 
   void setTakeProfit2(double? price) => state = state.copyWith(
-        takeProfit2: price ?? (state.takeProfit2 == null ? null : 0),
+        takeProfit2: price,
         exitPlanTouched: true,
         validation: null,
       );
 
   void setTakeProfit3(double? price) => state = state.copyWith(
-        takeProfit3: price ?? (state.takeProfit3 == null ? null : 0),
+        takeProfit3: price,
         exitPlanTouched: true,
         validation: null,
       );
@@ -383,7 +382,7 @@ class TradeForm extends _$TradeForm {
     final pf = state.preflight;
     if (pf == null) return false;
     if (state.symbol == null) return false;
-    if (!state.collateralModeTouched) return false;
+    if (!state.amountTouched) return false;
     if (!state.leverageTouched) return false;
     if (!state.orderTypeTouched) return false;
     if (!state.directionTouched) return false;
@@ -431,15 +430,12 @@ class TradeForm extends _$TradeForm {
     }
     final pf = state.preflight;
     if (sym == null) return 'Choose a trading pair to continue.';
-    if (!state.collateralModeTouched) {
-      return 'Select a margin type to continue.';
-    }
     if (!state.leverageTouched) return 'Choose leverage to continue.';
     if (!state.orderTypeTouched) return 'Choose an entry type to continue.';
     if (!state.amountTouched) return 'Enter trade size to continue.';
     if (!state.directionTouched) return 'Select a direction to continue.';
     if (!state.exitPlanTouched) {
-      return 'Confirm a take profit and stop loss to continue.';
+      return 'Confirm a stop loss to continue.';
     }
     if (state.availableBalance <= 0 &&
         !requiresExchangeForExecution &&
@@ -647,6 +643,7 @@ class TradeForm extends _$TradeForm {
         ),
       ],
       warningGuardrails: const [],
+      behavioralWarnings: const [],
     );
   }
 

@@ -17,11 +17,6 @@ class PBottomNav extends StatelessWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: _PNavBar(currentIndex: currentIndex),
-      floatingActionButton: Transform.translate(
-        offset: const Offset(0, 20),
-        child: _NavFab(onTap: () => context.go(Routes.trade)),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -37,38 +32,9 @@ class PBottomNav extends StatelessWidget {
   }
 }
 
-class _NavFab extends StatelessWidget {
-  const _NavFab({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 58,
-        height: 58,
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.40),
-              blurRadius: 16,
-              spreadRadius: 1,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
-      ),
-    );
-  }
-}
-
 class _PNavBar extends StatelessWidget {
   const _PNavBar({required this.currentIndex});
+
   final int currentIndex;
 
   static const _leftItems = [
@@ -133,8 +99,6 @@ class _PNavBar extends StatelessWidget {
                     onTap: () => context.go(item.path),
                   ),
                 ),
-              // Center placeholder — FAB protrudes here via centerDocked
-              const SizedBox(width: 80),
               for (final item in _rightItems)
                 Expanded(
                   child: _NavItem(
@@ -227,9 +191,7 @@ class _NavItemState extends State<_NavItem>
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 150),
               child: Icon(
-                widget.isSelected
-                    ? widget.item.activeIcon
-                    : widget.item.icon,
+                widget.isSelected ? widget.item.activeIcon : widget.item.icon,
                 key: ValueKey(widget.isSelected),
                 color: color,
                 size: 23,

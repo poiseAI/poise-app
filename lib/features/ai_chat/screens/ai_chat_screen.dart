@@ -145,7 +145,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                       onStartTrial: () async {
                         final result = await ref
                             .read(billingControllerProvider)
-                            .startCheckout();
+                            .startCheckout(BillingCycle.monthly);
                         if (result.isErr && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(result.error.userMessage)),

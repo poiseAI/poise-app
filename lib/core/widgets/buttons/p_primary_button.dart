@@ -91,7 +91,6 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
     final isLoading = widget.state == PButtonState.loading;
     final isSuccess = widget.state == PButtonState.success;
     final isError = widget.state == PButtonState.error;
-    final collapsed = isLoading || isSuccess;
     final radius = widget.borderRadius ?? AppRadius.buttonRadius;
     final isDisabled =
         widget.onPressed == null && widget.state == PButtonState.idle;
@@ -116,7 +115,7 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
           height: widget.height,
-          width: collapsed ? widget.height : double.infinity,
+          width: double.infinity,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: isError
@@ -124,8 +123,7 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
                 : _isEnabled || isLoading || isSuccess
                     ? AppColors.accent
                     : AppColors.bgCardElevated,
-            borderRadius:
-                collapsed ? BorderRadius.circular(widget.height / 2) : radius,
+            borderRadius: radius,
           ),
           child: Center(
             child: AnimatedSwitcher(

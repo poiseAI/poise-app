@@ -19,14 +19,15 @@ class _FakeOrdersNotifier extends OrdersNotifier {
 }
 
 void main() {
-  testWidgets('empty trades screen shows a single new trade CTA',
+  testWidgets(
+      'empty trades screen shows the empty-state CTA and the persistent floating CTA',
       (tester) async {
     await tester.pumpWidget(
       const _OrdersScreenHarness(orders: []),
     );
 
     expect(find.text('No trades yet'), findsOneWidget);
-    expect(find.text('New trade'), findsOneWidget);
+    expect(find.text('New trade'), findsNWidgets(2));
   });
 
   testWidgets('populated trades screen keeps the floating new trade action',
@@ -56,7 +57,7 @@ void main() {
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
 
-    expect(find.text('ETHUSDT'), findsOneWidget);
+    expect(find.text('ETH/USDT'), findsOneWidget);
     expect(find.text('No trade history yet'), findsNothing);
     expect(find.text('New trade'), findsOneWidget);
   });
@@ -69,7 +70,8 @@ void main() {
       ),
     );
 
-    expect(find.text('BTCUSDT'), findsOneWidget);
+    expect(find.text('BTC/USDT'), findsOneWidget);
+    expect(find.text('Open'), findsOneWidget);
     expect(find.text('No active trades'), findsNothing);
     expect(find.text('New trade'), findsOneWidget);
 
@@ -92,7 +94,7 @@ void main() {
 
     expect(api.insightsCalls, 0);
 
-    await tester.tap(find.text('BTCUSDT'));
+    await tester.tap(find.text('BTC/USDT'));
     await tester.pumpAndSettle();
 
     expect(find.text('Trade details'), findsOneWidget);
@@ -122,7 +124,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('SOLUSDT'));
+    await tester.tap(find.text('SOL/USDT'));
     await tester.pumpAndSettle();
 
     expect(find.text('Cancel unfilled order'), findsOneWidget);

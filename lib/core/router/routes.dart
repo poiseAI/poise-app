@@ -22,6 +22,8 @@ abstract final class Routes {
   static const notificationSettings = '/app/profile/notification-settings';
   static const dataPrivacy = '/app/profile/data-privacy';
   static const exchangeConnections = '/app/profile/exchange-connections';
+  static const billing = '/app/profile/billing';
+  static const billingSuccess = '/billing/success';
 
   // Full-screen overlays (no bottom nav)
   static const positionExit = '/app/position/:id/exit';

@@ -28,7 +28,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final ordersState = ref.watch(ordersNotifierProvider);
-    final showNewTradeButton = ordersState.valueOrNull?.isNotEmpty == true;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -47,11 +46,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: showNewTradeButton
-          ? _NewTradeButton(
-              onPressed: () => context.go(Routes.trade),
-            )
-          : null,
+      floatingActionButton: _NewTradeButton(
+        onPressed: () => context.go(Routes.trade),
+      ),
       body: SafeArea(
         top: false,
         child: ordersState.when(
@@ -282,7 +279,7 @@ class _OrderCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        order.symbol,
+                        _displayOrderSymbol(order.symbol),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.caption.copyWith(
@@ -317,7 +314,7 @@ class _OrderCard extends StatelessWidget {
                   ),
                 ),
                 _Pill(
-                  label: order.statusLabel,
+                  label: _orderStatusLabel(order),
                   color: statusColor,
                 ),
                 const SizedBox(width: AppSpacing.xs),
@@ -546,10 +543,13 @@ class _TradeInfoTab extends StatelessWidget {
                       color: sideColor,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Text(order.symbol, style: AppTypography.h3),
+                    Text(
+                      _displayOrderSymbol(order.symbol),
+                      style: AppTypography.h3,
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     _Pill(
-                      label: order.statusLabel.toUpperCase(),
+                      label: _orderStatusLabel(order).toUpperCase(),
                       color: _statusColor(order.status),
                     ),
                   ],
@@ -578,8 +578,14 @@ class _TradeInfoTab extends StatelessWidget {
               value: order.orderType.toUpperCase(),
             ),
             _DetailRow(
-              label: 'Quantity',
-              value: _quantity(order.quantity),
+              label: 'Margin used',
+              value: _money(order.marginUsed ?? 0),
+            ),
+            _DetailRow(
+              label: 'Position size',
+              value: _money(
+                order.quantity * (order.entryPrice ?? order.price ?? 0),
+              ),
             ),
             _DetailRow(
               label: 'Leverage',
@@ -1094,6 +1100,23 @@ class _NewTradeButton extends StatelessWidget {
 String _price(double? value) =>
     value == null ? '-' : '\$${value.toStringAsFixed(2)}';
 
+String _displayOrderSymbol(String value) {
+  final symbol = value.trim().toUpperCase();
+  if (symbol.contains('/')) return symbol;
+  const quotes = ['USDT', 'USDC', 'USD', 'BTC', 'ETH'];
+  for (final quote in quotes) {
+    if (symbol.length > quote.length && symbol.endsWith(quote)) {
+      return '${symbol.substring(0, symbol.length - quote.length)}/$quote';
+    }
+  }
+  return symbol.isEmpty ? '-' : symbol;
+}
+
+String _orderStatusLabel(Order order) {
+  if (order.isActiveTrade) return 'Open';
+  return order.statusLabel;
+}
+
 String? _entryExpiryStatus(Order order) {
   if (order.autoCancelledAt != null) return 'Auto-cancelled after expiry';
   if (!order.isActiveTrade || order.expiresAt == null) return null;
@@ -1193,19 +1216,6 @@ String _sideLabel(String side) {
 double? _orderPnl(Order order) => order.isActiveTrade
     ? order.unrealizedPnl ?? order.realizedPnl
     : order.realizedPnl ?? order.unrealizedPnl;
-
-String _quantity(double value) {
-  if (value <= 0) return '-';
-  if (value >= 100) return value.toStringAsFixed(0);
-  if (value >= 1) return _trimFixed(value, 4);
-  return _trimFixed(value, 8);
-}
-
-String _trimFixed(double value, int fractionDigits) {
-  final text = value.toStringAsFixed(fractionDigits);
-  final trimmed = text.replaceFirst(RegExp(r'\.?0+$'), '');
-  return trimmed.isEmpty ? '0' : trimmed;
-}
 
 String _historyDateLabel(String raw) {
   final parsed = DateTime.tryParse(raw);
