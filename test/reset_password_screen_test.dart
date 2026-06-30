@@ -46,9 +46,52 @@ Future<void> _advanceToPasswordStep(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('reset password OTP step matches Figma geometry', (tester) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _authHarness(const ResetPasswordScreen(email: 'user@example.com')),
+    );
+
+    expect(find.text('Forgot password'), findsNothing);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reset-back-button'))),
+      const Offset(22, 74),
+    );
+    expect(find.text('Enter OTP'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reset-otp-content'))),
+      const Offset(24, 130),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('reset-otp-content'))),
+      const Size(342, 220),
+    );
+    expect(tester.getTopLeft(find.byType(POtpField)), const Offset(24, 250));
+    expect(tester.getSize(find.byType(POtpField)), const Size(342, 64));
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reset-otp-request'))),
+      const Offset(24, 330),
+    );
+    expect(
+      tester.getTopLeft(find.byType(PPrimaryButton)),
+      const Offset(24, 724),
+    );
+    expect(tester.getSize(find.byType(PPrimaryButton)), const Size(342, 48));
+  });
+
   testWidgets(
       'reset password password step matches reference copy and controls',
       (tester) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       _authHarness(const ResetPasswordScreen(email: 'user@example.com')),
     );
@@ -64,6 +107,14 @@ void main() {
     expect(find.text('Create New Password'), findsNothing);
     expect(find.text('Forgot Password'), findsNothing);
     expect(find.text('Save'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reset-password-content'))),
+      const Offset(24, 134),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('reset-password-content'))),
+      const Size(342, 356),
+    );
 
     expect(find.byType(TextFormField), findsNWidgets(2));
     for (var index = 0; index < 2; index += 1) {
@@ -75,10 +126,20 @@ void main() {
 
     final button = tester.widget<PPrimaryButton>(find.byType(PPrimaryButton));
     expect(button.label, 'Save');
+    expect(
+      tester.getTopLeft(find.byType(PPrimaryButton)),
+      const Offset(24, 724),
+    );
+    expect(tester.getSize(find.byType(PPrimaryButton)), const Size(342, 48));
   });
 
   testWidgets('reset password success screen matches reference',
       (tester) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final authApi = _ResetPasswordApi();
     await tester.pumpWidget(
       _authHarness(
@@ -99,6 +160,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Image), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reset-success-seal'))),
+      const Offset(95, 166),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('reset-success-seal'))),
+      const Size(200, 200),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reset-success-copy'))),
+      const Offset(24, 458),
+    );
     expect(find.text('Your password has been updated'), findsOneWidget);
     expect(
       find.text(
@@ -108,5 +181,10 @@ void main() {
     );
     expect(find.text('Log in'), findsOneWidget);
     expect(find.text('Login'), findsNothing);
+    expect(
+      tester.getTopLeft(find.byType(PPrimaryButton)),
+      const Offset(23, 724),
+    );
+    expect(tester.getSize(find.byType(PPrimaryButton)), const Size(342, 48));
   });
 }

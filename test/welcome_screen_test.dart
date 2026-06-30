@@ -6,7 +6,7 @@ import 'package:poise_ai/core/theme/app_theme.dart';
 import 'package:poise_ai/features/auth/screens/welcome_screen.dart';
 
 void main() {
-  testWidgets('welcome screen uses reference title, dots, and pill geometry',
+  testWidgets('welcome screen uses the Figma onboarding carousel',
       (tester) async {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
@@ -24,9 +24,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump();
 
-    final title = tester.widget<Text>(
-      find.text('The Trading Operating System'),
-    );
+    final title = tester.widget<Text>(find.text('The Trading Operating System'));
     expect(title.style?.fontFamily, 'Orbitron');
     expect(title.style?.color, AppColors.primary);
     expect(title.style?.fontSize, closeTo(20, 0.1));
@@ -39,15 +37,17 @@ void main() {
             widget is Image &&
             widget.image is AssetImage &&
             (widget.image as AssetImage).assetName ==
-                'assets/images/head-welcome.png',
+                'assets/images/onboarding_trading_os.png',
       ),
       findsOneWidget,
     );
 
-    final getStartedSize = tester.getSize(find.text('Get Started'));
-    final loginSize = tester.getSize(find.text('Log in'));
-    expect(getStartedSize.height, lessThanOrEqualTo(40));
-    expect(loginSize.height, lessThanOrEqualTo(40));
+    final getStartedButton = find.byType(FilledButton);
+    final loginButton = find.byType(OutlinedButton);
+    expect(tester.getTopLeft(getStartedButton), const Offset(24, 688));
+    expect(tester.getSize(getStartedButton), const Size(342, 44));
+    expect(tester.getTopLeft(loginButton), const Offset(24, 744));
+    expect(tester.getSize(loginButton), const Size(342, 44));
 
     final dotDecorations = tester
         .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
@@ -55,22 +55,58 @@ void main() {
         .whereType<BoxDecoration>()
         .where((decoration) => decoration.shape == BoxShape.circle)
         .toList();
-    expect(dotDecorations, hasLength(1));
+    expect(dotDecorations, hasLength(3));
 
     final dots = find.byWidgetPredicate(
       (widget) =>
           widget is AnimatedContainer &&
-          widget.decoration is BoxDecoration &&
-          (widget.decoration! as BoxDecoration).shape == BoxShape.circle,
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith('welcome-dot-'),
     );
-    for (var index = 0; index < 1; index += 1) {
-      expect(tester.getSize(dots.at(index)).width, closeTo(15, 0.1));
-      expect(tester.getSize(dots.at(index)).height, closeTo(5, 0.1));
+    expect(tester.getSize(dots.at(0)).width, closeTo(25, 0.1));
+    expect(tester.getSize(dots.at(0)).height, closeTo(9, 0.1));
+    expect(tester.getSize(dots.at(1)).width, closeTo(23, 0.1));
+    expect(tester.getSize(dots.at(1)).height, closeTo(7, 0.1));
+    expect(tester.getSize(dots.at(2)).width, closeTo(21, 0.1));
+    expect(tester.getSize(dots.at(2)).height, closeTo(5, 0.1));
+    for (var index = 0; index < 3; index += 1) {
       expect(
         tester.widget<AnimatedContainer>(dots.at(index)).margin,
-        const EdgeInsets.symmetric(horizontal: 5),
+        const EdgeInsets.symmetric(horizontal: 8),
       );
     }
+
+    await tester.drag(find.byType(PageView), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Automated Risk Guardrails'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/onboarding_guardrails.png',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.drag(find.byType(PageView), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Real-Time AI Coaching'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/onboarding_ai_coaching.png',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.text('The Trading Operating System'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

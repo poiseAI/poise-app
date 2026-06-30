@@ -78,8 +78,8 @@ class _POtpFieldState extends State<POtpField>
             : AppColors.accent;
 
     final base = PinTheme(
-      width: 52,
-      height: 58,
+      width: 48,
+      height: 48,
       textStyle: AppTypography.h3.copyWith(fontFamily: 'Orbitron'),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
@@ -123,25 +123,30 @@ class _POtpFieldState extends State<POtpField>
             : 0.0;
         return Transform.translate(offset: Offset(shake, 0), child: child);
       },
-      child: Pinput(
-        length: widget.length,
-        controller: widget.controller,
-        focusNode: widget.focusNode,
-        obscureText: widget.obscureText,
-        autofocus: widget.autofocus,
-        enabled: widget.enabled,
-        defaultPinTheme: base,
-        focusedPinTheme: focused,
-        submittedPinTheme: submitted,
-        keyboardType: TextInputType.number,
-        onCompleted: widget.onCompleted,
-        onChanged: (val) {
-          HapticFeedback.selectionClick();
-          widget.onChanged?.call(val);
-        },
-        animationDuration: const Duration(milliseconds: 120),
-        animationCurve: Curves.easeOutBack,
-        pinAnimationType: PinAnimationType.slide,
+      child: SizedBox(
+        width: 342,
+        height: 64,
+        child: Pinput(
+          length: widget.length,
+          controller: widget.controller,
+          focusNode: widget.focusNode,
+          obscureText: widget.obscureText,
+          autofocus: widget.autofocus,
+          enabled: widget.enabled,
+          defaultPinTheme: base,
+          focusedPinTheme: focused,
+          submittedPinTheme: submitted,
+          separatorBuilder: (_) => const SizedBox(width: 10.8),
+          keyboardType: TextInputType.number,
+          onCompleted: widget.onCompleted,
+          onChanged: (val) {
+            HapticFeedback.selectionClick();
+            widget.onChanged?.call(val);
+          },
+          animationDuration: const Duration(milliseconds: 120),
+          animationCurve: Curves.easeOutBack,
+          pinAnimationType: PinAnimationType.slide,
+        ),
       ),
     );
   }

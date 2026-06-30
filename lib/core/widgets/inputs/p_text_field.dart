@@ -169,14 +169,14 @@ class _PTextFieldState extends State<PTextField>
           suffixIcon: _buildSuffix(),
           suffixIconConstraints: BoxConstraints(
             minWidth: widget.compact ? 40 : 44,
-            minHeight: widget.compact ? 40 : 44,
+            minHeight: widget.compact ? 48 : 44,
           ),
           counterText: '',
           isDense: widget.compact,
           constraints:
-              widget.compact ? const BoxConstraints(minHeight: 40) : null,
+              widget.compact ? const BoxConstraints.tightFor(height: 48) : null,
           contentPadding: widget.compact
-              ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
+              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 13)
               : null,
           border: widget.compact
               ? OutlineInputBorder(
@@ -233,14 +233,12 @@ class _PTextFieldState extends State<PTextField>
       children: [
         Text(
           widget.label,
-          style:
-              (widget.compact ? AppTypography.label : AppTypography.bodyMedium)
-                  .copyWith(
+          style: AppTypography.bodyMedium.copyWith(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w500,
           ),
         ),
-        SizedBox(height: widget.compact ? 4 : 6),
+        const SizedBox(height: 6),
         field,
       ],
     );

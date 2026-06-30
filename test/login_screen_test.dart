@@ -30,7 +30,7 @@ void main() {
       ),
     );
 
-    tester.view.physicalSize = const Size(1125, 2436);
+    tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -58,8 +58,22 @@ void main() {
     expect(find.textContaining("Don't have an account?"), findsOneWidget);
     expect(find.text('Sign up'), findsOneWidget);
 
-    // poise wordmark present (text 'poise')
+    // poise wordmark present (text 'poise') and no visible back affordance in
+    // the default Figma login state.
     expect(find.text('poise'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('login-wordmark'))),
+      const Offset(24, 82),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('login-content'))),
+      const Offset(24, 162),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('login-bottom-actions'))),
+      const Offset(24, 728),
+    );
 
     // Eye toggle present on password field
     expect(find.byIcon(Icons.shield_rounded), findsNothing);
@@ -68,9 +82,10 @@ void main() {
     final heading = tester.getTopLeft(find.text('Welcome back'));
     expect(heading.dx, closeTo(24, 0.5));
 
-    // Login button is 44dp
-    final loginButton = tester.getSize(find.byType(PPrimaryButton));
-    expect(loginButton.height, closeTo(44, 0.5));
+    // Login button is 48dp in the updated Figma screen.
+    final loginButton = find.byType(PPrimaryButton);
+    expect(tester.getTopLeft(loginButton), const Offset(24, 728));
+    expect(tester.getSize(loginButton), const Size(342, 48));
 
     // Forgot password left-aligned
     final forgotPassword = tester.getTopLeft(find.text('Forgot password?'));
@@ -93,9 +108,14 @@ void main() {
       isNotNull,
     );
 
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pump();
+    await tester.tap(find.byType(PPrimaryButton));
+    await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('login-error-alert')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('login-error-alert'))),
+      const Offset(24, 262),
+    );
     expect(find.byIcon(Icons.check_circle_outline_rounded), findsNothing);
 
     await tester.pump(const Duration(seconds: 4));

@@ -2,7 +2,7 @@
 
 Date inspected: 2026-05-30
 
-Figma source: https://www.figma.com/design/QAc0yS2GkBPj6wsBw0SgSU/Poise
+Figma source: https://www.figma.com/design/3ZCG8wqWIJ4jSs8LTFCMEr/Poise
 
 ## Scope
 
