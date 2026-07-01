@@ -245,13 +245,13 @@ class _LoginErrorAlert extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
+          const SizedBox(
             width: 20,
             height: 20,
             child: Stack(
               alignment: Alignment.center,
               clipBehavior: Clip.none,
-              children: const [
+              children: [
                 DecoratedBox(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
