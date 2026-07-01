@@ -160,8 +160,7 @@ class _PTextFieldState extends State<PTextField>
         enabled: widget.enabled,
         autofocus: widget.autofocus,
         cursorColor: AppColors.primary,
-        style: (widget.compact ? AppTypography.bodySm : AppTypography.body)
-            .copyWith(color: colorScheme.onSurface),
+        style: AppTypography.body.copyWith(color: colorScheme.onSurface),
         decoration: InputDecoration(
           labelText: widget.showLabelAbove ? null : widget.label,
           hintText: widget.hint,

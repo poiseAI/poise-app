@@ -20,6 +20,11 @@ Widget _authHarness(Widget child) {
 void main() {
   testWidgets('register screen matches authoritative create-account shell',
       (tester) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(_authHarness(const RegisterScreen()));
 
     expect(find.text('Sign up'), findsNothing);
@@ -29,17 +34,26 @@ void main() {
       tester.getSize(find.byType(PoiseWordmark)),
       const Size(PoiseWordmark.width, PoiseWordmark.height),
     );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('register-wordmark'))),
+      const Offset(24, 82),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('register-content'))),
+      const Offset(24, 156),
+    );
     expect(find.text('Create your account'), findsOneWidget);
     expect(
       find.text('Start your 14-day free trial. No credit card required'),
       findsOneWidget,
     );
-    expect(find.text('Your name'), findsOneWidget);
-    expect(find.text('Email address'), findsOneWidget);
-    expect(find.text('Create password'), findsOneWidget);
-    expect(find.text('Confirm password'), findsOneWidget);
+    expect(find.text('Your name'), findsWidgets);
+    expect(find.text('Email address'), findsWidgets);
+    expect(find.text('Create password'), findsWidgets);
+    expect(find.text('Confirm password'), findsWidgets);
     expect(find.text('Already have an account?'), findsOneWidget);
     expect(find.text('Log in'), findsOneWidget);
+    expect(find.text('Requires at least:'), findsNothing);
 
     final firstEditable = tester.widget<EditableText>(
       find.byType(EditableText).first,
@@ -52,6 +66,21 @@ void main() {
         inInclusiveRange(40, 48),
       );
     }
+
+    final registerButton = find.byType(PPrimaryButton);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('register-bottom-actions'))),
+      const Offset(24, 724),
+    );
+    expect(tester.getTopLeft(registerButton), const Offset(24, 724));
+    expect(tester.getSize(registerButton), const Size(342, 48));
+    expect(
+      tester
+          .getBottomLeft(find.byKey(const ValueKey('register-auth-switch')))
+          .dy,
+      lessThanOrEqualTo(
+          tester.view.physicalSize.height / tester.view.devicePixelRatio),
+    );
 
     expect(
       tester.widget<PPrimaryButton>(find.byType(PPrimaryButton)).onPressed,
@@ -86,6 +115,37 @@ void main() {
     expect(
       tester.widget<PPrimaryButton>(find.byType(PPrimaryButton)).onPressed,
       isNotNull,
+    );
+  });
+
+  testWidgets('register password requirements state keeps auth switch visible',
+      (tester) async {
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_authHarness(const RegisterScreen()));
+
+    await tester.tap(find.byType(TextFormField).at(2));
+    await tester.pump();
+
+    expect(find.text('Requires at least:'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('Requires at least:')).dy, 514);
+    expect(
+      tester.getTopLeft(find.text('Confirm password')),
+      const Offset(24, 606),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('register-bottom-actions'))),
+      const Offset(24, 724),
+    );
+    expect(
+      tester
+          .getBottomLeft(find.byKey(const ValueKey('register-auth-switch')))
+          .dy,
+      lessThanOrEqualTo(
+          tester.view.physicalSize.height / tester.view.devicePixelRatio),
     );
   });
 

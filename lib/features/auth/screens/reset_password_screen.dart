@@ -684,10 +684,9 @@ class _ResetPasswordRequirements extends StatelessWidget {
       children: [
         Text(
           'Requires at least:',
-          style: AppTypography.labelSm.copyWith(
+          style: AppTypography.label.copyWith(
             color: AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
-            height: 1.8,
+            fontWeight: FontWeight.w500,
             letterSpacing: 0,
           ),
         ),
@@ -755,7 +754,8 @@ class _ResetRequirementChip extends StatelessWidget {
       duration: const Duration(milliseconds: 160),
       width: width,
       height: 22,
-      alignment: Alignment.center,
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: bg,
         border: Border.all(color: color.withValues(alpha: 0.35)),
@@ -764,11 +764,10 @@ class _ResetRequirementChip extends StatelessWidget {
       child: Text(
         label,
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppTypography.labelSm.copyWith(
+        overflow: TextOverflow.clip,
+        style: AppTypography.label.copyWith(
           color: color,
-          fontWeight: FontWeight.w600,
-          height: 1,
+          fontWeight: FontWeight.w500,
           letterSpacing: 0,
         ),
       ),

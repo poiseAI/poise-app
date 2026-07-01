@@ -24,10 +24,23 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump();
 
-    final title = tester.widget<Text>(find.text('The Trading Operating System'));
+    final title =
+        tester.widget<Text>(find.text('The Trading Operating System'));
     expect(title.style?.fontFamily, 'Orbitron');
     expect(title.style?.color, AppColors.primary);
-    expect(title.style?.fontSize, closeTo(20, 0.1));
+    expect(title.style?.fontSize, closeTo(24, 0.1));
+    expect(title.style?.fontWeight, FontWeight.w600);
+    expect(title.style?.height, closeTo(32 / 24, 0.01));
+    expect(tester.getTopLeft(find.text('The Trading Operating System')),
+        const Offset(64, 495));
+    expect(tester.getSize(find.text('The Trading Operating System')),
+        const Size(265, 64));
+
+    final body = find.textContaining('Stop losing to emotional mistakes');
+    expect(tester.widget<Text>(body).style?.fontSize, closeTo(14, 0.1));
+    expect(tester.widget<Text>(body).style?.height, closeTo(20 / 14, 0.01));
+    expect(tester.getTopLeft(body), const Offset(32, 571));
+    expect(tester.getSize(body), const Size(329, 60));
     expect(find.text('poise'), findsNothing);
     expect(find.text('Automated Risk Guardrails'), findsNothing);
     expect(find.text('Real-Time AI Coaching'), findsNothing);
@@ -63,18 +76,12 @@ void main() {
           widget.key is ValueKey<String> &&
           (widget.key! as ValueKey<String>).value.startsWith('welcome-dot-'),
     );
-    expect(tester.getSize(dots.at(0)).width, closeTo(25, 0.1));
+    expect(tester.getSize(dots.at(0)).width, closeTo(9, 0.1));
     expect(tester.getSize(dots.at(0)).height, closeTo(9, 0.1));
-    expect(tester.getSize(dots.at(1)).width, closeTo(23, 0.1));
+    expect(tester.getSize(dots.at(1)).width, closeTo(7, 0.1));
     expect(tester.getSize(dots.at(1)).height, closeTo(7, 0.1));
-    expect(tester.getSize(dots.at(2)).width, closeTo(21, 0.1));
+    expect(tester.getSize(dots.at(2)).width, closeTo(5, 0.1));
     expect(tester.getSize(dots.at(2)).height, closeTo(5, 0.1));
-    for (var index = 0; index < 3; index += 1) {
-      expect(
-        tester.widget<AnimatedContainer>(dots.at(index)).margin,
-        const EdgeInsets.symmetric(horizontal: 8),
-      );
-    }
 
     await tester.drag(find.byType(PageView), const Offset(-500, 0));
     await tester.pumpAndSettle();

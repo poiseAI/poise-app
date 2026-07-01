@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 
 class PasswordRequirements extends StatelessWidget {
@@ -40,54 +39,76 @@ class PasswordRequirements extends StatelessWidget {
       children: [
         Text(
           'Requires at least:',
-          style: AppTypography.labelSm.copyWith(
+          style: AppTypography.label.copyWith(
             color: AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: 6),
         Wrap(
-          spacing: AppSpacing.xs,
-          runSpacing: AppSpacing.xs,
+          spacing: 4,
+          runSpacing: 4,
           children: [
             for (final req in requirements)
-              _RequirementChip(label: req.label, met: req.met),
+              _RequirementChip(
+                label: req.label,
+                met: req.met,
+                width: _badgeWidth(req.label),
+              ),
           ],
         ),
       ],
     );
   }
+
+  double _badgeWidth(String label) => switch (label) {
+        '8 characters long' => 113,
+        '1 number' => 65,
+        '1 uppercase letter' => 116,
+        '1 lowercase letter' => 113,
+        '1 symbol' => 63,
+        _ => 80,
+      };
 }
 
 class _RequirementChip extends StatelessWidget {
   const _RequirementChip({
     required this.label,
     required this.met,
+    required this.width,
   });
 
   final String label;
   final bool met;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     final color = met ? AppColors.profitGreen : AppColors.lossRed;
     final bg = met ? AppColors.profitGreenBg : AppColors.lossRedBg;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: AppTypography.labelSm.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0,
+    return SizedBox(
+      width: width,
+      height: 22,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.clip,
+          style: AppTypography.label.copyWith(
+            color: color,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+          ),
         ),
       ),
     );

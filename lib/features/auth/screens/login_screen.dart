@@ -192,9 +192,9 @@ class _LoginIntro extends StatelessWidget {
             'Welcome back',
             style: AppTypography.h2.copyWith(
               fontFamily: 'Orbitron',
-              fontSize: 20,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
-              height: 1.6,
+              height: 1.33,
               letterSpacing: 0,
             ),
           ),

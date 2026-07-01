@@ -29,6 +29,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       imageSize: 500,
       imageTop: 58,
       imageLeftOffset: -55,
+      titleLeft: 64,
+      titleWidth: 265,
+      infoTop: 495,
     ),
     _WelcomeSlide(
       image: 'assets/images/onboarding_guardrails.png',
@@ -38,6 +41,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       imageSize: 442,
       imageTop: 68,
       imageLeftOffset: -26,
+      titleLeft: 32,
+      titleWidth: 329,
+      infoTop: 495,
     ),
     _WelcomeSlide(
       image: 'assets/images/onboarding_ai_coaching.png',
@@ -47,6 +53,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       imageSize: 390,
       imageTop: 97,
       imageLeftOffset: 0,
+      titleLeft: 105,
+      titleWidth: 183,
+      infoTop: 497,
     ),
   ];
 
@@ -94,6 +103,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             builder: (context, constraints) {
               final heightScale = constraints.maxHeight / 844;
               final slideScale = heightScale.clamp(0.86, 1.0);
+              final actionTop =
+                  constraints.maxHeight >= 844 ? 688.0 : 688 * slideScale;
 
               return Stack(
                 children: [
@@ -118,7 +129,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   Positioned(
                     left: 24,
                     right: 24,
-                    bottom: (56 * heightScale).clamp(40, 56),
+                    top: actionTop,
                     child: _WelcomeActions(
                       onGetStarted: () => _continueTo(Routes.register),
                       onLogin: () => _continueTo(Routes.login),
@@ -142,6 +153,9 @@ class _WelcomeSlide {
     required this.imageSize,
     required this.imageTop,
     required this.imageLeftOffset,
+    required this.titleLeft,
+    required this.titleWidth,
+    required this.infoTop,
   });
 
   final String image;
@@ -150,6 +164,9 @@ class _WelcomeSlide {
   final double imageSize;
   final double imageTop;
   final double imageLeftOffset;
+  final double titleLeft;
+  final double titleWidth;
+  final double infoTop;
 }
 
 class _SlidePage extends StatelessWidget {
@@ -174,34 +191,38 @@ class _SlidePage extends StatelessWidget {
           ),
         ),
         Positioned(
+          left: slide.titleLeft,
+          top: slide.infoTop * scale,
+          width: slide.titleWidth,
+          height: 64,
+          child: Text(
+            slide.title,
+            textAlign: TextAlign.center,
+            style: AppTypography.display2.copyWith(
+              color: AppColors.primary,
+              fontFamily: 'Orbitron',
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              height: 32 / 24,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+        Positioned(
           left: 32,
-          right: 29,
-          top: 495 * scale,
-          child: Column(
-            children: [
-              Text(
-                slide.title,
-                textAlign: TextAlign.center,
-                style: AppTypography.display2.copyWith(
-                  color: AppColors.primary,
-                  fontFamily: 'Orbitron',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  height: 1.6,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                slide.body,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodySm.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.67,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
+          top: (slide.infoTop + 76) * scale,
+          width: 329,
+          height: 60,
+          child: Text(
+            slide.body,
+            textAlign: TextAlign.center,
+            style: AppTypography.body.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              height: 20 / 14,
+              letterSpacing: 0,
+            ),
           ),
         ),
       ],
@@ -229,7 +250,7 @@ class _WelcomeActions extends StatelessWidget {
           child: FilledButton(
             style: FilledButton.styleFrom(
               shape: const StadiumBorder(),
-              textStyle: AppTypography.button,
+              textStyle: AppTypography.buttonLg,
             ),
             onPressed: onGetStarted,
             child: const Text('Get Started'),
@@ -242,7 +263,7 @@ class _WelcomeActions extends StatelessWidget {
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
               shape: const StadiumBorder(),
-              textStyle: AppTypography.button,
+              textStyle: AppTypography.buttonLg,
             ),
             onPressed: onLogin,
             child: const Text('Log in'),
@@ -260,31 +281,69 @@ class _PageDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        final active = index == currentPage;
-        final distance = (index - currentPage).abs();
-        final size = active
-            ? 9.0
-            : distance == 1
-                ? 7.0
-                : 5.0;
+    final metrics = _DotMetrics.forPage(currentPage);
 
-        return AnimatedContainer(
-          key: ValueKey('welcome-dot-$index'),
-          duration: const Duration(milliseconds: 180),
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: active
-                ? AppColors.primary
-                : AppColors.primary.withValues(alpha: 0.22),
-          ),
-        );
-      }),
+    return Center(
+      child: SizedBox(
+        width: metrics.width,
+        height: 9,
+        child: Stack(
+          children: [
+            for (var index = 0; index < 3; index += 1)
+              Positioned(
+                left: metrics.lefts[index],
+                top: metrics.tops[index],
+                child: AnimatedContainer(
+                  key: ValueKey('welcome-dot-$index'),
+                  duration: const Duration(milliseconds: 180),
+                  width: metrics.sizes[index],
+                  height: metrics.sizes[index],
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: index == currentPage
+                        ? AppColors.primary
+                        : AppColors.primary.withValues(alpha: 0.22),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
+}
+
+class _DotMetrics {
+  const _DotMetrics({
+    required this.width,
+    required this.lefts,
+    required this.tops,
+    required this.sizes,
+  });
+
+  final double width;
+  final List<double> lefts;
+  final List<double> tops;
+  final List<double> sizes;
+
+  static _DotMetrics forPage(int page) => switch (page) {
+        0 => const _DotMetrics(
+            width: 53,
+            lefts: [0, 25, 48],
+            tops: [0, 1, 2],
+            sizes: [9, 7, 5],
+          ),
+        1 => const _DotMetrics(
+            width: 55,
+            lefts: [0, 23, 48],
+            tops: [1, 0, 1],
+            sizes: [7, 9, 7],
+          ),
+        _ => const _DotMetrics(
+            width: 53,
+            lefts: [0, 23, 44],
+            tops: [2, 1, 0],
+            sizes: [5, 7, 9],
+          ),
+      };
 }
