@@ -41,7 +41,7 @@ Widget _authHarness(Widget child, {AuthApi? authApi}) {
 Future<void> _advanceToPasswordStep(WidgetTester tester) async {
   await tester.enterText(find.byType(POtpField), '123456');
   await tester.pump();
-  await tester.tap(find.text('Continue'));
+  await tester.tap(find.byType(PPrimaryButton));
   await tester.pump();
 }
 
