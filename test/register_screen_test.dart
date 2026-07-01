@@ -51,8 +51,13 @@ void main() {
     expect(find.text('Email address'), findsWidgets);
     expect(find.text('Create password'), findsWidgets);
     expect(find.text('Confirm password'), findsWidgets);
-    expect(find.text('Already have an account?'), findsOneWidget);
-    expect(find.text('Log in'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Already have an account? Log in',
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Requires at least:'), findsNothing);
 
     final firstEditable = tester.widget<EditableText>(
@@ -68,12 +73,25 @@ void main() {
     }
 
     final registerButton = find.byType(PPrimaryButton);
+    final button = tester.widget<PPrimaryButton>(registerButton);
+    expect(button.textStyle?.fontFamily, 'Inter');
+    expect(button.textStyle?.fontSize, 16);
+    expect(button.textStyle?.fontWeight, FontWeight.w600);
+    expect(button.disabledLabelColor, AppColors.textSecondary);
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('register-bottom-actions'))),
-      const Offset(24, 724),
+      const Offset(16, 724),
     );
     expect(tester.getTopLeft(registerButton), const Offset(24, 724));
     expect(tester.getSize(registerButton), const Size(342, 48));
+    expect(
+      tester.getSize(find.byKey(const ValueKey('register-auth-switch'))),
+      const Size(358, 20),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('register-auth-switch'))),
+      const Offset(16, 788),
+    );
     expect(
       tester
           .getBottomLeft(find.byKey(const ValueKey('register-auth-switch')))
@@ -118,6 +136,51 @@ void main() {
     );
   });
 
+  testWidgets('register email validates on blur without shrinking input',
+      (tester) async {
+    await tester.pumpWidget(_authHarness(const RegisterScreen()));
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Blessing Umoh');
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'blessingyopmail.com',
+    );
+    await tester.tap(find.byType(TextFormField).at(2));
+    await tester.pump();
+
+    expect(find.text('Enter a valid email address'), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(TextFormField).at(1)),
+      const Size(342, 48),
+    );
+    expect(
+      tester.getTopLeft(find.text('Enter a valid email address')).dy,
+      greaterThan(tester.getBottomLeft(find.byType(TextFormField).at(1)).dy),
+    );
+  });
+
+  testWidgets('register password field waits before showing error while typing',
+      (tester) async {
+    await tester.pumpWidget(_authHarness(const RegisterScreen()));
+
+    await tester.tap(find.byType(TextFormField).at(2));
+    await tester.enterText(find.byType(TextFormField).at(2), 'B');
+    await tester.pump();
+
+    expect(find.text('Password does not meet all requirements'), findsNothing);
+    expect(find.byIcon(Icons.error_outline_rounded), findsNothing);
+
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(
+        find.text('Password does not meet all requirements'), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(TextFormField).at(2)),
+      const Size(342, 48),
+    );
+  });
+
   testWidgets('register password requirements state keeps auth switch visible',
       (tester) async {
     tester.view.physicalSize = const Size(1170, 2532);
@@ -138,7 +201,7 @@ void main() {
     );
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('register-bottom-actions'))),
-      const Offset(24, 724),
+      const Offset(16, 724),
     );
     expect(
       tester

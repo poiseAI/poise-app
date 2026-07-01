@@ -81,7 +81,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       onErr: (e) {
         setState(() {
           _buttonState = PButtonState.idle;
-          _errorMessage = e;
+          _errorMessage = 'Invalid login credentials';
+          _emailState = PFieldState.error;
+          _passwordState = PFieldState.error;
+          _emailError = null;
+          _passwordError = null;
         });
       },
     );
@@ -225,26 +229,66 @@ class _LoginErrorAlert extends StatelessWidget {
     return Container(
       height: 52,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.lossRedBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.lossRed.withValues(alpha: 0.22)),
+        color: const Color(0xFFFEF3F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFEE4E2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D101828),
+            blurRadius: 1,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 20,
-            color: AppColors.lossRed,
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: const [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.fromBorderSide(
+                      BorderSide(color: Color(0x4DD92D20), width: 2),
+                    ),
+                  ),
+                  child: SizedBox(width: 28, height: 28),
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.fromBorderSide(
+                      BorderSide(color: Color(0x1AD92D20), width: 2),
+                    ),
+                  ),
+                  child: SizedBox(width: 38, height: 38),
+                ),
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 20,
+                  color: Color(0xFFD92D20),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 16),
           Expanded(
             child: Text(
               message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodySm.copyWith(color: AppColors.lossRed),
+              style: AppTypography.body.copyWith(
+                color: const Color(0xFFD92D20),
+                fontWeight: FontWeight.w600,
+                height: 20 / 14,
+              ),
             ),
           ),
         ],
@@ -371,10 +415,11 @@ class _LoginActions extends StatelessWidget {
           state: buttonState,
           onPressed: canSubmit ? onSubmit : null,
           height: 48,
-          borderRadius: BorderRadius.circular(24),
-          textStyle: AppTypography.button,
+          borderRadius: BorderRadius.circular(40),
+          textStyle: AppTypography.buttonLg,
+          disabledLabelColor: AppColors.textDisabled,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,

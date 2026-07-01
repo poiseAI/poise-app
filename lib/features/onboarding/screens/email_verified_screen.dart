@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
@@ -42,8 +41,8 @@ class _EmailVerifiedScreenState extends State<EmailVerifiedScreen> {
                   key: const ValueKey('email-verified-illustration'),
                   width: 200,
                   height: 200,
-                  child: SvgPicture.asset(
-                    'assets/images/email-verified-illustration.svg',
+                  child: Image.asset(
+                    'assets/images/checkmark.png',
                     fit: BoxFit.contain,
                   ),
                 ).animate().fadeIn(duration: 260.ms).scale(

@@ -38,6 +38,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   String? _passError;
   String? _confirmError;
   String? _errorMessage;
+  String? _otpErrorText;
   bool _otpComplete = false;
   bool _resending = false;
   Timer? _otpTimer;
@@ -126,12 +127,34 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         });
       },
       onErr: (e) {
+        final message = e.userMessage;
+        if (_isOtpError(message)) {
+          _otpCtrl.clear();
+          setState(() {
+            _step = _ResetPasswordStep.otp;
+            _buttonState = PButtonState.idle;
+            _otpState = POtpState.error;
+            _otpErrorText = 'Incorrect code. Please try again';
+            _otpComplete = false;
+            _errorMessage = null;
+          });
+          return;
+        }
         setState(() {
           _buttonState = PButtonState.idle;
-          _errorMessage = e.userMessage;
+          _errorMessage = message;
         });
       },
     );
+  }
+
+  bool _isOtpError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('otp') ||
+        lower.contains('code') ||
+        lower.contains('expired') ||
+        lower.contains('invalid') ||
+        lower.contains('incorrect');
   }
 
   Future<void> _resend() async {
@@ -192,7 +215,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     onPressed: () => context.go(Routes.forgotPassword),
                     height: 48,
                     borderRadius: BorderRadius.circular(24),
-                    textStyle: AppTypography.button,
+                    textStyle: AppTypography.buttonLg,
                   ),
                 ),
               ],
@@ -251,16 +274,26 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                             }),
                             onChanged: (_) {
                               if (_otpState != POtpState.idle) {
-                                setState(() => _otpState = POtpState.idle);
+                                setState(() {
+                                  _otpState = POtpState.idle;
+                                  _otpErrorText = null;
+                                });
                               }
                               setState(() => _otpComplete = false);
                             },
                           ),
                         ),
+                        if (_otpErrorText != null)
+                          Positioned(
+                            key: const ValueKey('reset-otp-error'),
+                            left: 0,
+                            top: 190,
+                            child: _OtpErrorText(message: _otpErrorText!),
+                          ),
                         Positioned(
                           key: const ValueKey('reset-otp-request'),
                           left: 0,
-                          top: 200,
+                          top: _otpErrorText == null ? 200 : 230,
                           child: _RequestOtpRow(
                             resending: _resending,
                             secondsRemaining: _secondsRemaining,
@@ -284,7 +317,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                         : null,
                     height: 48,
                     borderRadius: BorderRadius.circular(24),
-                    textStyle: AppTypography.button,
+                    textStyle: AppTypography.buttonLg,
                   ),
                 ),
               ] else ...[
@@ -392,7 +425,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     onPressed: _otpComplete ? _submit : null,
                     height: 48,
                     borderRadius: BorderRadius.circular(24),
-                    textStyle: AppTypography.button,
+                    textStyle: AppTypography.buttonLg,
                   ),
                 ),
               ],
@@ -465,9 +498,9 @@ class _PasswordUpdatedSuccessScreen extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: AppTypography.bodySm.copyWith(
-                              color: AppColors.textSecondary,
-                              height: 1.67,
+                            style: AppTypography.body.copyWith(
+                              color: AppColors.textHeading,
+                              height: 20 / 14,
                               letterSpacing: 0,
                             ),
                           ),
@@ -485,8 +518,8 @@ class _PasswordUpdatedSuccessScreen extends StatelessWidget {
                   label: 'Log in',
                   onPressed: () => context.go(Routes.login),
                   height: 48,
-                  borderRadius: BorderRadius.circular(24),
-                  textStyle: AppTypography.button,
+                  borderRadius: BorderRadius.circular(40),
+                  textStyle: AppTypography.buttonLg,
                 ),
               ),
             ],
@@ -546,9 +579,9 @@ class _AuthInfoBlock extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.h2.copyWith(
                   fontFamily: 'Orbitron',
-                  fontSize: 20,
+                  fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  height: 1.6,
+                  height: 32 / 24,
                   letterSpacing: 0,
                 ),
               ),
@@ -608,10 +641,10 @@ class _RequestOtpRow extends StatelessWidget {
                 : secondsRemaining > 0
                     ? 'Request a new OTP'
                     : 'Request a new OTP',
-            style: AppTypography.bodySm.copyWith(
+            style: AppTypography.body.copyWith(
               color: disabled ? AppColors.textDisabled : AppColors.primary,
-              fontWeight: FontWeight.w700,
-              height: 1.67,
+              fontWeight: FontWeight.w600,
+              height: 20 / 14,
             ),
           ),
         ),
@@ -619,13 +652,37 @@ class _RequestOtpRow extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             _formatOtpTime(secondsRemaining),
-            style: AppTypography.bodySm.copyWith(
+            style: AppTypography.body.copyWith(
               color: AppColors.textSecondary,
-              height: 1.67,
+              fontWeight: FontWeight.w500,
+              height: 20 / 14,
             ),
           ),
         ],
       ],
+    );
+  }
+}
+
+class _OtpErrorText extends StatelessWidget {
+  const _OtpErrorText({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 342,
+      height: 20,
+      child: Text(
+        message,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.body.copyWith(
+          color: AppColors.lossRed,
+          height: 20 / 14,
+        ),
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:poise_ai/core/network/api_client.dart';
 import 'package:poise_ai/core/theme/app_theme.dart';
 import 'package:poise_ai/core/widgets/brand/poise_wordmark.dart';
 import 'package:poise_ai/core/widgets/buttons/p_primary_button.dart';
+import 'package:poise_ai/core/widgets/inputs/p_text_field.dart';
 import 'package:poise_ai/features/auth/screens/login_screen.dart';
 
 class _MockDio extends Mock implements Dio {}
@@ -120,6 +121,40 @@ void main() {
       tester.getTopLeft(find.byKey(const ValueKey('login-error-alert'))),
       const Offset(24, 262),
     );
+    expect(find.text('Invalid login credentials'), findsOneWidget);
+
+    final alertContainer = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('login-error-alert')),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final alertDecoration = alertContainer.decoration! as BoxDecoration;
+    expect(alertDecoration.color, const Color(0xFFFEF3F2));
+    expect(
+      (alertDecoration.borderRadius! as BorderRadius).topLeft.x,
+      8,
+    );
+    expect(
+      (alertDecoration.border! as Border).top.color,
+      const Color(0xFFFEE4E2),
+    );
+
+    final alertText =
+        tester.widget<Text>(find.text('Invalid login credentials'));
+    expect(alertText.style?.fontSize, 14);
+    expect(alertText.style?.fontWeight, FontWeight.w600);
+    expect(alertText.style?.color, const Color(0xFFD92D20));
+
+    final emailField = tester.widget<PTextField>(find.byType(PTextField).at(0));
+    final passwordField =
+        tester.widget<PTextField>(find.byType(PTextField).at(1));
+    expect(emailField.fieldState, PFieldState.error);
+    expect(passwordField.fieldState, PFieldState.error);
+    expect(emailField.errorText, isNull);
+    expect(passwordField.errorText, isNull);
     expect(find.byIcon(Icons.check_circle_outline_rounded), findsNothing);
 
     await tester.pump(const Duration(seconds: 4));

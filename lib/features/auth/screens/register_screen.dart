@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -28,6 +29,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmFocus = FocusNode();
+  Timer? _passwordValidationTimer;
 
   PButtonState _buttonState = PButtonState.idle;
   PFieldState _nameState = PFieldState.idle;
@@ -43,11 +45,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    _emailFocus.addListener(_handleEmailFocusChanged);
     _passwordFocus.addListener(_handlePasswordFocusChanged);
   }
 
   @override
   void dispose() {
+    _passwordValidationTimer?.cancel();
+    _emailFocus.removeListener(_handleEmailFocusChanged);
     _passwordFocus.removeListener(_handlePasswordFocusChanged);
     _nameCtrl.dispose();
     _emailCtrl.dispose();
@@ -61,7 +66,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   void _handlePasswordFocusChanged() {
+    if (!_passwordFocus.hasFocus &&
+        _passwordCtrl.text.isNotEmpty &&
+        !PasswordRequirements.isValid(_passwordCtrl.text)) {
+      _passwordValidationTimer?.cancel();
+      _validatePassword(_passwordCtrl.text);
+      return;
+    }
     if (mounted) setState(() {});
+  }
+
+  void _handleEmailFocusChanged() {
+    if (!_emailFocus.hasFocus && _emailCtrl.text.trim().isNotEmpty) {
+      _validateEmail(_emailCtrl.text.trim());
+    }
   }
 
   bool _isNameValidValue(String val) {
@@ -102,6 +120,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   bool _validatePassword(String val) {
+    _passwordValidationTimer?.cancel();
     final ok = PasswordRequirements.isValid(val);
     setState(() {
       _passwordState = ok ? PFieldState.valid : PFieldState.error;
@@ -241,11 +260,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             }
                           },
                           onPasswordChanged: (val) {
+                            _passwordValidationTimer?.cancel();
+                            final passwordValid =
+                                PasswordRequirements.isValid(val);
                             final passwordState = val.isEmpty
                                 ? PFieldState.idle
-                                : PasswordRequirements.isValid(val)
+                                : passwordValid
                                     ? PFieldState.valid
-                                    : PFieldState.error;
+                                    : PFieldState.idle;
                             final confirmState = _confirmCtrl.text.isEmpty
                                 ? PFieldState.idle
                                 : _isConfirmValidValue(_confirmCtrl.text)
@@ -260,6 +282,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   ? 'Passwords do not match'
                                   : null;
                             });
+                            if (val.isNotEmpty && !passwordValid) {
+                              _passwordValidationTimer =
+                                  Timer(const Duration(seconds: 2), () {
+                                if (!mounted) return;
+                                _validatePassword(_passwordCtrl.text);
+                              });
+                            }
                           },
                           onConfirmChanged: (val) {
                             final confirmState = val.isEmpty
@@ -284,8 +313,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       Positioned(
                         key: const ValueKey('register-bottom-actions'),
-                        left: 24,
-                        right: 24,
+                        left: 16,
+                        right: 16,
                         top: 724,
                         child: _RegisterActions(
                           canSubmit: _canSubmit,
@@ -525,45 +554,59 @@ class _RegisterActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        PPrimaryButton(
-          label: 'Continue',
-          state: buttonState,
-          onPressed: canSubmit ? onSubmit : null,
-          height: 48,
-          borderRadius: BorderRadius.circular(24),
-          textStyle: AppTypography.buttonLg,
+        SizedBox(
+          width: 342,
+          child: PPrimaryButton(
+            label: 'Continue',
+            state: buttonState,
+            onPressed: canSubmit ? onSubmit : null,
+            height: 48,
+            borderRadius: BorderRadius.circular(24),
+            textStyle: AppTypography.buttonLg,
+            disabledLabelColor: AppColors.textSecondary,
+          ),
         ),
-        const SizedBox(height: 12),
-        Wrap(
+        const SizedBox(height: 16),
+        SizedBox(
           key: const ValueKey('register-auth-switch'),
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              'Already have an account?',
-              style: AppTypography.bodySm.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                height: 1.67,
-              ),
-            ),
-            TextButton(
-              onPressed: onLogin,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.only(left: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(
-                'Log in',
-                style: AppTypography.bodySm.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                  height: 1.67,
+          width: 358,
+          height: 20,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onLogin,
+            child: Center(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Already have an account? ',
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                        height: 20 / 14,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'Log in',
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        height: 20 / 14,
+                      ),
+                    ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                  height: 20 / 14,
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ],
     );

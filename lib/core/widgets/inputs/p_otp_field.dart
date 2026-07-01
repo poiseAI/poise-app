@@ -101,7 +101,7 @@ class _POtpFieldState extends State<POtpField>
         color: isSuccess
             ? AppColors.profitGreen.withValues(alpha: 0.08)
             : isError
-                ? AppColors.lossRed.withValues(alpha: 0.08)
+                ? AppColors.bgCard
                 : AppColors.accent.withValues(alpha: 0.06),
         borderRadius: AppRadius.inputRadius,
         border: Border.all(
@@ -136,6 +136,8 @@ class _POtpFieldState extends State<POtpField>
           defaultPinTheme: base,
           focusedPinTheme: focused,
           submittedPinTheme: submitted,
+          errorPinTheme: submitted,
+          forceErrorState: isError,
           separatorBuilder: (_) => const SizedBox(width: 10.8),
           keyboardType: TextInputType.number,
           onCompleted: widget.onCompleted,

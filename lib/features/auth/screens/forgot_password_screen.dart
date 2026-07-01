@@ -23,15 +23,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   String? _emailError;
   String? _errorMessage;
 
+  bool get _canSubmit => _isEmailValid(_emailCtrl.text);
+
   @override
   void dispose() {
     _emailCtrl.dispose();
     super.dispose();
   }
 
+  bool _isEmailValid(String value) {
+    return RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$').hasMatch(value.trim());
+  }
+
   bool _validate() {
-    final ok = RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$')
-        .hasMatch(_emailCtrl.text.trim());
+    final ok = _isEmailValid(_emailCtrl.text);
     setState(() {
       _emailState = ok ? PFieldState.valid : PFieldState.error;
       _emailError = ok ? null : 'Enter a valid email address';
@@ -111,7 +116,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       PTextField(
                         controller: _emailCtrl,
                         label: 'Email address',
-                        hint: 'Enter email',
+                        hint: 'user@address.com',
                         showLabelAbove: true,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.done,
@@ -121,9 +126,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         compact: true,
                         showValidationIcon: false,
                         onChanged: (val) {
-                          if (_errorMessage != null) {
-                            setState(() => _errorMessage = null);
-                          }
+                          setState(() {
+                            if (_errorMessage != null) _errorMessage = null;
+                          });
                           if (_emailState != PFieldState.idle) _validate();
                         },
                         onEditingComplete: _submit,
@@ -146,7 +151,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 top: 728,
                 child: _ForgotActions(
                   buttonState: _buttonState,
-                  onSubmit: _submit,
+                  onSubmit: _canSubmit ? _submit : null,
                   onLogin: () => context.go(Routes.login),
                 ),
               ),
@@ -199,9 +204,9 @@ class _ForgotIntro extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.h2.copyWith(
                   fontFamily: 'Orbitron',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  height: 1.6,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  height: 32 / 24,
                   letterSpacing: 0,
                 ),
               ),
@@ -239,7 +244,7 @@ class _ForgotActions extends StatelessWidget {
   });
 
   final PButtonState buttonState;
-  final VoidCallback onSubmit;
+  final VoidCallback? onSubmit;
   final VoidCallback onLogin;
 
   @override
@@ -254,7 +259,7 @@ class _ForgotActions extends StatelessWidget {
             onPressed: onSubmit,
             height: 48,
             borderRadius: BorderRadius.circular(24),
-            textStyle: AppTypography.button,
+            textStyle: AppTypography.buttonLg,
           ),
           const SizedBox(height: 12),
           TextButton(

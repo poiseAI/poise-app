@@ -17,6 +17,7 @@ class PPrimaryButton extends StatefulWidget {
     this.height = 52,
     this.borderRadius,
     this.textStyle,
+    this.disabledLabelColor,
   });
 
   final String label;
@@ -26,6 +27,7 @@ class PPrimaryButton extends StatefulWidget {
   final double height;
   final BorderRadius? borderRadius;
   final TextStyle? textStyle;
+  final Color? disabledLabelColor;
 
   @override
   State<PPrimaryButton> createState() => _PPrimaryButtonState();
@@ -151,7 +153,8 @@ class _PPrimaryButtonState extends State<PPrimaryButton>
                           icon: widget.icon,
                           textStyle: widget.textStyle,
                           color: isDisabled
-                              ? AppColors.textDisabled
+                              ? widget.disabledLabelColor ??
+                                  AppColors.textDisabled
                               : Colors.white,
                         ),
             ),

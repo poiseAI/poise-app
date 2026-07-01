@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/feedback/p_toast.dart';
@@ -27,6 +26,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   PButtonState _buttonState = PButtonState.idle;
   POtpState _otpState = POtpState.idle;
+  String? _otpErrorText;
   bool _otpComplete = false;
   bool _resending = false;
   Timer? _otpTimer;
@@ -78,8 +78,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     result.fold(
       onOk: (_) {
         final auth = ref.read(authProvider).valueOrNull;
-        final isSettings =
-            auth is AuthAuthenticated && auth.hasActiveStrategy;
+        final isSettings = auth is AuthAuthenticated && auth.hasActiveStrategy;
         if (isSettings) {
           // Settings: router won't auto-redirect; show success briefly then go.
           setState(() {
@@ -98,21 +97,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         }
       },
       onErr: (message) {
+        _otpCtrl.clear();
         setState(() {
-          _buttonState = PButtonState.error;
+          _buttonState = PButtonState.idle;
           _otpState = POtpState.error;
+          _otpErrorText = 'Invalid OTP';
           _otpComplete = false;
         });
-        PToast.error(context, message);
-        Future<void>.delayed(const Duration(milliseconds: 420), () {
-          if (!mounted) return;
-          setState(() {
-            _buttonState = PButtonState.idle;
-            _otpState = POtpState.idle;
-          });
-          _otpCtrl.clear();
-          _focusNode.requestFocus();
-        });
+        _focusNode.requestFocus();
       },
     );
   }
@@ -157,105 +149,248 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        child: Padding(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 390),
+          child: Stack(
             children: [
-              const SizedBox(height: AppSpacing.sm),
-              IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: _goBack,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              Positioned(
+                key: const ValueKey('verify-email-back-button'),
+                left: 22,
+                top: 74,
+                child: _AuthBackGlyph(onPressed: _goBack),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Enter OTP',
-                style: AppTypography.h2.copyWith(
-                  fontFamily: 'Orbitron',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  height: 1.6,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                isSettingsVerification
-                    ? 'A 6-digit OTP has been sent to your email. Please enter it below to verify your email.'
-                    : 'A 6-digit OTP has been sent to $email. Please enter it below to verify your email.',
-                style: AppTypography.bodySm.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.67,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              POtpField(
-                controller: _otpCtrl,
-                focusNode: _focusNode,
-                state: _otpState,
-                onCompleted: (_) {
-                  setState(() => _otpComplete = true);
-                },
-                onChanged: (value) {
-                  if (_otpState != POtpState.idle) {
-                    setState(() => _otpState = POtpState.idle);
-                  }
-                  setState(() => _otpComplete = value.length == 6);
-                },
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              PPrimaryButton(
-                label: 'Verify',
-                state: _buttonState,
-                onPressed: _otpComplete ? _verify : null,
-              ),
-              const Spacer(),
-              Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: _resending || _secondsRemaining > 0
-                          ? null
-                          : _resend,
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              Positioned(
+                key: const ValueKey('verify-email-content'),
+                left: 24,
+                top: 130,
+                child: SizedBox(
+                  width: 342,
+                  height: 220,
+                  child: Stack(
+                    children: [
+                      _AuthInfoBlock(
+                        title: 'Enter your OTP',
+                        body: isSettingsVerification
+                            ? 'A 6-digit OTP has been sent to your email. Please enter it below to verify your email.'
+                            : 'A 6-digit OTP has been sent to $email. Please enter it below to verify your email.',
                       ),
-                      child: Text(
-                        _resending ? 'Sending...' : 'Request a new OTP',
-                        style: AppTypography.bodySm.copyWith(
-                          color: _secondsRemaining > 0
-                              ? AppColors.textDisabled
-                              : AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                          height: 1.67,
+                      Positioned(
+                        left: 0,
+                        top: 120,
+                        child: POtpField(
+                          controller: _otpCtrl,
+                          focusNode: _focusNode,
+                          state: _otpState,
+                          onCompleted: (_) {
+                            setState(() => _otpComplete = true);
+                          },
+                          onChanged: (value) {
+                            if (_otpState != POtpState.idle) {
+                              setState(() {
+                                _otpState = POtpState.idle;
+                                _otpErrorText = null;
+                              });
+                            }
+                            setState(() => _otpComplete = value.length == 6);
+                          },
                         ),
                       ),
-                    ),
-                    if (_secondsRemaining > 0) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        'in $_secondsRemaining seconds',
-                        style: AppTypography.bodySm.copyWith(
-                          color: AppColors.textSecondary,
-                          height: 1.67,
+                      if (_otpErrorText != null)
+                        Positioned(
+                          key: const ValueKey('verify-email-otp-error'),
+                          left: 0,
+                          top: 190,
+                          child: _OtpErrorText(message: _otpErrorText!),
+                        ),
+                      Positioned(
+                        key: const ValueKey('verify-email-otp-request'),
+                        left: 0,
+                        top: _otpErrorText == null ? 200 : 230,
+                        child: _RequestOtpRow(
+                          resending: _resending,
+                          secondsRemaining: _secondsRemaining,
+                          onPressed: _resend,
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              Positioned(
+                left: 24,
+                right: 24,
+                top: 724,
+                child: PPrimaryButton(
+                  label: 'Verify',
+                  state: _buttonState,
+                  onPressed: _otpComplete ? _verify : null,
+                  height: 48,
+                  borderRadius: BorderRadius.circular(24),
+                  textStyle: AppTypography.buttonLg,
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+class _OtpErrorText extends StatelessWidget {
+  const _OtpErrorText({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 342,
+      height: 20,
+      child: Text(
+        message,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.body.copyWith(
+          color: AppColors.lossRed,
+          height: 20 / 14,
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthBackGlyph extends StatelessWidget {
+  const _AuthBackGlyph({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: const SizedBox(
+        width: 24,
+        height: 24,
+        child: Icon(Icons.arrow_back_rounded, size: 24),
+      ),
+    );
+  }
+}
+
+class _AuthInfoBlock extends StatelessWidget {
+  const _AuthInfoBlock({
+    required this.title,
+    required this.body,
+  });
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 342,
+      height: 80,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            child: SizedBox(
+              width: 342,
+              height: 32,
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.h2.copyWith(
+                  fontFamily: 'Orbitron',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  height: 32 / 24,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            top: 40,
+            child: SizedBox(
+              width: 342,
+              height: 40,
+              child: Text(
+                body,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySm.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.67,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RequestOtpRow extends StatelessWidget {
+  const _RequestOtpRow({
+    required this.resending,
+    required this.secondsRemaining,
+    required this.onPressed,
+  });
+
+  final bool resending;
+  final int secondsRemaining;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = resending || secondsRemaining > 0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: disabled ? null : onPressed,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(132, 20),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            resending ? 'Sending...' : 'Request a new OTP',
+            style: AppTypography.body.copyWith(
+              color: disabled ? AppColors.textDisabled : AppColors.primary,
+              fontWeight: FontWeight.w600,
+              height: 20 / 14,
+            ),
+          ),
+        ),
+        if (secondsRemaining > 0) ...[
+          const SizedBox(width: 4),
+          Text(
+            _formatOtpTime(secondsRemaining),
+            style: AppTypography.body.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+              height: 20 / 14,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+String _formatOtpTime(int seconds) {
+  final minutes = seconds ~/ 60;
+  final secs = (seconds % 60).toString().padLeft(2, '0');
+  return '$minutes:$secs';
 }

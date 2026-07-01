@@ -164,7 +164,11 @@ class _PTextFieldState extends State<PTextField>
         decoration: InputDecoration(
           labelText: widget.showLabelAbove ? null : widget.label,
           hintText: widget.hint,
-          errorText: isError ? widget.errorText : null,
+          errorText: widget.compact
+              ? null
+              : isError
+                  ? widget.errorText
+                  : null,
           suffixIcon: _buildSuffix(),
           suffixIconConstraints: BoxConstraints(
             minWidth: widget.compact ? 40 : 44,
@@ -224,7 +228,27 @@ class _PTextFieldState extends State<PTextField>
       ),
     );
 
-    if (!widget.showLabelAbove) return field;
+    final errorText = widget.compact && isError && widget.errorText != null
+        ? Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              widget.errorText!,
+              style: AppTypography.body.copyWith(
+                color: AppColors.lossRed,
+                height: 20 / 14,
+              ),
+            ),
+          )
+        : null;
+
+    if (!widget.showLabelAbove) {
+      if (errorText == null) return field;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [field, errorText],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,6 +263,7 @@ class _PTextFieldState extends State<PTextField>
         ),
         const SizedBox(height: 6),
         field,
+        if (errorText != null) errorText,
       ],
     );
   }
