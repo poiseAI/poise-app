@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/brand/poise_wordmark.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/inputs/p_text_field.dart';
 import '../providers/auth_provider.dart';
@@ -154,7 +155,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _PoiseWordmark(),
+                    const PoiseWordmark(),
                     const SizedBox(height: 38),
                     Text(
                       'Create your account',
@@ -367,63 +368,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PoiseWordmark extends StatelessWidget {
-  const _PoiseWordmark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(
-          width: 18,
-          height: 22,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _LogoBar(height: 12),
-              SizedBox(width: 2),
-              _LogoBar(height: 18),
-              SizedBox(width: 2),
-              _LogoBar(height: 14),
-            ],
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          'poise',
-          style: AppTypography.h2.copyWith(
-            color: AppColors.primary,
-            fontFamily: 'Orbitron',
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-            height: 1,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LogoBar extends StatelessWidget {
-  const _LogoBar({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 4,
-      height: height,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(1),
       ),
     );
   }

@@ -67,112 +67,277 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Profile', style: AppTypography.h1),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: AppColors.borderLight),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 32),
+          children: [
+            _ProfileHeader(
+              name: name.isNotEmpty ? _titleCaseName(name) : 'Profile',
+              email: authState.email,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                children: [
+                  _ProfileSection(
+                    title: 'ACCOUNT',
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.person_outline_rounded,
+                        label: 'Edit profile',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => _EditProfileScreen(
+                              auth: authState,
+                              displayName: name,
+                            ),
+                          ),
+                        ),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.lock_outline_rounded,
+                        label: 'Change password',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const _ChangePasswordScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _ProfileSection(
+                    title: 'TRADING',
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.electrical_services_outlined,
+                        label: 'Exchange Connections',
+                        onTap: () => context.push(Routes.exchangeConnections),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.tune_rounded,
+                        label: 'Risk Appetite',
+                        subtitle: _riskAppetiteSubtitle(ref),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const SetRiskAppetiteScreen(
+                              mode: RiskAppetiteMode.settings,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _ProfileSection(
+                    title: 'PREFERENCES',
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.add_to_photos_outlined,
+                        label: 'Subscription',
+                        onTap: () => context.push(Routes.billing),
+                        trailing: authState.subscription.entitled
+                            ? _SubscriptionBadge(
+                                subscription: authState.subscription,
+                              )
+                            : null,
+                      ),
+                      _SettingsTile(
+                        icon: Icons.notifications_none_rounded,
+                        label: 'Notification',
+                        onTap: () => context.push(Routes.notificationSettings),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.shield_outlined,
+                        label: 'Data & Privacy',
+                        onTap: () => context.push(Routes.dataPrivacy),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _ProfileActionTile(
+                    icon: Icons.logout_rounded,
+                    label: 'Log out',
+                    onPressed: () => _showLogoutSheet(context, ref),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _ProfileActionTile(
+                    icon: Icons.delete_outline_rounded,
+                    label: 'Delete Account',
+                    color: AppColors.lossRed,
+                    onPressed: () => _showDeleteSheet(context, ref),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+    );
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.name, required this.email});
+
+  final String name;
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = _initials(name);
+    return SizedBox(
+      height: 170,
+      child: Stack(
         children: [
-          Text(
-            name.isNotEmpty ? _titleCaseName(name) : 'Profile',
-            style: AppTypography.h1.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            authState.email,
-            style: AppTypography.bodyLg.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 40,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(40),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                side: const BorderSide(color: AppColors.brand100),
-                textStyle: AppTypography.button,
-              ),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => _EditProfileScreen(
-                    auth: authState,
-                    displayName: name,
+          const Positioned.fill(child: _ProfilePattern()),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 24,
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    initials,
+                    style: AppTypography.display2.copyWith(
+                      color: AppColors.primary,
+                      fontSize: 22,
+                      height: 32 / 22,
+                    ),
                   ),
                 ),
-              ),
-              child: const Text('Edit profile'),
-            ),
-          ),
-          const SizedBox(height: 22),
-          Text(
-            'Settings',
-            style: AppTypography.bodySm.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _SettingsTile(
-            icon: Icons.electrical_services_outlined,
-            label: 'Exchange Connections',
-            onTap: () => context.push(Routes.exchangeConnections),
-          ),
-          _SettingsTile(
-            icon: Icons.tune_rounded,
-            label: 'Risk Appetite',
-            subtitle: _riskAppetiteSubtitle(ref),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const SetRiskAppetiteScreen(
-                  mode: RiskAppetiteMode.settings,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodyLg.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const _ProfilePlanPill(),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ),
-          _SettingsTile(
-            icon: Icons.lock_outline_rounded,
-            label: 'Security',
-            onTap: () => context.push(Routes.security),
-          ),
-          _SettingsTile(
-            icon: Icons.notifications_none_rounded,
-            label: 'Notification',
-            onTap: () => context.push(Routes.notificationSettings),
-          ),
-          _SettingsTile(
-            icon: Icons.shield_outlined,
-            label: 'Data & Privacy',
-            onTap: () => context.push(Routes.dataPrivacy),
-          ),
-          _SettingsTile(
-            icon: Icons.add_to_photos_outlined,
-            label: 'Subscription',
-            onTap: () => context.push(Routes.billing),
-            trailing: authState.subscription.entitled
-                ? _SubscriptionBadge(subscription: authState.subscription)
-                : null,
-          ),
-          const SizedBox(height: 30),
-          _ProfileActionTile(
-            icon: Icons.logout_rounded,
-            label: 'Log out',
-            onPressed: () => _showLogoutSheet(context, ref),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileActionTile(
-            icon: Icons.delete_outline_rounded,
-            label: 'Delete Account',
-            color: AppColors.lossRed,
-            onPressed: () => _showDeleteSheet(context, ref),
           ),
         ],
       ),
+    );
+  }
+
+  static String _initials(String value) {
+    final parts = value.trim().split(RegExp(r'\s+'));
+    final letters = parts
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part[0].toUpperCase())
+        .join();
+    return letters.isEmpty ? 'P' : letters;
+  }
+}
+
+class _ProfilePlanPill extends StatelessWidget {
+  const _ProfilePlanPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.badgeInfoBg,
+        borderRadius: AppRadius.chipRadius,
+        border: Border.all(color: AppColors.badgeInfoBorder),
+      ),
+      child: Text(
+        'Poise Trader',
+        style: AppTypography.labelSm.copyWith(
+          color: AppColors.badgeInfoText,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfilePattern extends StatelessWidget {
+  const _ProfilePattern();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(painter: _ProfilePatternPainter());
+  }
+}
+
+class _ProfilePatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = AppColors.primary.withValues(alpha: 0.08);
+    for (var x = -120.0; x < size.width + 220; x += 70) {
+      canvas.drawArc(
+        Rect.fromLTWH(x, -170, 160, 420),
+        0.9,
+        1.4,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ProfileSection extends StatelessWidget {
+  const _ProfileSection({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTypography.labelSm.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final child in children) child,
+      ],
     );
   }
 }
@@ -252,6 +417,7 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Material(
@@ -261,10 +427,11 @@ class _SettingsTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: AppRadius.cardRadius,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(
+            height: hasSubtitle ? null : 48,
+            constraints: BoxConstraints(minHeight: hasSubtitle ? 58 : 48),
+            padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: 12,
+              vertical: hasSubtitle ? 10 : 0,
             ),
             decoration: BoxDecoration(
               borderRadius: AppRadius.cardRadius,
@@ -288,7 +455,7 @@ class _SettingsTile extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      if (hasSubtitle) ...[
                         const SizedBox(height: 2),
                         Text(
                           subtitle!,
@@ -608,7 +775,18 @@ class _ChangePasswordScreenState extends ConsumerState<_ChangePasswordScreen> {
   String? _confirmPasswordError;
 
   @override
+  void initState() {
+    super.initState();
+    _currentPasswordCtrl.addListener(_onPasswordFieldChanged);
+    _newPasswordCtrl.addListener(_onPasswordFieldChanged);
+    _confirmPasswordCtrl.addListener(_onPasswordFieldChanged);
+  }
+
+  @override
   void dispose() {
+    _currentPasswordCtrl.removeListener(_onPasswordFieldChanged);
+    _newPasswordCtrl.removeListener(_onPasswordFieldChanged);
+    _confirmPasswordCtrl.removeListener(_onPasswordFieldChanged);
     _currentPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
@@ -616,6 +794,15 @@ class _ChangePasswordScreenState extends ConsumerState<_ChangePasswordScreen> {
     _newPasswordFocus.dispose();
     _confirmPasswordFocus.dispose();
     super.dispose();
+  }
+
+  void _onPasswordFieldChanged() => setState(() {});
+
+  bool get _canSave {
+    return _currentPasswordCtrl.text.isNotEmpty &&
+        PasswordRequirements.isValid(_newPasswordCtrl.text) &&
+        _confirmPasswordCtrl.text == _newPasswordCtrl.text &&
+        _passwordButtonState != PButtonState.loading;
   }
 
   bool _validateCurrentPassword() {
@@ -681,95 +868,141 @@ class _ChangePasswordScreenState extends ConsumerState<_ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: const Text('Change password'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        backgroundColor: AppColors.bgPrimary,
+        body: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              SizedBox(
+                height: 98,
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 32,
+                        height: 32,
+                      ),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                  children: [
+                    Text(
+                      'Change password',
+                      style: AppTypography.display2.copyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: 24,
+                        height: 32 / 24,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enter a new secure password for your account',
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        height: 20 / 14,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 36),
+                    PTextField(
+                      controller: _currentPasswordCtrl,
+                      focusNode: _currentPasswordFocus,
+                      label: 'Current password',
+                      hint: 'Enter password',
+                      showLabelAbove: true,
+                      obscureText: true,
+                      compact: true,
+                      textInputAction: TextInputAction.next,
+                      fieldState: _currentPasswordState,
+                      errorText: _currentPasswordError,
+                      onChanged: (_) {
+                        if (_currentPasswordState != PFieldState.idle) {
+                          _validateCurrentPassword();
+                        }
+                      },
+                      onEditingComplete: () => _newPasswordFocus.requestFocus(),
+                    ),
+                    const SizedBox(height: 24),
+                    PTextField(
+                      controller: _newPasswordCtrl,
+                      focusNode: _newPasswordFocus,
+                      label: 'New password',
+                      hint: 'Enter password',
+                      showLabelAbove: true,
+                      obscureText: true,
+                      compact: true,
+                      textInputAction: TextInputAction.next,
+                      fieldState: _newPasswordState,
+                      errorText: _newPasswordError,
+                      onChanged: (_) {
+                        if (_newPasswordState != PFieldState.idle) {
+                          _validateNewPassword();
+                        }
+                        if (_confirmPasswordState != PFieldState.idle) {
+                          _validateConfirmPassword();
+                        }
+                      },
+                      onEditingComplete: () =>
+                          _confirmPasswordFocus.requestFocus(),
+                    ),
+                    const SizedBox(height: 12),
+                    PasswordRequirements(password: _newPasswordCtrl.text),
+                    const SizedBox(height: 24),
+                    PTextField(
+                      controller: _confirmPasswordCtrl,
+                      focusNode: _confirmPasswordFocus,
+                      label: 'Confirm password',
+                      hint: 'Repeat password',
+                      showLabelAbove: true,
+                      obscureText: true,
+                      compact: true,
+                      textInputAction: TextInputAction.done,
+                      fieldState: _confirmPasswordState,
+                      errorText: _confirmPasswordError,
+                      onChanged: (_) {
+                        if (_confirmPasswordState != PFieldState.idle) {
+                          _validateConfirmPassword();
+                        }
+                      },
+                      onEditingComplete: _canSave ? _changePassword : null,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: AppSpacing.screenPadding,
-          children: [
-            const SizedBox(height: AppSpacing.md),
-            const Text('Change password', style: AppTypography.h2),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Create a new password for this account.',
-              style:
-                  AppTypography.body.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            PTextField(
-              controller: _currentPasswordCtrl,
-              focusNode: _currentPasswordFocus,
-              label: 'Current password',
-              showLabelAbove: true,
-              obscureText: true,
-              textInputAction: TextInputAction.next,
-              fieldState: _currentPasswordState,
-              errorText: _currentPasswordError,
-              onChanged: (_) {
-                if (_currentPasswordState != PFieldState.idle) {
-                  _validateCurrentPassword();
-                }
-              },
-              onEditingComplete: () => _newPasswordFocus.requestFocus(),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            PTextField(
-              controller: _newPasswordCtrl,
-              focusNode: _newPasswordFocus,
-              label: 'New password',
-              showLabelAbove: true,
-              obscureText: true,
-              textInputAction: TextInputAction.next,
-              fieldState: _newPasswordState,
-              errorText: _newPasswordError,
-              onChanged: (_) {
-                setState(() {});
-                if (_newPasswordState != PFieldState.idle) {
-                  _validateNewPassword();
-                }
-                if (_confirmPasswordState != PFieldState.idle) {
-                  _validateConfirmPassword();
-                }
-              },
-              onEditingComplete: () => _confirmPasswordFocus.requestFocus(),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            PasswordRequirements(password: _newPasswordCtrl.text),
-            const SizedBox(height: AppSpacing.md),
-            PTextField(
-              controller: _confirmPasswordCtrl,
-              focusNode: _confirmPasswordFocus,
-              label: 'Confirm password',
-              hint: 'Repeat password',
-              showLabelAbove: true,
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              fieldState: _confirmPasswordState,
-              errorText: _confirmPasswordError,
-              onChanged: (_) {
-                if (_confirmPasswordState != PFieldState.idle) {
-                  _validateConfirmPassword();
-                }
-              },
-              onEditingComplete: _changePassword,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PPrimaryButton(
-              label: 'Change password',
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 36),
+            child: PPrimaryButton(
+              label: 'Save',
+              height: 44,
+              borderRadius: AppRadius.pillRadius,
               state: _passwordButtonState,
-              onPressed: _passwordButtonState == PButtonState.loading
-                  ? null
-                  : _changePassword,
+              onPressed: _canSave ? _changePassword : null,
             ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
+          ),
         ),
       ),
     );
@@ -784,40 +1017,57 @@ class _PasswordChangedSuccessScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 166),
+            Image.asset(
+              'assets/images/checkmark.png',
+              width: 200,
+              height: 200,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            ),
+            const SizedBox(height: 92),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  Text(
+                    'Your password has been updated',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.display2.copyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: 24,
+                      height: 32 / 24,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Your password has been changed successfully',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      height: 20 / 14,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
         child: Padding(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              Image.asset(
-                'assets/images/checkmark.png',
-                width: 190,
-                height: 190,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-              ),
-              const Spacer(),
-              const Text(
-                'Your password has been updated',
-                textAlign: TextAlign.center,
-                style: AppTypography.h2,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Your password has been changed successfully.',
-                textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
-              ),
-              const Spacer(flex: 2),
-              PPrimaryButton(
-                label: 'Done',
-                onPressed: () => context.go(Routes.profile),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 38),
+          child: PPrimaryButton(
+            label: 'Done',
+            height: 48,
+            onPressed: () => context.go(Routes.profile),
           ),
         ),
       ),

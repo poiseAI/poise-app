@@ -7,7 +7,8 @@ abstract final class Routes {
   static const verifyEmail = '/auth/verify-email';
   static const verifyEmailSuccess = '/onboarding/verify-email-success';
   static const riskAppetite = '/onboarding/risk-appetite';
-  static const baselineSync = '/onboarding/baseline-sync';
+  static const baselineSync = '/app/exchange/baseline-sync';
+  static const legacyBaselineSync = '/onboarding/baseline-sync';
   static const forgotPassword = '/auth/forgot-password';
   static const resetPassword = '/auth/reset-password';
 

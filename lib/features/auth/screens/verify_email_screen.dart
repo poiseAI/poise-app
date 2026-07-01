@@ -156,45 +156,43 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         auth is AuthAuthenticated && auth.hasActiveStrategy;
 
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: false,
-        title: Text(
-          isSettingsVerification ? 'Verify new email address' : 'Sign up',
-          style: AppTypography.h1,
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: _goBack,
-        ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: AppColors.borderLight),
-        ),
-      ),
+      backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
           padding: AppSpacing.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: AppSpacing.sm),
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: _goBack,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
               const SizedBox(height: AppSpacing.lg),
-              const Text(
-                'Verify your email address',
-                style: AppTypography.h2,
+              Text(
+                'Enter OTP',
+                style: AppTypography.h2.copyWith(
+                  fontFamily: 'Orbitron',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  height: 1.6,
+                  letterSpacing: 0,
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 isSettingsVerification
                     ? 'A 6-digit OTP has been sent to your email. Please enter it below to verify your email.'
                     : 'A 6-digit OTP has been sent to $email. Please enter it below to verify your email.',
-                style: AppTypography.body.copyWith(
+                style: AppTypography.bodySm.copyWith(
                   color: AppColors.textSecondary,
-                  height: 1.45,
+                  height: 1.67,
+                  letterSpacing: 0,
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              const Text('Enter OTP', style: AppTypography.label),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xl),
               POtpField(
                 controller: _otpCtrl,
                 focusNode: _focusNode,
@@ -211,22 +209,46 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               ),
               const SizedBox(height: AppSpacing.xl),
               PPrimaryButton(
-                label: 'Continue',
+                label: 'Verify',
                 state: _buttonState,
                 onPressed: _otpComplete ? _verify : null,
               ),
               const Spacer(),
               Center(
-                child: TextButton(
-                  onPressed:
-                      _resending || _secondsRemaining > 0 ? null : _resend,
-                  child: Text(
-                    _resending
-                        ? 'Sending...'
-                        : _secondsRemaining > 0
-                            ? 'Request a new OTP in ${_formatOtpTime(_secondsRemaining)}'
-                            : 'Request a new OTP',
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: _resending || _secondsRemaining > 0
+                          ? null
+                          : _resend,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        _resending ? 'Sending...' : 'Request a new OTP',
+                        style: AppTypography.bodySm.copyWith(
+                          color: _secondsRemaining > 0
+                              ? AppColors.textDisabled
+                              : AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                          height: 1.67,
+                        ),
+                      ),
+                    ),
+                    if (_secondsRemaining > 0) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        'in $_secondsRemaining seconds',
+                        style: AppTypography.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.67,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -236,10 +258,4 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       ),
     );
   }
-}
-
-String _formatOtpTime(int seconds) {
-  final minutes = seconds ~/ 60;
-  final secs = (seconds % 60).toString().padLeft(2, '0');
-  return '$minutes:$secs';
 }

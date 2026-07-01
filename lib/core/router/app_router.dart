@@ -81,6 +81,10 @@ GoRouter appRouter(Ref ref) {
             _fadeTransition(state, const BaselineSyncScreen()),
       ),
       GoRoute(
+        path: Routes.legacyBaselineSync,
+        redirect: (_, __) => Routes.baselineSync,
+      ),
+      GoRoute(
         path: Routes.forgotPassword,
         pageBuilder: (context, state) =>
             _slideTransition(state, const ForgotPasswordScreen()),

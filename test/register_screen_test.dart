@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poise_ai/core/theme/app_colors.dart';
 import 'package:poise_ai/core/theme/app_theme.dart';
+import 'package:poise_ai/core/widgets/brand/poise_wordmark.dart';
 import 'package:poise_ai/core/widgets/buttons/p_primary_button.dart';
 import 'package:poise_ai/core/widgets/inputs/p_text_field.dart';
 import 'package:poise_ai/features/auth/screens/register_screen.dart';
@@ -23,7 +24,11 @@ void main() {
 
     expect(find.text('Sign up'), findsNothing);
     expect(find.text('Enter Details'), findsNothing);
-    expect(find.text('poise'), findsOneWidget);
+    expect(find.byType(PoiseWordmark), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(PoiseWordmark)),
+      const Size(PoiseWordmark.width, PoiseWordmark.height),
+    );
     expect(find.text('Create your account'), findsOneWidget);
     expect(
       find.text('Start your 14-day free trial. No credit card required'),

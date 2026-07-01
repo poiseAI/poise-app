@@ -276,7 +276,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   right: 24,
                   top: 724,
                   child: PPrimaryButton(
-                    label: 'Continue',
+                    label: 'Verify',
                     onPressed: _otpComplete
                         ? () => setState(
                               () => _step = _ResetPasswordStep.password,

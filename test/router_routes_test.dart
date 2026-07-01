@@ -52,7 +52,9 @@ void main() {
         File('lib/features/onboarding/screens/baseline_sync_screen.dart');
 
     expect(routesSource, contains('baselineSync'));
+    expect(routesSource, contains('/app/exchange/baseline-sync'));
     expect(routesSource, contains('/onboarding/baseline-sync'));
+    expect(routerSource, contains('legacyBaselineSync'));
     expect(routerSource, contains('BaselineSyncScreen'));
     expect(screenFile.existsSync(), isTrue);
 

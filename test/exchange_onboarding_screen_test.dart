@@ -220,7 +220,7 @@ Widget _exchangeHarness(
         builder: (context, state) => const ExchangeConnectionsScreen(),
       ),
       GoRoute(
-        path: '/onboarding/baseline-sync',
+        path: Routes.baselineSync,
         builder: (context, state) => const _RouteProbe('Baseline route'),
       ),
       GoRoute(

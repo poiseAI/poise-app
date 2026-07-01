@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:poise_ai/core/network/api_client.dart';
 import 'package:poise_ai/core/theme/app_theme.dart';
+import 'package:poise_ai/core/widgets/brand/poise_wordmark.dart';
 import 'package:poise_ai/core/widgets/buttons/p_primary_button.dart';
 import 'package:poise_ai/features/auth/screens/login_screen.dart';
 
@@ -58,13 +59,16 @@ void main() {
     expect(find.textContaining("Don't have an account?"), findsOneWidget);
     expect(find.text('Sign up'), findsOneWidget);
 
-    // poise wordmark present (text 'poise') and no visible back affordance in
-    // the default Figma login state.
-    expect(find.text('poise'), findsOneWidget);
+    // Figma wordmark frame: 98.583 x 28 at x=24, y=82.
+    expect(find.byType(PoiseWordmark), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('login-wordmark'))),
       const Offset(24, 82),
+    );
+    expect(
+      tester.getSize(find.byType(PoiseWordmark)),
+      const Size(PoiseWordmark.width, PoiseWordmark.height),
     );
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('login-content'))),

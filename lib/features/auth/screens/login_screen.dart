@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/brand/poise_wordmark.dart';
 import '../../../core/widgets/buttons/p_primary_button.dart';
 import '../../../core/widgets/inputs/p_text_field.dart';
 import '../providers/auth_provider.dart';
@@ -88,8 +89,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canSubmit = _emailCtrl.text.trim().isNotEmpty &&
-        _passwordCtrl.text.isNotEmpty;
+    final canSubmit =
+        _emailCtrl.text.trim().isNotEmpty && _passwordCtrl.text.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -102,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 key: ValueKey('login-wordmark'),
                 left: 24,
                 top: 82,
-                child: _PoiseWordmark(),
+                child: PoiseWordmark(),
               ),
               const Positioned(
                 key: ValueKey('login-content'),
@@ -405,63 +406,6 @@ class _LoginActions extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _PoiseWordmark extends StatelessWidget {
-  const _PoiseWordmark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(
-          width: 18,
-          height: 22,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _LogoBar(height: 12),
-              SizedBox(width: 2),
-              _LogoBar(height: 18),
-              SizedBox(width: 2),
-              _LogoBar(height: 14),
-            ],
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          'poise',
-          style: AppTypography.h2.copyWith(
-            color: AppColors.primary,
-            fontFamily: 'Orbitron',
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-            height: 1,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LogoBar extends StatelessWidget {
-  const _LogoBar({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 4,
-      height: height,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(1),
-      ),
     );
   }
 }

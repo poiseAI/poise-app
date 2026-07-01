@@ -33,14 +33,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Subscription'), findsOneWidget);
+    expect(find.text('ACCOUNT'), findsOneWidget);
+    expect(find.text('TRADING'), findsOneWidget);
+    expect(find.text('PREFERENCES'), findsOneWidget);
+    expect(find.text('Change password'), findsOneWidget);
+    expect(find.text('Security'), findsNothing);
     expect(find.text(r'$79/month'), findsNothing);
     expect(find.text('Notification'), findsOneWidget);
     expect(find.text('Notifications'), findsNothing);
     expect(
       tester
-          .getSize(find.widgetWithText(OutlinedButton, 'Edit profile'))
+          .getSize(
+            find
+                .ancestor(
+                  of: find.text('Edit profile'),
+                  matching: find.byType(InkWell),
+                )
+                .first,
+          )
           .height,
-      40,
+      48,
     );
     expect(
       tester
@@ -134,6 +146,54 @@ void main() {
 
     expect(launched, ['https://billing.stripe.test/session']);
   });
+
+  testWidgets('profile change password matches Figma states', (tester) async {
+    _setFigmaPhoneViewport(tester);
+    const subscription = BillingSubscription.none;
+    final dio = _profileDio(subscription: subscription);
+
+    await tester.pumpWidget(_profileHarness(
+      dio: dio,
+      launched: <String>[],
+      subscription: subscription,
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Change password'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter a new secure password for your account'),
+        findsOneWidget);
+    expect(find.widgetWithText(PPrimaryButton, 'Save'), findsOneWidget);
+    expect(find.widgetWithText(PPrimaryButton, 'Change password'), findsNothing);
+    expect(find.text('Requires at least:'), findsOneWidget);
+    expect(find.text('8 characters long'), findsOneWidget);
+    expect(find.text('1 symbol'), findsOneWidget);
+
+    final saveButton = tester.widget<PPrimaryButton>(
+      find.widgetWithText(PPrimaryButton, 'Save'),
+    );
+    expect(saveButton.onPressed, isNull);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Enter password').at(0),
+      'old-password',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Enter password').at(1),
+      'Newpass1!',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Repeat password'),
+      'Newpass1!',
+    );
+    await tester.pump();
+
+    final enabledSaveButton = tester.widget<PPrimaryButton>(
+      find.widgetWithText(PPrimaryButton, 'Save'),
+    );
+    expect(enabledSaveButton.onPressed, isNotNull);
+  });
 }
 
 void _setFigmaPhoneViewport(WidgetTester tester) {
@@ -196,6 +256,17 @@ _MockDio _profileDio({required BillingSubscription subscription}) {
     (_) async => Response<Map<String, dynamic>>(
       requestOptions: RequestOptions(path: '/billing/subscription'),
       data: {'subscription': subscription.toJson()},
+    ),
+  );
+  when(
+    () => dio.put<void>(
+      '/password',
+      data: any(named: 'data'),
+    ),
+  ).thenAnswer(
+    (_) async => Response<void>(
+      requestOptions: RequestOptions(path: '/password'),
+      statusCode: 200,
     ),
   );
   when(

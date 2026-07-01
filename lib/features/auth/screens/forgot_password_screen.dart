@@ -249,7 +249,7 @@ class _ForgotActions extends StatelessWidget {
       child: Column(
         children: [
           PPrimaryButton(
-            label: 'Reset password',
+            label: 'Send code',
             state: buttonState,
             onPressed: onSubmit,
             height: 48,
@@ -265,7 +265,7 @@ class _ForgotActions extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
-              'Log in',
+              'Back to Log in',
               style: AppTypography.bodySm.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w700,
